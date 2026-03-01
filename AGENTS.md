@@ -54,6 +54,16 @@ Use these folders first:
 4. Do not log secrets/tokens.
 5. Every new alert path must include a failure-safe (no crash on Telegram/API failure).
 
+## React Component Structure
+Goal: **keep implementation simple now, with light scalability for later**.
+
+1. Use proper React component structure for every page/feature.
+2. Keep pages thin: page files should compose components, not hold business logic.
+3. Extract reusable UI into `components/` early when duplicated.
+4. Keep components focused on one responsibility and simple props.
+5. Prefer clear naming (`FeatureName`, `FeatureNameCard`, `FeatureNameSection`) over generic names.
+6. Avoid over-engineering abstractions in MVP; only generalize after a second real use case.
+
 ## Required Environment Variables
 Use `.env`/`.env.local`:
 1. `DATABASE_URL`
