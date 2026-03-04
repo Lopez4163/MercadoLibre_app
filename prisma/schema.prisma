@@ -17,6 +17,7 @@ model User {
   createdAt      DateTime         @default(now())
 
   telegramAccount TelegramAccount?
+  telegramConnectTokens TelegramConnectToken[]
   items           Item[]
 }
 
@@ -25,6 +26,18 @@ model TelegramAccount {
   userId String @unique
   chatId String
   user   User   @relation(fields: [userId], references: [id])
+}
+
+model TelegramConnectToken {
+  id        String   @id @default(cuid())
+  code      String   @unique
+  userId    String
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@index([userId, usedAt, expiresAt])
 }
 
 model Item {
