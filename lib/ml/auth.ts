@@ -1,4 +1,4 @@
-type MlTokenResponse = {
+export type MlTokenResponse = {
   access_token: string;
   token_type: string;
   expires_in: number;
@@ -46,6 +46,31 @@ export async function exchangeAuthorizationCode(code: string): Promise<MlTokenRe
   if (!response.ok) {
     const errorText = await response.text();
     throw new Error(`ML token exchange failed: ${response.status} ${errorText}`);
+  }
+
+  return (await response.json()) as MlTokenResponse;
+}
+
+export async function refreshAccessToken(refreshToken: string): Promise<MlTokenResponse> {
+  const { clientId, clientSecret } = getMlConfig();
+
+  const body = new URLSearchParams({
+    grant_type: "refresh_token",
+    client_id: clientId,
+    client_secret: clientSecret,
+    refresh_token: refreshToken,
+  });
+
+  const response = await fetch("https://api.mercadolibre.com/oauth/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: body.toString(),
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`ML token refresh failed: ${response.status} ${errorText}`);
   }
 
   return (await response.json()) as MlTokenResponse;

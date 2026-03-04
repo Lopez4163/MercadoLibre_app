@@ -2,6 +2,7 @@ import { createHash } from "crypto";
 import { prisma } from "../db/prisma";
 import { sendOrderSoldNotification, sendOutOfStockNotification } from "../notifications/sender";
 import { getItemById, getOrderById } from "./api";
+import { withUserMlAccessToken } from "./tokens";
 
 type MlWebhookBody = {
   user_id?: string | number;
@@ -381,6 +382,8 @@ export async function processMercadoLibreWebhook(input: ProcessMlWebhookInput) {
     select: {
       id: true,
       accessToken: true,
+      refreshToken: true,
+      tokenExpiresAt: true,
     },
   });
 
@@ -397,29 +400,31 @@ export async function processMercadoLibreWebhook(input: ProcessMlWebhookInput) {
     data: { userId: user.id },
   });
 
-  if (matchesOrder) {
-    const orderId = extractOrderId(resource);
-    if (!orderId) {
-      console.log("[ML webhook] missing order id", {
+  return withUserMlAccessToken(user, async (accessToken) => {
+    if (matchesOrder) {
+      const orderId = extractOrderId(resource);
+      if (!orderId) {
+        console.log("[ML webhook] missing order id", {
+          eventKey,
+          resource,
+        });
+        return { processed: false as const, reason: "missing_order_id" as const };
+      }
+
+      return handleOrderEvent({
+        userId: user.id,
+        accessToken,
+        orderId,
         eventKey,
-        resource,
       });
-      return { processed: false as const, reason: "missing_order_id" as const };
     }
 
-    return handleOrderEvent({
+    return handleItemSnapshotEvent({
       userId: user.id,
-      accessToken: user.accessToken,
-      orderId,
+      mlUserId,
+      accessToken,
+      resource,
       eventKey,
     });
-  }
-
-  return handleItemSnapshotEvent({
-    userId: user.id,
-    mlUserId,
-    accessToken: user.accessToken,
-    resource,
-    eventKey,
   });
 }
