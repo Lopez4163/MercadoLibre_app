@@ -18,6 +18,7 @@ model User {
 
   telegramAccount TelegramAccount?
   telegramConnectTokens TelegramConnectToken[]
+  mlWebhookEvents MlWebhookEvent[]
   items           Item[]
 }
 
@@ -49,4 +50,20 @@ model Item {
   threshold Int
   createdAt DateTime @default(now())
   user      User     @relation(fields: [userId], references: [id])
+
+  @@unique([userId, mlItemId])
+}
+
+model MlWebhookEvent {
+  id        String   @id @default(cuid())
+  eventKey  String   @unique
+  userId    String?
+  mlUserId  String?
+  topic     String?
+  resource  String?
+  action    String?
+  createdAt DateTime @default(now())
+  user      User?    @relation(fields: [userId], references: [id])
+
+  @@index([userId, createdAt])
 }

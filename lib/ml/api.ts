@@ -12,6 +12,27 @@ type ItemDetailsEntry = {
   body?: unknown;
 };
 
+export type MlItemSnapshot = {
+  id: string;
+  title: string;
+  available_quantity: number;
+  status?: string;
+  permalink?: string | null;
+};
+
+export type MlOrderLine = {
+  itemId: string;
+  title: string;
+  quantity: number;
+};
+
+export type MlOrderSnapshot = {
+  id: string;
+  status?: string;
+  totalAmount?: number;
+  lines: MlOrderLine[];
+};
+
 function buildAuthHeaders(accessToken: string) {
   return {
     Authorization: `Bearer ${accessToken}`,
@@ -71,7 +92,6 @@ export async function getSellerItemIds(options: {
 }
 
 export async function getItemsByIds(options: { accessToken: string; itemIds: string[] }) {
-  console.log(' ** GETITEMSBYID OPTIONS ** ', options)
   const { accessToken, itemIds } = options;
   const allItems: unknown[] = [];
 
@@ -101,4 +121,92 @@ export async function getItemsByIds(options: { accessToken: string; itemIds: str
   }
 
   return allItems;
+}
+
+export async function getItemById(options: { accessToken: string; itemId: string }) {
+  const items = await getItemsByIds({
+    accessToken: options.accessToken,
+    itemIds: [options.itemId],
+  });
+
+  const [first] = items as Partial<MlItemSnapshot>[];
+  if (!first || typeof first.id !== "string") {
+    return null;
+  }
+
+  const availableQuantity = Number(first.available_quantity);
+  if (!Number.isFinite(availableQuantity)) {
+    return null;
+  }
+
+  return {
+    id: first.id,
+    title: typeof first.title === "string" ? first.title : first.id,
+    available_quantity: availableQuantity,
+    status: typeof first.status === "string" ? first.status : undefined,
+    permalink: typeof first.permalink === "string" ? first.permalink : null,
+  } satisfies MlItemSnapshot;
+}
+
+export async function getOrderById(options: { accessToken: string; orderId: string }) {
+  const response = await fetch(`${ML_API_BASE_URL}/orders/${options.orderId}`, {
+    method: "GET",
+    headers: buildAuthHeaders(options.accessToken),
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`ML order details failed: ${response.status} ${errorText}`);
+  }
+
+  const payload = (await response.json()) as {
+    id?: string | number;
+    status?: string;
+    total_amount?: number;
+    order_items?: Array<{
+      quantity?: number;
+      item?: {
+        id?: string;
+        title?: string;
+      };
+    }>;
+  };
+
+  const orderId = payload.id !== undefined && payload.id !== null ? String(payload.id) : null;
+  if (!orderId) {
+    return null;
+  }
+
+  const lines: MlOrderLine[] = [];
+  for (const orderItem of payload.order_items ?? []) {
+    const rawId = orderItem.item?.id;
+    const itemId = typeof rawId === "string" && rawId.length > 0 ? rawId : null;
+    if (!itemId) {
+      continue;
+    }
+
+    const quantity = Number(orderItem.quantity);
+    if (!Number.isFinite(quantity) || quantity <= 0) {
+      continue;
+    }
+
+    const title =
+      typeof orderItem.item?.title === "string" && orderItem.item.title.length > 0
+        ? orderItem.item.title
+        : itemId;
+
+    lines.push({
+      itemId,
+      title,
+      quantity,
+    });
+  }
+
+  return {
+    id: orderId,
+    status: typeof payload.status === "string" ? payload.status : undefined,
+    totalAmount: Number.isFinite(Number(payload.total_amount)) ? Number(payload.total_amount) : undefined,
+    lines,
+  } satisfies MlOrderSnapshot;
 }
