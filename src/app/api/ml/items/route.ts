@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "../../../../../lib/db/prisma";
 import { getItemsByIds, getSellerItemIds } from "../../../../../lib/ml/api";
+import { withUserMlAccessToken } from "../../../../../lib/ml/tokens";
 
 export async function GET(request: NextRequest) {
-  console.log('** HIT ** ')
   const sessionUserId = request.cookies.get("ml_user_id")?.value;
-  console.log('** GRABING SESSIONUSERID **',sessionUserId)
   if (!sessionUserId) {
     return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
   }
@@ -16,24 +15,26 @@ export async function GET(request: NextRequest) {
       id: true,
       mlUserId: true,
       accessToken: true,
+      refreshToken: true,
+      tokenExpiresAt: true,
     },
   });
-  console.log(' ** USER **', user)
   if (!user) {
     return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
   }
 
   const statusParam = request.nextUrl.searchParams.get("status") ?? "active";
-  console.log(' ** STATUS PARAMS **', statusParam)
 
   try {
-    const itemIds = await getSellerItemIds({
-      accessToken: user.accessToken,
-      mlUserId: user.mlUserId,
-      status: statusParam,
-    });
+    const items = await withUserMlAccessToken(user, async (accessToken) => {
+      const itemIds = await getSellerItemIds({
+        accessToken,
+        mlUserId: user.mlUserId,
+        status: statusParam,
+      });
 
-    const items = await getItemsByIds({ accessToken: user.accessToken, itemIds });
+      return getItemsByIds({ accessToken, itemIds });
+    });
 
     return NextResponse.json(
       {
