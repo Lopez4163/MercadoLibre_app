@@ -17,7 +17,7 @@ export default function InventorySearchBar({ query, onQueryChange }: InventorySe
         value={query}
         onChange={(event) => onQueryChange(event.target.value)}
         placeholder="Type an item name..."
-        className="h-9 w-full border border-[var(--border-1)] bg-[var(--surface-1)] px-3 text-sm text-[var(--text-1)] placeholder:text-[var(--text-3)] focus:outline-none"
+        className="h-9 w-full border border-[var(--border-1)] bg-[var(--bg-0)] px-3 text-sm text-[var(--text-1)] placeholder:text-[var(--text-3)] focus:outline-none"
       />
     </div>
   );

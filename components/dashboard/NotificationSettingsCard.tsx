@@ -18,7 +18,7 @@ export default function NotificationSettingsCard() {
         Configure how and when Telegram alerts are triggered.
       </p>
 
-      <div className="mt-5 divide-y divide-[var(--border-1)] border border-[var(--border-1)] bg-[var(--surface-2)]">
+      <div className="mt-5 divide-y divide-[var(--border-1)] border border-[var(--border-1)] bg-[var(--bg-0)]">
         <label className="flex items-center justify-between px-3 py-3 text-sm">
           <span className="text-[var(--text-1)]">Notify on every item sold</span>
           <input
@@ -62,7 +62,7 @@ export default function NotificationSettingsCard() {
         </div>
       </div>
 
-      <div className="mt-4 border border-[var(--border-1)] bg-[var(--surface-2)] px-3 py-3 text-sm">
+      <div className="mt-4 border border-[var(--border-1)] bg-[var(--bg-0)] px-3 py-3 text-sm">
         <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-3)]">Telegram Channel</p>
         <div className="mt-2 flex items-center gap-2">
           <span className="h-2 w-2 bg-emerald-400" />
@@ -72,7 +72,7 @@ export default function NotificationSettingsCard() {
 
       <button
         type="button"
-        className="mt-4 inline-flex h-10 w-full items-center justify-center border border-[var(--accent)] bg-[var(--accent)] px-3 text-sm font-semibold text-[var(--accent-contrast)] hover:bg-transparent hover:text-[var(--text-1)]"
+        className="mt-4 inline-flex h-10 w-full items-center justify-center border border-[var(--accent)] bg-[var(--accent)] px-3 text-sm font-semibold text-[var(--accent-contrast)] hover:bg-[var(--bg-0)] hover:text-[var(--text-1)]"
       >
         Save Settings (Soon)
       </button>

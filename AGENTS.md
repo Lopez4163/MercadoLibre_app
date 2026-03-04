@@ -17,8 +17,8 @@ Do not build yet:
 3. Order/message notification types beyond stock alerts.
 4. Multi-account support.
 
-## Current Repo Assessment (March 2, 2026)
-Status: **MVP flow in progress, core auth path working, inventory fetch partially working**.
+## Current Repo Assessment (March 4, 2026)
+Status: **MVP flow in progress, core auth path working, inventory fetch working, alert pipeline not complete yet**.
 
 Baseline decisions for this branch:
 1. Keep Next.js `16.1.6` as the active framework version.
@@ -35,14 +35,34 @@ What is already in place:
    - `src/app/api/ml/items/route.ts`
 6. Dashboard page fetches inventory from `/api/ml/items` and renders a table:
    - `src/app/(dashboard)/dashboard/page.tsx`
-7. Test webhook route exists under:
+7. Dashboard UI includes search/sort/pagination + stock status visualization:
+   - Search by item name
+   - Sort by stock/price (asc/desc)
+   - Pagination (`10`, `20`, `all`)
+   - Stock severity badges (`Critical`, `Low`, `Watch`, `Healthy`)
+8. Dashboard includes notification settings MVP skeleton card (UI only, no persistence yet):
+   - `components/dashboard/NotificationSettingsCard.tsx`
+9. Theme system and dark/light toggle are wired globally:
+   - `components/ui/ThemeToggle.tsx`
+   - `src/app/layout.tsx`
+   - `src/app/globals.css`
+10. Test webhook route exists under:
    - `src/app/api/webhooks/mercadolibre/route.ts`
-8. Prisma client helper exists at `lib/db/prisma.ts`.
+11. Prisma client helper exists at `lib/db/prisma.ts`.
 
 Current blockers to resolve before MVP is considered "good to go":
-1. Most domain files are placeholders (empty) in `lib/`, `services/`, `hooks/`, and several route files.
-2. `/api/ml/items` can return `502` when Mercado Libre upstream responds `403` (token/scope/account mismatch still under validation).
-3. App contains out-of-scope scaffolding (billing/dashboard) that should not drive implementation priority for MVP.
+1. ML access-token refresh is not integrated into item fetch path yet; expired tokens can break `/api/ml/items`.
+2. Telegram connect/status/disconnect flow is not complete end-to-end (persist + verify + live status wiring).
+3. Notification settings card is currently UI-only; no backend persistence.
+4. Sold-out/low-stock alert dispatch path still needs full webhook/poller -> Telegram integration validation.
+5. Several domain/service files remain placeholders and should be completed only for MVP-critical paths.
+
+## Immediate Next Steps (Execution Order)
+1. Implement ML token refresh + retry flow in ML API client/routes.
+2. Complete Telegram connect/status/disconnect API and persist `chatId` via Prisma.
+3. Add Telegram test ping on connect and reflect real connection status in dashboard card.
+4. Wire notification settings card to backend persistence.
+5. Validate end-to-end sold-out and low-threshold alerts (webhook/poller to Telegram).
 
 ## Source of Truth for MVP Architecture
 Use these folders first:

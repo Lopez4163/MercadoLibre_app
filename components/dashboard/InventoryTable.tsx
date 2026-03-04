@@ -143,8 +143,8 @@ export default function InventoryTable({ items }: InventoryTableProps) {
   }
 
   return (
-    <section className="border border-[var(--border-1)] bg-[var(--surface-1)] p-5">
-      <div>
+    <section className="border border-[var(--border-1)] bg-[var(--surface-1)]">
+      <div className="p-5">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--text-3)]">
@@ -157,7 +157,7 @@ export default function InventoryTable({ items }: InventoryTableProps) {
         <div className="mt-4">
           <InventorySearchBar query={searchQuery} onQueryChange={onSearchQueryChange} />
         </div>
-        <div className="mt-3 flex flex-wrap items-center gap-3 border border-[var(--border-1)] bg-[var(--surface-2)] p-3 text-sm">
+        <div className="mt-4 flex flex-wrap items-center gap-3 border border-[var(--border-1)] bg-[var(--bg-0)] p-3 text-sm">
           <label htmlFor="sort-by" className="text-[var(--text-2)]">
             Sort
           </label>
@@ -197,7 +197,7 @@ export default function InventoryTable({ items }: InventoryTableProps) {
                 type="button"
                 onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
                 disabled={safeCurrentPage === 1}
-                className="h-9 border border-[var(--border-1)] bg-[var(--surface-2)] px-3 text-xs font-semibold uppercase tracking-wide text-[var(--text-1)] disabled:cursor-not-allowed disabled:opacity-50"
+                className="h-9 border border-[var(--border-1)] bg-[var(--bg-0)] px-3 text-xs font-semibold uppercase tracking-wide text-[var(--text-1)] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Prev
               </button>
@@ -205,7 +205,7 @@ export default function InventoryTable({ items }: InventoryTableProps) {
                 type="button"
                 onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
                 disabled={safeCurrentPage === totalPages}
-                className="h-9 border border-[var(--border-1)] bg-[var(--surface-2)] px-3 text-xs font-semibold uppercase tracking-wide text-[var(--text-1)] disabled:cursor-not-allowed disabled:opacity-50"
+                className="h-9 border border-[var(--border-1)] bg-[var(--bg-0)] px-3 text-xs font-semibold uppercase tracking-wide text-[var(--text-1)] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Next
               </button>
@@ -214,9 +214,9 @@ export default function InventoryTable({ items }: InventoryTableProps) {
         </div>
       </div>
 
-      <div className="mt-4 overflow-x-auto border border-[var(--border-1)] bg-[var(--surface-1)]">
+      <div className="overflow-x-auto border-t border-[var(--border-1)] bg-[var(--surface-1)]">
         <table className="min-w-full text-left text-sm text-[var(--text-2)]">
-          <thead className="bg-[var(--surface-2)] text-[var(--text-1)]">
+          <thead className="bg-[var(--bg-0)] text-[var(--text-1)]">
             <tr>
               <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider">ID</th>
               <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider">Title</th>
@@ -234,7 +234,7 @@ export default function InventoryTable({ items }: InventoryTableProps) {
               </tr>
             )}
             {visibleItems.map((item) => (
-              <tr key={item.id} className="border-t border-[var(--border-1)] even:bg-[var(--surface-2)]">
+              <tr key={item.id} className="border-t border-[var(--border-1)] hover:bg-[var(--surface-2)]">
                 <td className="px-4 py-3 font-mono text-xs text-[var(--text-2)]">{item.id}</td>
                 <td className="px-4 py-3 text-[var(--text-1)]">{item.title ?? "-"}</td>
                 <td className="px-4 py-3 text-[var(--text-1)]">

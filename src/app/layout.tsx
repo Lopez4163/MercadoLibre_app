@@ -17,11 +17,27 @@ export const metadata: Metadata = {
   description: "Mercado Libre notifications dashboard",
 };
 
+const themeInitScript = `
+(() => {
+  try {
+    const savedTheme = window.localStorage.getItem("theme");
+    const systemPrefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+    const theme = savedTheme === "light" || savedTheme === "dark"
+      ? savedTheme
+      : (systemPrefersDark ? "dark" : "light");
+    document.documentElement.setAttribute("data-theme", theme);
+  } catch (_) {}
+})();
+`;
+
 export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+      </head>
       <body className={`${spaceGrotesk.variable} ${jetBrainsMono.variable} antialiased`}>
         {children}
       </body>
