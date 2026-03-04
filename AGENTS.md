@@ -17,30 +17,37 @@ Do not build yet:
 3. Order/message notification types beyond stock alerts.
 4. Multi-account support.
 
-## Current Repo Assessment (March 1, 2026)
-Status: **Partially ready, not feature-ready yet**.
+## Current Repo Assessment (March 2, 2026)
+Status: **MVP flow in progress, core auth path working, inventory fetch partially working**.
+
+Baseline decisions for this branch:
+1. Keep Next.js `16.1.6` as the active framework version.
+2. Keep API route paths under `src/app/api/*` for callback/webhook handling.
 
 What is already in place:
 1. `src/app` App Router scaffold exists.
 2. Prisma schema exists with `User`, `TelegramAccount`, and `Item`.
-3. Test route handlers exist for ML callback and ML webhook under:
+3. ML OAuth callback route is implemented and upserts user tokens:
    - `src/app/api/ml/callback/route.ts`
+4. Logout route exists and clears session cookie:
+   - `src/app/api/auth/logout/route.ts`
+5. ML items route exists and attempts to fetch seller items:
+   - `src/app/api/ml/items/route.ts`
+6. Dashboard page fetches inventory from `/api/ml/items` and renders a table:
+   - `src/app/(dashboard)/dashboard/page.tsx`
+7. Test webhook route exists under:
    - `src/app/api/webhooks/mercadolibre/route.ts`
-4. Prisma client helper exists at `lib/db/prisma.ts`.
+8. Prisma client helper exists at `lib/db/prisma.ts`.
 
-Blocking mismatches to resolve before MVP is considered "good to go":
-1. Framework version mismatch: `package.json` is on Next.js `16.1.6` (target stack says Next.js 14).
-2. Live URL mismatch:
-   - Desired callback: `/callback`
-   - Desired webhook: `/webhook`
-   - Current handlers are under `/api/...`.
-3. Most domain files are placeholders (empty) in `lib/`, `services/`, `hooks/`, and several route files.
-4. App contains out-of-scope scaffolding (billing/dashboard) that should not drive implementation priority for MVP.
+Current blockers to resolve before MVP is considered "good to go":
+1. Most domain files are placeholders (empty) in `lib/`, `services/`, `hooks/`, and several route files.
+2. `/api/ml/items` can return `502` when Mercado Libre upstream responds `403` (token/scope/account mismatch still under validation).
+3. App contains out-of-scope scaffolding (billing/dashboard) that should not drive implementation priority for MVP.
 
 ## Source of Truth for MVP Architecture
 Use these folders first:
 1. `src/app/api/ml/*` for ML OAuth and token lifecycle.
-2. `src/app/api/webhooks/mercadolibre/*` (or `/webhook` route) for webhook ingestion.
+2. `src/app/api/webhooks/mercadolibre/*` for webhook ingestion.
 3. `lib/ml/*` for ML API client and webhook business logic.
 4. `lib/telegram/*` for Telegram message delivery and account linking.
 5. `lib/notifications/sender.ts` for centralized alert dispatch.
