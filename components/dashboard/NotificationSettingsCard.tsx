@@ -287,6 +287,15 @@ export default function NotificationSettingsCard() {
         </div>
       </div>
 
+      <button
+        type="button"
+        onClick={handleSaveSettings}
+        disabled={settingsLoading || settingsSaving || !hasUnsavedChanges}
+        className="mt-4 inline-flex h-10 w-full cursor-pointer items-center justify-center border border-[var(--accent)] bg-[var(--accent)] px-3 text-sm font-semibold text-[var(--accent-contrast)] hover:bg-[var(--bg-0)] hover:text-[var(--text-1)] disabled:cursor-not-allowed disabled:border-[var(--border-1)] disabled:bg-[var(--surface-2)] disabled:text-[var(--text-3)] disabled:hover:bg-[var(--surface-2)] disabled:hover:text-[var(--text-3)]"
+      >
+        {settingsSaving ? "Saving..." : "Save Settings"}
+      </button>
+
       <div className="mt-4 border border-[var(--border-1)] bg-[var(--bg-0)] px-3 py-3 text-sm">
         <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-3)]">Telegram Channel</p>
         <div className="mt-2 flex items-center gap-2">
@@ -296,30 +305,30 @@ export default function NotificationSettingsCard() {
           </p>
         </div>
 
-        <div className="mt-3 flex gap-2">
+        <div className="mt-3 grid grid-cols-3 overflow-hidden border border-[var(--border-1)]">
           <button
             type="button"
-            disabled={telegramActionLoading}
+            disabled={telegramConnected || telegramActionLoading}
             onClick={handleTelegramConnect}
-            className="inline-flex h-9 items-center justify-center border border-[var(--border-1)] px-3 text-xs font-semibold uppercase tracking-wide text-[var(--text-1)] hover:bg-[var(--surface-1)] disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex h-10 cursor-pointer items-center justify-center border-r border-[var(--border-1)] bg-[var(--surface-2)] px-3 text-[11px] font-semibold uppercase tracking-wide text-[var(--text-1)] hover:bg-[var(--surface-1)] disabled:cursor-not-allowed disabled:text-[var(--text-3)] disabled:hover:bg-[var(--surface-2)]"
           >
-            Connect Telegram
-          </button>
-          <button
-            type="button"
-            disabled={!telegramConnected || telegramActionLoading}
-            onClick={handleTelegramDisconnect}
-            className="inline-flex h-9 items-center justify-center border border-[var(--border-1)] px-3 text-xs font-semibold uppercase tracking-wide text-[var(--text-2)] hover:bg-[var(--surface-1)] disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            Disconnect
+            Connect
           </button>
           <button
             type="button"
             disabled={!telegramConnected || telegramActionLoading}
             onClick={handleSendTestPing}
-            className="inline-flex h-9 items-center justify-center border border-[var(--border-1)] px-3 text-xs font-semibold uppercase tracking-wide text-[var(--text-2)] hover:bg-[var(--surface-1)] disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex h-10 cursor-pointer items-center justify-center border-r border-[var(--border-1)] bg-[var(--surface-2)] px-3 text-[11px] font-semibold uppercase tracking-wide text-[var(--text-2)] hover:bg-[var(--surface-1)] disabled:cursor-not-allowed disabled:text-[var(--text-3)] disabled:hover:bg-[var(--surface-2)]"
           >
-            Test Ping
+            Test
+          </button>
+          <button
+            type="button"
+            disabled={!telegramConnected || telegramActionLoading}
+            onClick={handleTelegramDisconnect}
+            className="inline-flex h-10 cursor-pointer items-center justify-center bg-[var(--surface-2)] px-3 text-[11px] font-semibold uppercase tracking-wide text-[var(--text-2)] hover:bg-[var(--surface-1)] disabled:cursor-not-allowed disabled:text-[var(--text-3)] disabled:hover:bg-[var(--surface-2)]"
+          >
+            Disconnect
           </button>
         </div>
 
@@ -332,15 +341,6 @@ export default function NotificationSettingsCard() {
           <p className="mt-3 text-xs text-emerald-300">{telegramSuccess}</p>
         ) : null}
       </div>
-
-      <button
-        type="button"
-        onClick={handleSaveSettings}
-        disabled={settingsLoading || settingsSaving || !hasUnsavedChanges}
-        className="mt-4 inline-flex h-10 w-full items-center justify-center border border-[var(--accent)] bg-[var(--accent)] px-3 text-sm font-semibold text-[var(--accent-contrast)] hover:bg-[var(--bg-0)] hover:text-[var(--text-1)] disabled:cursor-not-allowed disabled:border-[var(--border-1)] disabled:bg-[var(--surface-2)] disabled:text-[var(--text-3)] disabled:hover:bg-[var(--surface-2)] disabled:hover:text-[var(--text-3)]"
-      >
-        {settingsSaving ? "Saving..." : "Save Settings"}
-      </button>
 
       {settingsError ? <p className="mt-2 text-xs text-rose-300">Settings error: {settingsError}</p> : null}
       {settingsSuccess ? <p className="mt-2 text-xs text-emerald-300">{settingsSuccess}</p> : null}
