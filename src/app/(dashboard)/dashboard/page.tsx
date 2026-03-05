@@ -22,42 +22,44 @@ type InventoryResponse = {
 export default function DashboardPage() {
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [lastUpdatedAt, setLastUpdatedAt] = useState<number | null>(null);
 
-  useEffect(() => {
-    let mounted = true;
+  async function loadInventory(options?: { initial?: boolean }) {
+    const initial = options?.initial ?? false;
 
-    async function loadInventory() {
-      try {
+    try {
+      if (initial) {
         setLoading(true);
-        setError(null);
+      } else {
+        setRefreshing(true);
+      }
+      setError(null);
 
-        const response = await fetch("/api/ml/items", { cache: "no-store" });
-        const data = (await response.json()) as InventoryResponse;
+      const response = await fetch("/api/ml/items", { cache: "no-store" });
+      const data = (await response.json()) as InventoryResponse;
 
-        if (!response.ok || !data.ok) {
-          throw new Error(data.message ?? data.error ?? "Failed to fetch inventory");
-        }
+      if (!response.ok || !data.ok) {
+        throw new Error(data.message ?? data.error ?? "Failed to fetch inventory");
+      }
 
-        if (mounted) {
-          setItems(data.items ?? []);
-        }
-      } catch (err) {
-        if (mounted) {
-          const message = err instanceof Error ? err.message : "Unknown error";
-          setError(message);
-        }
-      } finally {
-        if (mounted) {
-          setLoading(false);
-        }
+      setItems(data.items ?? []);
+      setLastUpdatedAt(Date.now());
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unknown error";
+      setError(message);
+    } finally {
+      if (initial) {
+        setLoading(false);
+      } else {
+        setRefreshing(false);
       }
     }
+  }
 
-    loadInventory();
-    return () => {
-      mounted = false;
-    };
+  useEffect(() => {
+    void loadInventory({ initial: true });
   }, []);
 
   const totalItems = items.length;
@@ -103,7 +105,7 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {!loading && !error && (
+      {!loading && (
         <>
           <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
             <article className="border border-[var(--border-1)] bg-[var(--surface-1)] p-4 xl:col-span-1">
@@ -129,7 +131,12 @@ export default function DashboardPage() {
           </section>
 
           <section className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_340px]">
-            <InventoryTable items={items} />
+            <InventoryTable
+              items={items}
+              refreshing={refreshing}
+              lastUpdatedAt={lastUpdatedAt}
+              onRefresh={() => void loadInventory()}
+            />
             <div className="xl:sticky xl:top-24">
               <NotificationSettingsCard />
             </div>
