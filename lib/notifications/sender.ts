@@ -14,7 +14,28 @@ type OrderSoldNotificationInput = {
   }>;
 };
 
+async function getNotificationSettings(userId: string) {
+  return prisma.notificationSettings.upsert({
+    where: { userId },
+    create: {
+      userId,
+    },
+    update: {},
+    select: {
+      notifyEverySale: true,
+      notifySoldOut: true,
+      notifyLowStock: true,
+      lowStockThreshold: true,
+    },
+  });
+}
+
 export async function sendOrderSoldNotification(input: OrderSoldNotificationInput) {
+  const settings = await getNotificationSettings(input.userId);
+  if (!settings.notifyEverySale) {
+    return { sent: false as const, reason: "notify_every_sale_disabled" as const };
+  }
+
   const account = await prisma.telegramAccount.findUnique({
     where: { userId: input.userId },
     select: { chatId: true },
@@ -45,6 +66,11 @@ type OutOfStockNotificationInput = {
 };
 
 export async function sendOutOfStockNotification(input: OutOfStockNotificationInput) {
+  const settings = await getNotificationSettings(input.userId);
+  if (!settings.notifySoldOut) {
+    return { sent: false as const, reason: "notify_sold_out_disabled" as const };
+  }
+
   const account = await prisma.telegramAccount.findUnique({
     where: { userId: input.userId },
     select: { chatId: true },

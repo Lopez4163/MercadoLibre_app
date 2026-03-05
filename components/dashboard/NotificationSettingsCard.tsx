@@ -2,6 +2,13 @@
 
 import { useEffect, useState } from "react";
 
+type NotificationSettingsPayload = {
+  notifyEverySale: boolean;
+  notifySoldOut: boolean;
+  notifyLowStock: boolean;
+  lowStockThreshold: number;
+};
+
 export default function NotificationSettingsCard() {
   const [notifyEverySale, setNotifyEverySale] = useState(false);
   const [notifyLowStock, setNotifyLowStock] = useState(true);
@@ -12,6 +19,10 @@ export default function NotificationSettingsCard() {
   const [telegramActionLoading, setTelegramActionLoading] = useState(false);
   const [telegramError, setTelegramError] = useState<string | null>(null);
   const [telegramSuccess, setTelegramSuccess] = useState<string | null>(null);
+  const [settingsLoading, setSettingsLoading] = useState(true);
+  const [settingsSaving, setSettingsSaving] = useState(false);
+  const [settingsError, setSettingsError] = useState<string | null>(null);
+  const [settingsSuccess, setSettingsSuccess] = useState<string | null>(null);
 
   async function loadTelegramStatus() {
     setTelegramLoading(true);
@@ -36,7 +47,36 @@ export default function NotificationSettingsCard() {
 
   useEffect(() => {
     void loadTelegramStatus();
+    void loadNotificationSettings();
   }, []);
+
+  async function loadNotificationSettings() {
+    setSettingsLoading(true);
+    setSettingsError(null);
+    setSettingsSuccess(null);
+
+    try {
+      const response = await fetch("/api/notifications/settings", { cache: "no-store" });
+      const data = (await response.json()) as {
+        ok?: boolean;
+        error?: string;
+        settings?: NotificationSettingsPayload;
+      };
+
+      if (!response.ok || !data.ok || !data.settings) {
+        throw new Error(data.error ?? "failed_to_load_settings");
+      }
+
+      setNotifyEverySale(Boolean(data.settings.notifyEverySale));
+      setNotifySoldOut(Boolean(data.settings.notifySoldOut));
+      setNotifyLowStock(Boolean(data.settings.notifyLowStock));
+      setLowStockThreshold(Number(data.settings.lowStockThreshold) || 0);
+    } catch (error) {
+      setSettingsError(error instanceof Error ? error.message : "failed_to_load_settings");
+    } finally {
+      setSettingsLoading(false);
+    }
+  }
 
   async function handleTelegramConnect() {
     setTelegramActionLoading(true);
@@ -117,6 +157,47 @@ export default function NotificationSettingsCard() {
     }
   }
 
+  async function handleSaveSettings() {
+    setSettingsSaving(true);
+    setSettingsError(null);
+    setSettingsSuccess(null);
+
+    try {
+      const response = await fetch("/api/notifications/settings", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          notifyEverySale,
+          notifySoldOut,
+          notifyLowStock,
+          lowStockThreshold,
+        }),
+      });
+
+      const data = (await response.json()) as {
+        ok?: boolean;
+        error?: string;
+        settings?: NotificationSettingsPayload;
+      };
+
+      if (!response.ok || !data.ok || !data.settings) {
+        throw new Error(data.error ?? "failed_to_save_settings");
+      }
+
+      setNotifyEverySale(Boolean(data.settings.notifyEverySale));
+      setNotifySoldOut(Boolean(data.settings.notifySoldOut));
+      setNotifyLowStock(Boolean(data.settings.notifyLowStock));
+      setLowStockThreshold(Number(data.settings.lowStockThreshold) || 0);
+      setSettingsSuccess("Notification settings saved.");
+    } catch (error) {
+      setSettingsError(error instanceof Error ? error.message : "failed_to_save_settings");
+    } finally {
+      setSettingsSaving(false);
+    }
+  }
+
   return (
     <section className="border border-[var(--border-1)] bg-[var(--surface-1)] p-5">
       <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--text-3)]">
@@ -134,6 +215,7 @@ export default function NotificationSettingsCard() {
             type="checkbox"
             checked={notifyEverySale}
             onChange={(event) => setNotifyEverySale(event.target.checked)}
+            disabled={settingsLoading || settingsSaving}
             className="h-4 w-4 accent-[var(--accent)]"
           />
         </label>
@@ -144,6 +226,7 @@ export default function NotificationSettingsCard() {
             type="checkbox"
             checked={notifySoldOut}
             onChange={(event) => setNotifySoldOut(event.target.checked)}
+            disabled={settingsLoading || settingsSaving}
             className="h-4 w-4 accent-[var(--accent)]"
           />
         </label>
@@ -154,6 +237,7 @@ export default function NotificationSettingsCard() {
             type="checkbox"
             checked={notifyLowStock}
             onChange={(event) => setNotifyLowStock(event.target.checked)}
+            disabled={settingsLoading || settingsSaving}
             className="h-4 w-4 accent-[var(--accent)]"
           />
         </label>
@@ -164,7 +248,7 @@ export default function NotificationSettingsCard() {
             type="number"
             min={0}
             value={lowStockThreshold}
-            disabled={!notifyLowStock}
+            disabled={!notifyLowStock || settingsLoading || settingsSaving}
             onChange={(event) => setLowStockThreshold(Number(event.target.value))}
             className="h-9 w-24 border border-[var(--border-1)] bg-[var(--surface-1)] px-2 text-right text-[var(--text-1)] disabled:cursor-not-allowed disabled:opacity-60"
           />
@@ -219,14 +303,15 @@ export default function NotificationSettingsCard() {
 
       <button
         type="button"
+        onClick={handleSaveSettings}
+        disabled={settingsLoading || settingsSaving}
         className="mt-4 inline-flex h-10 w-full items-center justify-center border border-[var(--accent)] bg-[var(--accent)] px-3 text-sm font-semibold text-[var(--accent-contrast)] hover:bg-[var(--bg-0)] hover:text-[var(--text-1)]"
       >
-        Save Settings (Soon)
+        {settingsSaving ? "Saving..." : "Save Settings"}
       </button>
 
-      <p className="mt-2 text-xs text-[var(--text-3)]">
-        This is a UI preview; API persistence will be connected next.
-      </p>
+      {settingsError ? <p className="mt-2 text-xs text-rose-300">Settings error: {settingsError}</p> : null}
+      {settingsSuccess ? <p className="mt-2 text-xs text-emerald-300">{settingsSuccess}</p> : null}
     </section>
   );
 }
