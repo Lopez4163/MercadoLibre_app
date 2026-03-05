@@ -13,6 +13,9 @@ type InventoryItem = {
 
 type InventoryTableProps = {
   items: InventoryItem[];
+  refreshing: boolean;
+  lastUpdatedAt: number | null;
+  onRefresh: () => void;
 };
 
 type SortOption = "stock_asc" | "stock_desc" | "price_asc" | "price_desc";
@@ -80,7 +83,7 @@ function getStockLevel(stock?: number) {
   };
 }
 
-export default function InventoryTable({ items }: InventoryTableProps) {
+export default function InventoryTable({ items, refreshing, lastUpdatedAt, onRefresh }: InventoryTableProps) {
   const [pageSize, setPageSize] = useState<"10" | "20" | "all">("10");
   const [currentPage, setCurrentPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState("");
@@ -152,7 +155,21 @@ export default function InventoryTable({ items }: InventoryTableProps) {
             </p>
             <h2 className="mt-1 text-xl font-semibold tracking-tight text-[var(--text-1)]">Items</h2>
           </div>
-          <p className="text-xs text-[var(--text-3)]">Sorted view with real-time stock indicators</p>
+          <div className="flex flex-wrap items-center gap-2">
+            {lastUpdatedAt ? (
+              <p className="text-xs text-[var(--text-3)]">
+                Updated {new Date(lastUpdatedAt).toLocaleTimeString()}
+              </p>
+            ) : null}
+            <button
+              type="button"
+              onClick={onRefresh}
+              disabled={refreshing}
+              className="inline-flex h-8 cursor-pointer items-center border border-[var(--border-1)] bg-[var(--surface-2)] px-3 text-[11px] font-semibold uppercase tracking-wide text-[var(--text-1)] hover:bg-[var(--surface-1)] disabled:cursor-not-allowed disabled:text-[var(--text-3)] disabled:hover:bg-[var(--surface-2)]"
+            >
+              {refreshing ? "Refreshing..." : "Refresh"}
+            </button>
+          </div>
         </div>
         <div className="mt-4">
           <InventorySearchBar query={searchQuery} onQueryChange={onSearchQueryChange} />
