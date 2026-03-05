@@ -241,38 +241,65 @@ export default function NotificationSettingsCard() {
       </p>
 
       <div className="mt-5 divide-y divide-[var(--border-1)] border border-[var(--border-1)] bg-[var(--bg-0)]">
-        <label className="flex items-center justify-between px-3 py-3 text-sm">
+        <div className="flex items-center justify-between px-3 py-3 text-sm">
           <span className="text-[var(--text-1)]">Notify on every item sold</span>
-          <input
-            type="checkbox"
-            checked={notifyEverySale}
-            onChange={(event) => setNotifyEverySale(event.target.checked)}
+          <button
+            type="button"
+            role="switch"
+            aria-checked={notifyEverySale}
+            onClick={() => setNotifyEverySale((current) => !current)}
             disabled={settingsLoading || settingsSaving}
-            className="h-4 w-4 accent-[var(--accent)]"
-          />
-        </label>
+            className={`relative inline-flex h-6 w-11 cursor-pointer items-center border border-[var(--border-1)] transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
+              notifyEverySale ? "bg-emerald-500/30" : "bg-[var(--surface-1)]"
+            }`}
+          >
+            <span
+              className={`h-4 w-4 border border-[var(--border-1)] bg-[var(--text-1)] transition-transform ${
+                notifyEverySale ? "translate-x-[22px]" : "translate-x-[2px]"
+              }`}
+            />
+          </button>
+        </div>
 
-        <label className="flex items-center justify-between px-3 py-3 text-sm">
+        <div className="flex items-center justify-between px-3 py-3 text-sm">
           <span className="text-[var(--text-1)]">Notify on sold out (stock = 0)</span>
-          <input
-            type="checkbox"
-            checked={notifySoldOut}
-            onChange={(event) => setNotifySoldOut(event.target.checked)}
+          <button
+            type="button"
+            role="switch"
+            aria-checked={notifySoldOut}
+            onClick={() => setNotifySoldOut((current) => !current)}
             disabled={settingsLoading || settingsSaving}
-            className="h-4 w-4 accent-[var(--accent)]"
-          />
-        </label>
+            className={`relative inline-flex h-6 w-11 cursor-pointer items-center border border-[var(--border-1)] transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
+              notifySoldOut ? "bg-emerald-500/30" : "bg-[var(--surface-1)]"
+            }`}
+          >
+            <span
+              className={`h-4 w-4 border border-[var(--border-1)] bg-[var(--text-1)] transition-transform ${
+                notifySoldOut ? "translate-x-[22px]" : "translate-x-[2px]"
+              }`}
+            />
+          </button>
+        </div>
 
-        <label className="flex items-center justify-between px-3 py-3 text-sm">
+        <div className="flex items-center justify-between px-3 py-3 text-sm">
           <span className="text-[var(--text-1)]">Notify on low stock</span>
-          <input
-            type="checkbox"
-            checked={notifyLowStock}
-            onChange={(event) => setNotifyLowStock(event.target.checked)}
+          <button
+            type="button"
+            role="switch"
+            aria-checked={notifyLowStock}
+            onClick={() => setNotifyLowStock((current) => !current)}
             disabled={settingsLoading || settingsSaving}
-            className="h-4 w-4 accent-[var(--accent)]"
-          />
-        </label>
+            className={`relative inline-flex h-6 w-11 cursor-pointer items-center border border-[var(--border-1)] transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
+              notifyLowStock ? "bg-emerald-500/30" : "bg-[var(--surface-1)]"
+            }`}
+          >
+            <span
+              className={`h-4 w-4 border border-[var(--border-1)] bg-[var(--text-1)] transition-transform ${
+                notifyLowStock ? "translate-x-[22px]" : "translate-x-[2px]"
+              }`}
+            />
+          </button>
+        </div>
 
         <div className="flex items-center justify-between px-3 py-3 text-sm">
           <span className="text-[var(--text-1)]">Low stock threshold</span>
