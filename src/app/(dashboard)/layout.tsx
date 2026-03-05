@@ -1,8 +1,31 @@
 import ThemeToggle from "../../../components/ui/ThemeToggle";
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
+import { prisma } from "../../../lib/db/prisma";
 
-export default function DashboardLayout({
+export default async function DashboardLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
+  const cookieStore = await cookies();
+  const sessionUserId = cookieStore.get("ml_user_id")?.value;
+
+  if (!sessionUserId) {
+    redirect("/login");
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { id: sessionUserId },
+    select: { id: true, mlUserId: true, accessToken: true, refreshToken: true },
+  });
+
+  if (!user) {
+    redirect("/login");
+  }
+
+  if (!user.mlUserId || !user.accessToken || !user.refreshToken) {
+    redirect("/connect/ml");
+  }
+
   return (
     <section className="min-h-screen">
       <header className="border-b border-[var(--border-1)] bg-[var(--surface-1)]">

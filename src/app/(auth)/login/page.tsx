@@ -1,12 +1,26 @@
 import LoginComponent from "../../../../components/auth/LoginComponent";
-import ThemeToggle from "../../../../components/ui/ThemeToggle";
+import Navbar from "../../../../components/layout/Navbar";
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
+import { prisma } from "../../../../lib/db/prisma";
 
-export default function LoginPage() {
+export default async function LoginPage() {
+  const cookieStore = await cookies();
+  const sessionUserId = cookieStore.get("ml_user_id")?.value;
+
+  if (sessionUserId) {
+    const user = await prisma.user.findUnique({
+      where: { id: sessionUserId },
+      select: { id: true },
+    });
+    if (user) {
+      redirect("/dashboard");
+    }
+  }
+
   return (
-    <main className="min-h-screen px-6 py-10">
-      <div className="mx-auto flex w-full max-w-5xl justify-end">
-        <ThemeToggle />
-      </div>
+    <main className="min-h-screen">
+      <Navbar />
       <LoginComponent />
     </main>
   );
