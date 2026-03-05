@@ -13,86 +13,89 @@ Only build:
 
 Do not build yet:
 1. Payments/subscriptions.
-2. Dashboard/productized UI.
-3. Order/message notification types beyond stock alerts.
-4. Multi-account support.
+2. Multi-account support.
 
-## Current Repo Assessment (March 4, 2026)
-Status: **MVP flow in progress, core auth path working, inventory fetch working, alert pipeline not complete yet**.
+## Current Repo Assessment (March 5, 2026)
+Status: **MVP core flow is operational for OAuth + Telegram + order-based sale alerts; low-stock/reconciler hardening still pending**.
 
-Baseline decisions for this branch:
-1. Keep Next.js `16.1.6` as the active framework version.
-2. Keep API route paths under `src/app/api/*` for callback/webhook handling.
+Baseline decisions:
+1. Keep Next.js `16.1.6`.
+2. Keep API route paths under `src/app/api/*`.
 
-What is already in place:
-1. `src/app` App Router scaffold exists.
-2. Prisma schema exists with `User`, `TelegramAccount`, and `Item`.
-3. ML OAuth callback route is implemented and upserts user tokens:
+## What Is Implemented
+1. ML OAuth callback persists seller tokens:
    - `src/app/api/ml/callback/route.ts`
-4. Logout route exists and clears session cookie:
-   - `src/app/api/auth/logout/route.ts`
-5. ML items route exists and attempts to fetch seller items:
-   - `src/app/api/ml/items/route.ts`
-6. Dashboard page fetches inventory from `/api/ml/items` and renders a table:
+2. ML token refresh + retry is integrated:
+   - `lib/ml/auth.ts` (`refreshAccessToken`)
+   - `lib/ml/tokens.ts` (`withUserMlAccessToken`)
+   - used by `/api/ml/items` and ML webhook processing
+3. Telegram connect flow is complete:
+   - connect link + short one-time code persistence
+   - webhook `/start` linking persists `chatId`
+   - status + disconnect endpoints
+   - test ping endpoint
+   - `src/app/api/telegram/*`
+4. Dashboard inventory UI is functional with search/sort/pagination/status badges:
    - `src/app/(dashboard)/dashboard/page.tsx`
-7. Dashboard UI includes search/sort/pagination + stock status visualization:
-   - Search by item name
-   - Sort by stock/price (asc/desc)
-   - Pagination (`10`, `20`, `all`)
-   - Stock severity badges (`Critical`, `Low`, `Watch`, `Healthy`)
-8. Dashboard includes notification settings MVP skeleton card (UI only, no persistence yet):
+   - `components/dashboard/InventoryTable.tsx`
+5. Notification settings are persisted and wired to UI:
+   - `src/app/api/notifications/settings/route.ts`
    - `components/dashboard/NotificationSettingsCard.tsx`
-9. Theme system and dark/light toggle are wired globally:
-   - `components/ui/ThemeToggle.tsx`
-   - `src/app/layout.tsx`
-   - `src/app/globals.css`
-10. Test webhook route exists under:
+   - Prisma `NotificationSettings` model
+6. ML webhook processing is implemented with idempotency:
    - `src/app/api/webhooks/mercadolibre/route.ts`
-11. Prisma client helper exists at `lib/db/prisma.ts`.
+   - `lib/ml/webhooks.ts`
+   - Prisma `MlWebhookEvent` dedupe key
+7. Sale notifications now use `orders_v2` path:
+   - order fetch + Telegram order alert
+   - dedupe by `orders_v2:<mlUserId>:<orderId>`
+8. Out-of-stock transition alerts are implemented:
+   - transition-based (`prevStock > 0 && currentStock === 0`)
+   - can be triggered via order decrement path or item snapshot path
+9. Item snapshot model and unique upsert path are in place:
+   - Prisma `Item @@unique([userId, mlItemId])`
 
-Current blockers to resolve before MVP is considered "good to go":
-1. ML access-token refresh is not integrated into item fetch path yet; expired tokens can break `/api/ml/items`.
-2. Telegram connect/status/disconnect flow is not complete end-to-end (persist + verify + live status wiring).
-3. Notification settings card is currently UI-only; no backend persistence.
-4. Sold-out/low-stock alert dispatch path still needs full webhook/poller -> Telegram integration validation.
-5. Several domain/service files remain placeholders and should be completed only for MVP-critical paths.
+## Current Behavior Notes
+1. `shipments` and unsupported topics are intentionally ignored (logged).
+2. `fbm_stock_operations` events are currently recognized but logged-only when item ID is not directly extractable from resource.
+3. Alert toggles currently enforced in sender:
+   - `notifyEverySale` gates order sold alerts
+   - `notifySoldOut` gates out-of-stock alerts
+4. `notifyLowStock` and `lowStockThreshold` are persisted but low-stock dispatch logic is not fully implemented yet.
+
+## Remaining Blockers (MVP)
+1. Implement low-stock notification dispatch using persisted threshold.
+2. Add reliable resolver for `fbm_stock_operations` item mapping (or keep reconciler as source of truth correction).
+3. Add lightweight reconciler job (periodic drift correction between local snapshots and ML stock).
+4. Optionally reduce Prisma noise in dev logs (`query` logging level / duplicate event handling ergonomics).
 
 ## Immediate Next Steps (Execution Order)
-1. Implement ML token refresh + retry flow in ML API client/routes.
-2. Complete Telegram connect/status/disconnect API and persist `chatId` via Prisma.
-3. Add Telegram test ping on connect and reflect real connection status in dashboard card.
-4. Wire notification settings card to backend persistence.
-5. Validate end-to-end sold-out and low-threshold alerts (webhook/poller to Telegram).
+1. Implement low-stock transition checks and Telegram dispatch using `NotificationSettings.lowStockThreshold`.
+2. Add periodic reconciler (small batches) to correct snapshot drift and catch missed transitions.
+3. Add stock-operation resolver for `fbm_stock_operations` resources (if item mapping endpoint available in target account scope).
+4. End-to-end test matrix on real events:
+   - `orders_v2` sale
+   - item snapshot update
+   - out-of-stock transition
+   - token refresh on forced expiration
 
-## Source of Truth for MVP Architecture
-Use these folders first:
-1. `src/app/api/ml/*` for ML OAuth and token lifecycle.
-2. `src/app/api/webhooks/mercadolibre/*` for webhook ingestion.
-3. `lib/ml/*` for ML API client and webhook business logic.
-4. `lib/telegram/*` for Telegram message delivery and account linking.
-5. `lib/notifications/sender.ts` for centralized alert dispatch.
-6. `lib/inventory/poller.ts` + `services/inventoryPoller.ts` for periodic threshold checks.
+## Source of Truth Folders
+1. `src/app/api/ml/*` for OAuth/token lifecycle.
+2. `src/app/api/telegram/*` for connect/status/disconnect/test/webhook.
+3. `src/app/api/notifications/*` for user settings persistence.
+4. `src/app/api/webhooks/mercadolibre/*` for ML ingestion.
+5. `lib/ml/*` for ML API and webhook business logic.
+6. `lib/notifications/sender.ts` for gated Telegram dispatch.
 7. `prisma/schema.prisma` + `lib/db/prisma.ts` for persistence.
 
 ## Engineering Rules
-1. Keep changes MVP-only until Phase 1 is complete.
-2. Favor small, testable endpoints and service functions.
-3. Make webhook handlers idempotent (safe on retries).
-4. Do not log secrets/tokens.
-5. Every new alert path must include a failure-safe (no crash on Telegram/API failure).
-
-## React Component Structure
-Goal: **keep implementation simple now, with light scalability for later**.
-
-1. Use proper React component structure for every page/feature.
-2. Keep pages thin: page files should compose components, not hold business logic.
-3. Extract reusable UI into `components/` early when duplicated.
-4. Keep components focused on one responsibility and simple props.
-5. Prefer clear naming (`FeatureName`, `FeatureNameCard`, `FeatureNameSection`) over generic names.
-6. Avoid over-engineering abstractions in MVP; only generalize after a second real use case.
+1. Keep webhook handlers idempotent and safe on retries.
+2. Return `200` from webhooks without leaking secrets.
+3. Do not log access tokens/secrets.
+4. Keep alert dispatch failure-safe (no crash if Telegram fails).
+5. Keep pages thin and business logic in `lib/*` / API routes.
 
 ## Required Environment Variables
-Use `.env`/`.env.local`:
 1. `DATABASE_URL`
 2. `NEXTAUTH_SECRET`
 3. `NEXTAUTH_URL`
@@ -100,16 +103,19 @@ Use `.env`/`.env.local`:
 5. `ML_CLIENT_SECRET`
 6. `ML_REDIRECT_URI`
 7. `TELEGRAM_BOT_TOKEN`
+8. `TELEGRAM_BOT_USERNAME`
+9. `TELEGRAM_WEBHOOK_SECRET`
 
-Optional for later phases:
-1. `MP_ACCESS_TOKEN`
-2. `MP_PUBLIC_KEY`
+Optional:
+1. `APP_BASE_URL`
+2. `MP_ACCESS_TOKEN`
+3. `MP_PUBLIC_KEY`
 
 ## MVP Done Criteria
 MVP is done only when all are true:
-1. Seller connects Mercado Libre via OAuth and tokens are stored.
+1. Seller connects ML via OAuth and tokens are stored/refreshed automatically.
 2. Seller links Telegram chat successfully.
-3. Webhook-driven sold-out event sends Telegram alert.
-4. Poller-driven low-threshold event sends Telegram alert.
-5. Access token refresh works automatically.
-6. Deployed Render routes match configured ML callback/webhook URLs.
+3. `orders_v2` sale events send Telegram alerts with dedupe.
+4. Out-of-stock transitions send Telegram alerts without duplicates.
+5. Low-stock threshold alerts are active and tested.
+6. Reconciler is running (or equivalent drift-correction mechanism) and validated.

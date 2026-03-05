@@ -6,7 +6,7 @@ function getRedirectBase(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const response = NextResponse.redirect(new URL("/login", getRedirectBase(request)));
+  const response = NextResponse.redirect(new URL("/", getRedirectBase(request)));
   response.cookies.set("ml_user_id", "", {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
