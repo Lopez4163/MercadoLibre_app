@@ -37,6 +37,18 @@ export default function NotificationSettingsCard() {
     return () => window.clearTimeout(timer);
   }, [settingsSuccess]);
 
+  useEffect(() => {
+    if (!telegramSuccess) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      setTelegramSuccess(null);
+    }, 3000);
+
+    return () => window.clearTimeout(timer);
+  }, [telegramSuccess]);
+
   async function loadTelegramStatus() {
     setTelegramLoading(true);
     setTelegramError(null);
@@ -146,6 +158,7 @@ export default function NotificationSettingsCard() {
       }
 
       await loadTelegramStatus();
+      setTelegramSuccess("Telegram disconnected.");
     } catch (error) {
       setTelegramError(error instanceof Error ? error.message : "failed_to_disconnect");
     } finally {
