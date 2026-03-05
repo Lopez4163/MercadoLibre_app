@@ -23,6 +23,19 @@ export default function NotificationSettingsCard() {
   const [settingsSaving, setSettingsSaving] = useState(false);
   const [settingsError, setSettingsError] = useState<string | null>(null);
   const [settingsSuccess, setSettingsSuccess] = useState<string | null>(null);
+  const [savedSettings, setSavedSettings] = useState<NotificationSettingsPayload | null>(null);
+
+  useEffect(() => {
+    if (!settingsSuccess) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      setSettingsSuccess(null);
+    }, 3000);
+
+    return () => window.clearTimeout(timer);
+  }, [settingsSuccess]);
 
   async function loadTelegramStatus() {
     setTelegramLoading(true);
@@ -71,6 +84,12 @@ export default function NotificationSettingsCard() {
       setNotifySoldOut(Boolean(data.settings.notifySoldOut));
       setNotifyLowStock(Boolean(data.settings.notifyLowStock));
       setLowStockThreshold(Number(data.settings.lowStockThreshold) || 0);
+      setSavedSettings({
+        notifyEverySale: Boolean(data.settings.notifyEverySale),
+        notifySoldOut: Boolean(data.settings.notifySoldOut),
+        notifyLowStock: Boolean(data.settings.notifyLowStock),
+        lowStockThreshold: Number(data.settings.lowStockThreshold) || 0,
+      });
     } catch (error) {
       setSettingsError(error instanceof Error ? error.message : "failed_to_load_settings");
     } finally {
@@ -190,6 +209,12 @@ export default function NotificationSettingsCard() {
       setNotifySoldOut(Boolean(data.settings.notifySoldOut));
       setNotifyLowStock(Boolean(data.settings.notifyLowStock));
       setLowStockThreshold(Number(data.settings.lowStockThreshold) || 0);
+      setSavedSettings({
+        notifyEverySale: Boolean(data.settings.notifyEverySale),
+        notifySoldOut: Boolean(data.settings.notifySoldOut),
+        notifyLowStock: Boolean(data.settings.notifyLowStock),
+        lowStockThreshold: Number(data.settings.lowStockThreshold) || 0,
+      });
       setSettingsSuccess("Notification settings saved.");
     } catch (error) {
       setSettingsError(error instanceof Error ? error.message : "failed_to_save_settings");
@@ -197,6 +222,13 @@ export default function NotificationSettingsCard() {
       setSettingsSaving(false);
     }
   }
+
+  const hasUnsavedChanges = savedSettings
+    ? savedSettings.notifyEverySale !== notifyEverySale ||
+      savedSettings.notifySoldOut !== notifySoldOut ||
+      savedSettings.notifyLowStock !== notifyLowStock ||
+      savedSettings.lowStockThreshold !== lowStockThreshold
+    : false;
 
   return (
     <section className="border border-[var(--border-1)] bg-[var(--surface-1)] p-5">
@@ -304,8 +336,8 @@ export default function NotificationSettingsCard() {
       <button
         type="button"
         onClick={handleSaveSettings}
-        disabled={settingsLoading || settingsSaving}
-        className="mt-4 inline-flex h-10 w-full items-center justify-center border border-[var(--accent)] bg-[var(--accent)] px-3 text-sm font-semibold text-[var(--accent-contrast)] hover:bg-[var(--bg-0)] hover:text-[var(--text-1)]"
+        disabled={settingsLoading || settingsSaving || !hasUnsavedChanges}
+        className="mt-4 inline-flex h-10 w-full items-center justify-center border border-[var(--accent)] bg-[var(--accent)] px-3 text-sm font-semibold text-[var(--accent-contrast)] hover:bg-[var(--bg-0)] hover:text-[var(--text-1)] disabled:cursor-not-allowed disabled:border-[var(--border-1)] disabled:bg-[var(--surface-2)] disabled:text-[var(--text-3)] disabled:hover:bg-[var(--surface-2)] disabled:hover:text-[var(--text-3)]"
       >
         {settingsSaving ? "Saving..." : "Save Settings"}
       </button>
