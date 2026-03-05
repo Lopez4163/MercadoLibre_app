@@ -1,6 +1,6 @@
 import { prisma } from "../db/prisma";
 import { sendTelegramMessage } from "../telegram/bot";
-import { buildOrderSoldMessage, buildOutOfStockMessage } from "../telegram/messages";
+import { buildLowStockMessage, buildOrderSoldMessage, buildOutOfStockMessage } from "../telegram/messages";
 
 type OrderSoldNotificationInput = {
   userId: string;
@@ -85,6 +85,44 @@ export async function sendOutOfStockNotification(input: OutOfStockNotificationIn
     itemTitle: input.itemTitle,
     previousStock: input.previousStock,
     currentStock: input.currentStock,
+    source: input.source,
+  });
+
+  await sendTelegramMessage(account.chatId, message);
+  return { sent: true as const };
+}
+
+type LowStockNotificationInput = {
+  userId: string;
+  itemId: string;
+  itemTitle: string;
+  previousStock: number;
+  currentStock: number;
+  threshold: number;
+  source: "orders_v2" | "items";
+};
+
+export async function sendLowStockNotification(input: LowStockNotificationInput) {
+  const settings = await getNotificationSettings(input.userId);
+  if (!settings.notifyLowStock) {
+    return { sent: false as const, reason: "notify_low_stock_disabled" as const };
+  }
+
+  const account = await prisma.telegramAccount.findUnique({
+    where: { userId: input.userId },
+    select: { chatId: true },
+  });
+
+  if (!account?.chatId) {
+    return { sent: false as const, reason: "telegram_not_connected" as const };
+  }
+
+  const message = buildLowStockMessage({
+    itemId: input.itemId,
+    itemTitle: input.itemTitle,
+    previousStock: input.previousStock,
+    currentStock: input.currentStock,
+    threshold: input.threshold,
     source: input.source,
   });
 

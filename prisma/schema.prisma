@@ -49,6 +49,7 @@ model Item {
   name      String
   stock     Int
   threshold Int
+  lowStockAlertedAt DateTime?
   createdAt DateTime @default(now())
   user      User     @relation(fields: [userId], references: [id])
 

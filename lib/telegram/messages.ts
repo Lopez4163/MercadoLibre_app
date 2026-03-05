@@ -83,3 +83,21 @@ export function buildOutOfStockMessage(input: {
     `Source: ${input.source}`,
   ].join("\n");
 }
+
+export function buildLowStockMessage(input: {
+  itemId: string;
+  itemTitle: string;
+  previousStock: number;
+  currentStock: number;
+  threshold: number;
+  source: "orders_v2" | "items";
+}) {
+  return [
+    "Low stock",
+    input.itemTitle,
+    `Item: ${input.itemId}`,
+    `Stock: ${input.previousStock} -> ${input.currentStock}`,
+    `Threshold: ${input.threshold}`,
+    `Source: ${input.source}`,
+  ].join("\n");
+}

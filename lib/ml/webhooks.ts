@@ -1,6 +1,10 @@
 import { createHash } from "crypto";
 import { prisma } from "../db/prisma";
-import { sendOrderSoldNotification, sendOutOfStockNotification } from "../notifications/sender";
+import {
+  sendLowStockNotification,
+  sendOrderSoldNotification,
+  sendOutOfStockNotification,
+} from "../notifications/sender";
 import { getItemById, getOrderById } from "./api";
 import { withUserMlAccessToken } from "./tokens";
 
@@ -82,6 +86,20 @@ function isItemSnapshotEvent(topic: string, resource: string, action: string) {
   return combined.includes("item") || combined.includes("/items/") || combined.includes("fbm_stock_operations");
 }
 
+async function getNotificationSettings(userId: string) {
+  return prisma.notificationSettings.upsert({
+    where: { userId },
+    create: {
+      userId,
+    },
+    update: {},
+    select: {
+      notifyLowStock: true,
+      lowStockThreshold: true,
+    },
+  });
+}
+
 async function handleOrderEvent(options: {
   userId: string;
   accessToken: string;
@@ -112,6 +130,9 @@ async function handleOrderEvent(options: {
   }).catch(() => ({ sent: false as const, reason: "telegram_send_failed" as const }));
 
   const lineItemIds = order.lines.map((line) => line.itemId);
+  const notificationSettings = await getNotificationSettings(userId);
+  const threshold = notificationSettings.lowStockThreshold;
+
   const existingSnapshots = await prisma.item.findMany({
     where: {
       userId,
@@ -120,7 +141,7 @@ async function handleOrderEvent(options: {
     select: {
       mlItemId: true,
       stock: true,
-      threshold: true,
+      lowStockAlertedAt: true,
       name: true,
     },
   });
@@ -163,13 +184,54 @@ async function handleOrderEvent(options: {
         mlItemId: line.itemId,
         name: line.title,
         stock: currentStock,
-        threshold: 5,
+        threshold,
+        lowStockAlertedAt: currentStock > threshold ? null : snapshot?.lowStockAlertedAt ?? null,
       },
       update: {
         name: line.title,
         stock: currentStock,
+        threshold,
+        lowStockAlertedAt: currentStock > threshold ? null : snapshot?.lowStockAlertedAt ?? null,
       },
     });
+
+    const crossedIntoLowStock = previousStock > threshold && currentStock <= threshold && currentStock > 0;
+    if (crossedIntoLowStock && !snapshot?.lowStockAlertedAt) {
+      const lowStockNotifyResult = await sendLowStockNotification({
+        userId,
+        itemId: line.itemId,
+        itemTitle: line.title,
+        previousStock,
+        currentStock,
+        threshold,
+        source: "orders_v2",
+      }).catch(() => ({ sent: false as const, reason: "telegram_send_failed" as const }));
+
+      if (lowStockNotifyResult.sent) {
+        await prisma.item.update({
+          where: {
+            userId_mlItemId: {
+              userId,
+              mlItemId: line.itemId,
+            },
+          },
+          data: {
+            lowStockAlertedAt: new Date(),
+          },
+        });
+      }
+
+      console.log("[ML webhook] low-stock transition from order", {
+        eventKey,
+        orderId: order.id,
+        itemId: line.itemId,
+        previousStock,
+        currentStock,
+        threshold,
+        telegramNotified: lowStockNotifyResult.sent,
+        notifyReason: "reason" in lowStockNotifyResult ? lowStockNotifyResult.reason : undefined,
+      });
+    }
 
     if (previousStock > 0 && currentStock === 0) {
       const outNotifyResult = await sendOutOfStockNotification({
@@ -244,6 +306,9 @@ async function handleItemSnapshotEvent(options: {
     return { processed: false as const, reason: "item_fetch_failed" as const };
   }
 
+  const notificationSettings = await getNotificationSettings(userId);
+  const threshold = notificationSettings.lowStockThreshold;
+
   const existing = await prisma.item.findUnique({
     where: {
       userId_mlItemId: {
@@ -253,7 +318,7 @@ async function handleItemSnapshotEvent(options: {
     },
     select: {
       stock: true,
-      threshold: true,
+      lowStockAlertedAt: true,
     },
   });
 
@@ -272,13 +337,53 @@ async function handleItemSnapshotEvent(options: {
       mlItemId: item.id,
       name: item.title,
       stock: currentStock,
-      threshold: 5,
+      threshold,
+      lowStockAlertedAt: currentStock > threshold ? null : existing?.lowStockAlertedAt ?? null,
     },
     update: {
       name: item.title,
       stock: currentStock,
+      threshold,
+      lowStockAlertedAt: currentStock > threshold ? null : existing?.lowStockAlertedAt ?? null,
     },
   });
+
+  const crossedIntoLowStock = previousStock > threshold && currentStock <= threshold && currentStock > 0;
+  if (crossedIntoLowStock && !existing?.lowStockAlertedAt) {
+    const lowStockNotifyResult = await sendLowStockNotification({
+      userId,
+      itemId: item.id,
+      itemTitle: item.title,
+      previousStock,
+      currentStock,
+      threshold,
+      source: "items",
+    }).catch(() => ({ sent: false as const, reason: "telegram_send_failed" as const }));
+
+    if (lowStockNotifyResult.sent) {
+      await prisma.item.update({
+        where: {
+          userId_mlItemId: {
+            userId,
+            mlItemId: item.id,
+          },
+        },
+        data: {
+          lowStockAlertedAt: new Date(),
+        },
+      });
+    }
+
+    console.log("[ML webhook] low-stock transition from stock snapshot", {
+      eventKey,
+      itemId: item.id,
+      previousStock,
+      currentStock,
+      threshold,
+      telegramNotified: lowStockNotifyResult.sent,
+      notifyReason: "reason" in lowStockNotifyResult ? lowStockNotifyResult.reason : undefined,
+    });
+  }
 
   if (previousStock > 0 && currentStock === 0) {
     const notifyResult = await sendOutOfStockNotification({
