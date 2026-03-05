@@ -1,99 +1,92 @@
 # MercadoLibs Agent Guide
 
 ## Product Mission
-Build a SaaS that sends real-time Telegram alerts to Mercado Libre sellers in Colombia when critical inventory events happen.
-
-## Phase 1 (MVP) Scope
-Only build:
-1. Mercado Libre OAuth login/connection.
-2. Telegram bot connection (store `chatId`).
-3. Sold-out alert (`stock === 0`).
-4. Low-stock alert (`stock < threshold`).
-5. ML token refresh flow (access tokens expire ~6h).
-
-Do not build yet:
-1. Payments/subscriptions.
-2. Multi-account support.
+Build a SaaS for Mercado Libre sellers that delivers inventory-risk notifications to Telegram and provides a clean operations dashboard.
 
 ## Current Repo Assessment (March 5, 2026)
-Status: **MVP core flow is operational for OAuth + Telegram + order-based sale alerts; low-stock/reconciler hardening still pending**.
+Status: **MVP+ operational**.
 
-Baseline decisions:
-1. Keep Next.js `16.1.6`.
-2. Keep API route paths under `src/app/api/*`.
+Core flow is implemented:
+1. Mercado Libre OAuth + token persistence.
+2. Automatic ML token refresh + retry on unauthorized.
+3. Telegram connect/disconnect/status/test flow.
+4. Dashboard inventory view (search/sort/pagination/manual refresh).
+5. Notification settings persistence + UI wiring.
+6. Webhook ingestion with idempotency and dedupe.
+7. Order sold, low-stock, and sold-out alert dispatch logic.
+8. Batched reconciler route and core reconcile engine.
 
-## What Is Implemented
-1. ML OAuth callback persists seller tokens:
+## Architecture Snapshot
+1. Dashboard currently reads inventory live from ML via `/api/ml/items`.
+2. Local `Item` table acts as operational snapshot for alerting/reconcile.
+3. ML webhook events are deduped via `MlWebhookEvent.eventKey`.
+4. Telegram delivery is gated by per-user notification settings.
+5. Reconciler compares ML truth to local snapshots and can trigger transitions.
+
+## Implemented Features
+1. OAuth + session cookie:
    - `src/app/api/ml/callback/route.ts`
-2. ML token refresh + retry is integrated:
-   - `lib/ml/auth.ts` (`refreshAccessToken`)
-   - `lib/ml/tokens.ts` (`withUserMlAccessToken`)
-   - used by `/api/ml/items` and ML webhook processing
-3. Telegram connect flow is complete:
-   - connect link + short one-time code persistence
-   - webhook `/start` linking persists `chatId`
-   - status + disconnect endpoints
-   - test ping endpoint
-   - `src/app/api/telegram/*`
-4. Dashboard inventory UI is functional with search/sort/pagination/status badges:
-   - `src/app/(dashboard)/dashboard/page.tsx`
-   - `components/dashboard/InventoryTable.tsx`
-5. Notification settings are persisted and wired to UI:
+   - cookie: `ml_user_id`
+2. Token lifecycle:
+   - `lib/ml/auth.ts`
+   - `lib/ml/tokens.ts`
+3. Telegram integration:
+   - `src/app/api/telegram/connect/route.ts`
+   - `src/app/api/telegram/webhook/route.ts`
+   - `src/app/api/telegram/status/route.ts`
+   - `src/app/api/telegram/disconnect/route.ts`
+   - `src/app/api/telegram/test/route.ts`
+4. Notification settings:
    - `src/app/api/notifications/settings/route.ts`
    - `components/dashboard/NotificationSettingsCard.tsx`
-   - Prisma `NotificationSettings` model
-6. ML webhook processing is implemented with idempotency:
+5. ML webhook processing:
    - `src/app/api/webhooks/mercadolibre/route.ts`
    - `lib/ml/webhooks.ts`
-   - Prisma `MlWebhookEvent` dedupe key
-7. Sale notifications now use `orders_v2` path:
-   - order fetch + Telegram order alert
-   - dedupe by `orders_v2:<mlUserId>:<orderId>`
-8. Out-of-stock transition alerts are implemented:
-   - transition-based (`prevStock > 0 && currentStock === 0`)
-   - can be triggered via order decrement path or item snapshot path
-9. Item snapshot model and unique upsert path are in place:
-   - Prisma `Item @@unique([userId, mlItemId])`
+6. Alert sender/message builders:
+   - `lib/notifications/sender.ts`
+   - `lib/telegram/messages.ts`
+7. Reconciler:
+   - `lib/ml/reconcile.ts`
+   - `src/app/api/jobs/reconcile/route.ts`
+8. Landing/auth/connect UX:
+   - `src/app/page.tsx`
+   - `src/app/connect/ml/page.tsx`
+   - `components/layout/Navbar.tsx`
 
-## Current Behavior Notes
-1. `shipments` and unsupported topics are intentionally ignored (logged).
-2. `fbm_stock_operations` events are currently recognized but logged-only when item ID is not directly extractable from resource.
-3. Alert toggles currently enforced in sender:
-   - `notifyEverySale` gates order sold alerts
-   - `notifySoldOut` gates out-of-stock alerts
-4. `notifyLowStock` and `lowStockThreshold` are persisted but low-stock dispatch logic is not fully implemented yet.
+## Current Alert Behavior
+1. `orders_v2` events send order sold alerts (`notifyEverySale`).
+2. Sold-out alerts fire on transition `previousStock > 0 && currentStock === 0` (`notifySoldOut`).
+3. Low-stock alerts fire on crossing `previousStock > threshold && currentStock <= threshold && currentStock > 0` (`notifyLowStock`).
+4. Duplicate low-stock notifications are prevented with `Item.lowStockAlertedAt`.
+5. Low-stock alert state resets when stock recovers above threshold.
+6. Unsupported topics (e.g., `shipments`) are logged and ignored by design.
 
-## Remaining Blockers (MVP)
-1. Implement low-stock notification dispatch using persisted threshold.
-2. Add reliable resolver for `fbm_stock_operations` item mapping (or keep reconciler as source of truth correction).
-3. Add lightweight reconciler job (periodic drift correction between local snapshots and ML stock).
-4. Optionally reduce Prisma noise in dev logs (`query` logging level / duplicate event handling ergonomics).
+## Data Models In Use
+1. `User` (ML identity + tokens)
+2. `TelegramAccount` (linked chat ID)
+3. `TelegramConnectToken` (short-lived connect code)
+4. `NotificationSettings` (toggles + threshold)
+5. `Item` (snapshot stock, threshold, `lowStockAlertedAt`)
+6. `MlWebhookEvent` (idempotency/dedupe)
 
-## Immediate Next Steps (Execution Order)
-1. Implement low-stock transition checks and Telegram dispatch using `NotificationSettings.lowStockThreshold`.
-2. Add periodic reconciler (small batches) to correct snapshot drift and catch missed transitions.
-3. Add stock-operation resolver for `fbm_stock_operations` resources (if item mapping endpoint available in target account scope).
-4. End-to-end test matrix on real events:
-   - `orders_v2` sale
-   - item snapshot update
-   - out-of-stock transition
-   - token refresh on forced expiration
+## Operations To Wire In Deploy
+1. Set `RECONCILE_CRON_SECRET`.
+2. Optional tuning: `RECONCILE_USER_BATCH_SIZE` (default `10` users/batch).
+3. Schedule every 10 minutes:
+   - `POST /api/jobs/reconcile`
+   - header: `x-reconcile-secret: <RECONCILE_CRON_SECRET>`
 
-## Source of Truth Folders
-1. `src/app/api/ml/*` for OAuth/token lifecycle.
-2. `src/app/api/telegram/*` for connect/status/disconnect/test/webhook.
-3. `src/app/api/notifications/*` for user settings persistence.
-4. `src/app/api/webhooks/mercadolibre/*` for ML ingestion.
-5. `lib/ml/*` for ML API and webhook business logic.
-6. `lib/notifications/sender.ts` for gated Telegram dispatch.
-7. `prisma/schema.prisma` + `lib/db/prisma.ts` for persistence.
+## Known Notes
+1. Dashboard inventory source is still live ML API (not DB-cached UI read).
+2. Local snapshot is used for alerts and reconciliation, not as current table source.
+3. Turbopack `.next` cache corruption can occur in local dev after abrupt restarts; clear `.next` and restart if needed.
+4. Duplicate `orders_v2` inserts are expected and handled via `eventKey` unique dedupe.
 
-## Engineering Rules
-1. Keep webhook handlers idempotent and safe on retries.
-2. Return `200` from webhooks without leaking secrets.
-3. Do not log access tokens/secrets.
-4. Keep alert dispatch failure-safe (no crash if Telegram fails).
-5. Keep pages thin and business logic in `lib/*` / API routes.
+## Remaining Gaps (Post-MVP Hardening)
+1. Ensure reconciler scheduler is active in hosted environment.
+2. Add item-level batch controls if catalog size grows significantly.
+3. Consider DB-cached inventory reads for dashboard as usage scales.
+4. Optional resolver improvement for `fbm_stock_operations` item mapping.
 
 ## Required Environment Variables
 1. `DATABASE_URL`
@@ -105,17 +98,17 @@ Baseline decisions:
 7. `TELEGRAM_BOT_TOKEN`
 8. `TELEGRAM_BOT_USERNAME`
 9. `TELEGRAM_WEBHOOK_SECRET`
+10. `RECONCILE_CRON_SECRET`
 
 Optional:
 1. `APP_BASE_URL`
-2. `MP_ACCESS_TOKEN`
-3. `MP_PUBLIC_KEY`
+2. `RECONCILE_USER_BATCH_SIZE`
+3. `MP_ACCESS_TOKEN`
+4. `MP_PUBLIC_KEY`
 
-## MVP Done Criteria
-MVP is done only when all are true:
-1. Seller connects ML via OAuth and tokens are stored/refreshed automatically.
-2. Seller links Telegram chat successfully.
-3. `orders_v2` sale events send Telegram alerts with dedupe.
-4. Out-of-stock transitions send Telegram alerts without duplicates.
-5. Low-stock threshold alerts are active and tested.
-6. Reconciler is running (or equivalent drift-correction mechanism) and validated.
+## MVP+ Done Criteria
+Consider this phase done when all are true:
+1. OAuth, Telegram connect, webhook ingestion, and notifications are working on live account.
+2. Low-stock and sold-out transitions are validated with real stock changes.
+3. Reconciler endpoint is scheduled every 10 minutes in deployment.
+4. Token refresh works under forced expiration scenarios.
