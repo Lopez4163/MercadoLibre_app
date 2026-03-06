@@ -88,6 +88,43 @@ Core flow is implemented:
 3. Consider DB-cached inventory reads for dashboard as usage scales.
 4. Optional resolver improvement for `fbm_stock_operations` item mapping.
 
+## Next Session TODO: Build Environment Stages
+Goal: establish clear `local` / `staging` / `production` workflow before broader production testing.
+
+1. Create hosted `staging` and `production` environments (keep local for development only).
+2. Provision separate databases for staging and production (no shared DB across environments).
+3. Configure full required env var set in each environment:
+   - `DATABASE_URL`
+   - `NEXTAUTH_SECRET`
+   - `NEXTAUTH_URL`
+   - `ML_CLIENT_ID`
+   - `ML_CLIENT_SECRET`
+   - `ML_REDIRECT_URI`
+   - `TELEGRAM_BOT_TOKEN`
+   - `TELEGRAM_BOT_USERNAME`
+   - `TELEGRAM_WEBHOOK_SECRET`
+   - `RECONCILE_CRON_SECRET`
+4. Ensure staging/prod secrets are different (especially webhook + cron secrets).
+5. Set deployment flow:
+   - Auto deploy to staging from integration branch.
+   - Deploy to production only from protected branch/tag.
+6. Run Prisma migrations in staging and verify schema/indexes.
+7. Wire webhooks to staging first:
+   - Mercado Libre webhook -> staging endpoint
+   - Telegram webhook -> staging endpoint
+8. Configure staging reconcile scheduler:
+   - Every 10 minutes
+   - `POST /api/jobs/reconcile`
+   - header `x-reconcile-secret: <RECONCILE_CRON_SECRET>`
+9. Validate staging for at least 24h with critical flows:
+   - OAuth connect
+   - Telegram connect/status/test/disconnect
+   - sale alerts
+   - low-stock and sold-out transitions
+   - duplicate webhook dedupe
+   - token refresh under expiration
+10. Promote same setup to production only after staging passes.
+
 ## Required Environment Variables
 1. `DATABASE_URL`
 2. `NEXTAUTH_SECRET`
