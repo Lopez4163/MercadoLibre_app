@@ -24,9 +24,9 @@ Core flow is implemented:
 5. Reconciler compares ML truth to local snapshots and can trigger transitions.
 
 ## Implemented Features
-1. OAuth + session cookie:
+1. OAuth + signed session cookie:
    - `src/app/api/ml/callback/route.ts`
-   - cookie: `ml_user_id`
+   - cookie: `ml_session` (httpOnly, signed, expiring)
 2. Token lifecycle:
    - `lib/ml/auth.ts`
    - `lib/ml/tokens.ts`
@@ -136,7 +136,8 @@ Goal: establish clear `local` / `staging` / `production` workflow before broader
    - Deploy to production only from protected branch/tag.
 6. [x] Run Prisma migrations in staging and verify schema/indexes.
 7. [ ] Wire webhooks to staging first:
-   - Mercado Libre webhook -> staging endpoint
+   - Mercado Libre webhook -> staging endpoint with secret query:
+     - `https://<staging-domain>/api/webhooks/mercadolibre?secret=<ML_WEBHOOK_SECRET>`
    - Telegram webhook -> staging endpoint
 8. [ ] Configure staging reconcile scheduler:
    - Every 10 minutes
