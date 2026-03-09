@@ -94,6 +94,21 @@ Core flow is implemented:
 3. [x] Retry/backoff for transient ML/Telegram failures.
 4. [x] Run history table + retention cleanup.
 
+## Must Fix Before Production Access (Cousin/User Beta)
+1. [ ] Replace raw `ml_user_id` cookie trust with signed/encrypted server session auth.
+2. [ ] Add OAuth `state` generation + callback verification (CSRF protection).
+3. [ ] Add Mercado Libre webhook authentication/verification (comparable to Telegram secret gating).
+4. [ ] Verify hosted scheduler end-to-end in staging then production:
+   - Every 10 minutes
+   - `POST /api/jobs/reconcile`
+   - header `x-reconcile-secret: <RECONCILE_CRON_SECRET>`
+5. [ ] Run staging smoke validation before granting access:
+   - OAuth connect
+   - Telegram connect/status/test/disconnect
+   - sale alerts
+   - low-stock/sold-out transitions
+   - webhook dedupe
+
 ## Next Session TODO: Build Environment Stages
 Goal: establish clear `local` / `staging` / `production` workflow before broader production testing.
 
