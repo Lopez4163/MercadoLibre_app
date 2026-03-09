@@ -15,7 +15,7 @@ type ReconcileOptions = {
   userBatchSize?: number;
 };
 
-type ReconcileResult = {
+export type ReconcileResult = {
   usersProcessed: number;
   usersFailed: number;
   itemsChecked: number;

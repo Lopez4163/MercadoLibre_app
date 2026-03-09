@@ -1,3 +1,10 @@
+import {
+  isLikelyTransientNetworkError,
+  isRetryableHttpStatus,
+  RetryableRequestError,
+  withRetry,
+} from "../utils/retry";
+
 export type MlTokenResponse = {
   access_token: string;
   token_type: string;
@@ -25,6 +32,29 @@ function getMlConfig() {
   return { clientId, clientSecret, redirectUri };
 }
 
+async function fetchMlAuthWithRetry(url: string, init: RequestInit, errorPrefix: string) {
+  return withRetry(
+    async () => {
+      const response = await fetch(url, init);
+      if (response.ok) {
+        return response;
+      }
+
+      const errorText = await response.text();
+      const message = `${errorPrefix}: ${response.status} ${errorText}`;
+      if (isRetryableHttpStatus(response.status)) {
+        throw new RetryableRequestError(message);
+      }
+
+      throw new Error(message);
+    },
+    {
+      shouldRetry: (error) =>
+        error instanceof RetryableRequestError || isLikelyTransientNetworkError(error),
+    },
+  );
+}
+
 export async function exchangeAuthorizationCode(code: string): Promise<MlTokenResponse> {
   const { clientId, clientSecret, redirectUri } = getMlConfig();
 
@@ -36,17 +66,16 @@ export async function exchangeAuthorizationCode(code: string): Promise<MlTokenRe
     redirect_uri: redirectUri,
   });
 
-  const response = await fetch("https://api.mercadolibre.com/oauth/token", {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: body.toString(),
-    cache: "no-store",
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`ML token exchange failed: ${response.status} ${errorText}`);
-  }
+  const response = await fetchMlAuthWithRetry(
+    "https://api.mercadolibre.com/oauth/token",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: body.toString(),
+      cache: "no-store",
+    },
+    "ML token exchange failed",
+  );
 
   return (await response.json()) as MlTokenResponse;
 }
@@ -61,33 +90,31 @@ export async function refreshAccessToken(refreshToken: string): Promise<MlTokenR
     refresh_token: refreshToken,
   });
 
-  const response = await fetch("https://api.mercadolibre.com/oauth/token", {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: body.toString(),
-    cache: "no-store",
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`ML token refresh failed: ${response.status} ${errorText}`);
-  }
+  const response = await fetchMlAuthWithRetry(
+    "https://api.mercadolibre.com/oauth/token",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: body.toString(),
+      cache: "no-store",
+    },
+    "ML token refresh failed",
+  );
 
   return (await response.json()) as MlTokenResponse;
 }
 
 export async function getMlUserProfile(accessToken: string): Promise<MlUserResponse> {
-  const response = await fetch("https://api.mercadolibre.com/users/me", {
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
+  const response = await fetchMlAuthWithRetry(
+    "https://api.mercadolibre.com/users/me",
+    {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+      cache: "no-store",
     },
-    cache: "no-store",
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`ML user profile request failed: ${response.status} ${errorText}`);
-  }
+    "ML user profile request failed",
+  );
 
   return (await response.json()) as MlUserResponse;
 }
