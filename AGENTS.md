@@ -97,7 +97,7 @@ Core flow is implemented:
 ## Must Fix Before Production Access (Cousin/User Beta)
 1. [x] Replace raw `ml_user_id` cookie trust with signed/encrypted server session auth.
 2. [x] Add OAuth `state` generation + callback verification (CSRF protection).
-3. [ ] Add Mercado Libre webhook authentication/verification (comparable to Telegram secret gating).
+3. [x] Add Mercado Libre webhook authentication/verification (comparable to Telegram secret gating).
 4. [ ] Verify hosted scheduler end-to-end in staging then production:
    - Every 10 minutes
    - `POST /api/jobs/reconcile`
@@ -108,6 +108,10 @@ Core flow is implemented:
    - sale alerts
    - low-stock/sold-out transitions
    - webhook dedupe
+
+## Optional Production Hardening
+1. [ ] Fail closed for ML webhook auth in production:
+   - If `NODE_ENV=production` and `ML_WEBHOOK_SECRET` is missing, return `500` from `/api/webhooks/mercadolibre` to prevent unauthenticated webhook processing.
 
 ## Next Session TODO: Build Environment Stages
 Goal: establish clear `local` / `staging` / `production` workflow before broader production testing.
@@ -124,6 +128,7 @@ Goal: establish clear `local` / `staging` / `production` workflow before broader
    - `TELEGRAM_BOT_TOKEN`
    - `TELEGRAM_BOT_USERNAME`
    - `TELEGRAM_WEBHOOK_SECRET`
+   - `ML_WEBHOOK_SECRET`
    - `RECONCILE_CRON_SECRET`
 4. [x] Ensure staging/prod secrets are different (especially webhook + cron secrets).
 5. [x] Set deployment flow:
@@ -158,7 +163,8 @@ Goal: establish clear `local` / `staging` / `production` workflow before broader
 7. `TELEGRAM_BOT_TOKEN`
 8. `TELEGRAM_BOT_USERNAME`
 9. `TELEGRAM_WEBHOOK_SECRET`
-10. `RECONCILE_CRON_SECRET`
+10. `ML_WEBHOOK_SECRET`
+11. `RECONCILE_CRON_SECRET`
 
 Optional:
 1. `APP_BASE_URL`
