@@ -113,6 +113,25 @@ Core flow is implemented:
 1. [ ] Fail closed for ML webhook auth in production:
    - If `NODE_ENV=production` and `ML_WEBHOOK_SECRET` is missing, return `500` from `/api/webhooks/mercadolibre` to prevent unauthenticated webhook processing.
 
+## Stripe Flows
+### Recommended SaaS Billing Flow
+1. User logs in via Mercado Libre OAuth and reaches dashboard.
+2. User starts on free tier with clear usage limits.
+3. `Start Free Trial` CTA is shown in dashboard/billing.
+4. On CTA click (or paid-feature gate), backend creates Stripe Checkout Session with trial.
+5. User completes card entry in Stripe Checkout.
+6. Stripe webhook updates local subscription state (`trialing`, `active`, `past_due`, `canceled`).
+7. App access is gated from DB subscription status (webhook-driven source of truth).
+8. Billing page shows plan state, renewal/trial date, and Stripe Billing Portal link.
+
+### Landing Page `Start Free Trial` Link Flow
+1. User clicks `Start Free Trial` on landing page.
+2. If not authenticated, redirect to Mercado Libre OAuth login.
+3. After OAuth callback success, redirect to onboarding billing step (or dashboard trial intent route).
+4. Show short trial confirmation modal/page and continue button.
+5. Backend creates Stripe Checkout Session and redirects user to Stripe.
+6. After Checkout return + webhook confirmation, user lands in dashboard with trial active state.
+
 ## Next Session TODO: Build Environment Stages
 Goal: establish clear `local` / `staging` / `production` workflow before broader production testing.
 
