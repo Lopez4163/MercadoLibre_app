@@ -2,12 +2,13 @@ import ThemeToggle from "../../../components/ui/ThemeToggle";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { prisma } from "../../../lib/db/prisma";
+import { getSessionUserIdFromCookieStore } from "../../../lib/auth/session";
 
 export default async function DashboardLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   const cookieStore = await cookies();
-  const sessionUserId = cookieStore.get("ml_user_id")?.value;
+  const sessionUserId = getSessionUserIdFromCookieStore(cookieStore);
 
   if (!sessionUserId) {
     redirect("/login");

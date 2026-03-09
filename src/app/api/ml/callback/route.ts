@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "../../../../../lib/db/prisma";
 import { exchangeAuthorizationCode, getMlUserProfile } from "../../../../../lib/ml/auth";
+import { setSessionCookie } from "../../../../../lib/auth/session";
 
 function getSafeBaseUrl(request: NextRequest) {
-  console.log("HIT")
   const configured = process.env.APP_BASE_URL ?? process.env.NEXTAUTH_URL;
   const origin = configured ?? request.nextUrl.origin;
 
@@ -48,13 +48,7 @@ export async function GET(request: NextRequest) {
     });
 
     const response = NextResponse.redirect(new URL("/dashboard", getSafeBaseUrl(request)));
-    response.cookies.set("ml_user_id", user.id, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      path: "/",
-      maxAge: 60 * 60 * 24 * 7,
-    });
+    setSessionCookie(response, user.id);
 
     return response;
   } catch (error) {

@@ -4,9 +4,10 @@ import {
   createTelegramConnectCode,
   TELEGRAM_CONNECT_CODE_TTL_SECONDS,
 } from "../../../../../lib/telegram/connect";
+import { getSessionUserIdFromRequest } from "../../../../../lib/auth/session";
 
 export async function GET(request: NextRequest) {
-  const sessionUserId = request.cookies.get("ml_user_id")?.value;
+  const sessionUserId = getSessionUserIdFromRequest(request);
   if (!sessionUserId) {
     return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
   }

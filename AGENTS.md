@@ -95,7 +95,7 @@ Core flow is implemented:
 4. [x] Run history table + retention cleanup.
 
 ## Must Fix Before Production Access (Cousin/User Beta)
-1. [ ] Replace raw `ml_user_id` cookie trust with signed/encrypted server session auth.
+1. [x] Replace raw `ml_user_id` cookie trust with signed/encrypted server session auth.
 2. [ ] Add OAuth `state` generation + callback verification (CSRF protection).
 3. [ ] Add Mercado Libre webhook authentication/verification (comparable to Telegram secret gating).
 4. [ ] Verify hosted scheduler end-to-end in staging then production:

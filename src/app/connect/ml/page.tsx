@@ -2,10 +2,11 @@ import Link from "next/link";
 import { cookies } from "next/headers";
 import Navbar from "../../../../components/layout/Navbar";
 import { prisma } from "../../../../lib/db/prisma";
+import { getSessionUserIdFromCookieStore } from "../../../../lib/auth/session";
 
 export default async function ConnectMercadoLibrePage() {
   const cookieStore = await cookies();
-  const sessionUserId = cookieStore.get("ml_user_id")?.value;
+  const sessionUserId = getSessionUserIdFromCookieStore(cookieStore);
   const connectedUser = sessionUserId
     ? await prisma.user.findUnique({
         where: { id: sessionUserId },

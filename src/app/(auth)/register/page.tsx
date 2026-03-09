@@ -3,12 +3,13 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import Navbar from "../../../../components/layout/Navbar";
 import { prisma } from "../../../../lib/db/prisma";
+import { getSessionUserIdFromCookieStore } from "../../../../lib/auth/session";
 
 const mlAuthUrl = `https://auth.mercadolibre.com.co/authorization?response_type=code&client_id=${process.env.NEXT_PUBLIC_ML_CLIENT_ID}&redirect_uri=${process.env.NEXT_PUBLIC_ML_REDIRECT_URL}&scope=read_listings%20read_orders%20offline_access%20write_listings`;
 
 export default async function RegisterPage() {
   const cookieStore = await cookies();
-  const sessionUserId = cookieStore.get("ml_user_id")?.value;
+  const sessionUserId = getSessionUserIdFromCookieStore(cookieStore);
 
   if (sessionUserId) {
     const user = await prisma.user.findUnique({

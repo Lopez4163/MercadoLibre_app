@@ -2,9 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "../../../../../lib/db/prisma";
 import { getItemsByIds, getSellerItemIds } from "../../../../../lib/ml/api";
 import { withUserMlAccessToken } from "../../../../../lib/ml/tokens";
+import { getSessionUserIdFromRequest } from "../../../../../lib/auth/session";
 
 export async function GET(request: NextRequest) {
-  const sessionUserId = request.cookies.get("ml_user_id")?.value;
+  const sessionUserId = getSessionUserIdFromRequest(request);
   if (!sessionUserId) {
     return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
   }

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "../../../../../lib/db/prisma";
+import { getSessionUserIdFromRequest } from "../../../../../lib/auth/session";
 
 type SettingsPayload = {
   notifyEverySale?: boolean;
@@ -9,7 +10,7 @@ type SettingsPayload = {
 };
 
 async function getSessionUser(request: NextRequest) {
-  const sessionUserId = request.cookies.get("ml_user_id")?.value;
+  const sessionUserId = getSessionUserIdFromRequest(request);
   if (!sessionUserId) {
     return null;
   }
