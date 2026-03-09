@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "../../../../../lib/db/prisma";
 import { exchangeAuthorizationCode, getMlUserProfile } from "../../../../../lib/ml/auth";
 import { setSessionCookie } from "../../../../../lib/auth/session";
+import {
+  clearOAuthStateCookie,
+  getOAuthStateTokenFromRequest,
+  isValidOAuthStatePair,
+} from "../../../../../lib/auth/oauth-state";
 
 function getSafeBaseUrl(request: NextRequest) {
   const configured = process.env.APP_BASE_URL ?? process.env.NEXTAUTH_URL;
@@ -18,9 +23,19 @@ function getSafeBaseUrl(request: NextRequest) {
 export async function GET(request: NextRequest) {
   const url = new URL(request.url);
   const code = url.searchParams.get("code");
+  const state = url.searchParams.get("state") ?? undefined;
+  const stateFromCookie = getOAuthStateTokenFromRequest(request);
 
-  if (!code) {
-    return NextResponse.redirect(new URL("/login?error=missing_code", request.url));
+  if (!code || !state) {
+    const response = NextResponse.redirect(new URL("/login?error=missing_oauth_params", request.url));
+    clearOAuthStateCookie(response);
+    return response;
+  }
+
+  if (!isValidOAuthStatePair(state, stateFromCookie)) {
+    const response = NextResponse.redirect(new URL("/login?error=invalid_oauth_state", request.url));
+    clearOAuthStateCookie(response);
+    return response;
   }
 
   try {
@@ -49,10 +64,13 @@ export async function GET(request: NextRequest) {
 
     const response = NextResponse.redirect(new URL("/dashboard", getSafeBaseUrl(request)));
     setSessionCookie(response, user.id);
+    clearOAuthStateCookie(response);
 
     return response;
   } catch (error) {
     console.error("ML OAuth callback failed:", error);
-    return NextResponse.redirect(new URL("/login?error=oauth_failed", request.url));
+    const response = NextResponse.redirect(new URL("/login?error=oauth_failed", request.url));
+    clearOAuthStateCookie(response);
+    return response;
   }
 }
