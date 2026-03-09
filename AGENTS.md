@@ -132,6 +132,15 @@ Core flow is implemented:
 5. Backend creates Stripe Checkout Session and redirects user to Stripe.
 6. After Checkout return + webhook confirmation, user lands in dashboard with trial active state.
 
+### Local Stripe Listener (Dev)
+1. Start app locally (`npm run dev` or `npm run dev:ngrok`).
+2. Run Stripe listener to local app webhook route:
+   - `stripe listen --forward-to http://localhost:3000/api/billing/webhook`
+3. Copy the shown webhook signing secret (`whsec_...`) into local env:
+   - `STRIPE_WEBHOOK_SECRET=<whsec_from_stripe_listen>`
+4. Trigger success event for webhook testing:
+   - `stripe trigger checkout.session.completed`
+
 ## Next Session TODO: Build Environment Stages
 Goal: establish clear `local` / `staging` / `production` workflow before broader production testing.
 
