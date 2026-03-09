@@ -88,6 +88,12 @@ Core flow is implemented:
 3. Consider DB-cached inventory reads for dashboard as usage scales.
 4. Optional resolver improvement for `fbm_stock_operations` item mapping.
 
+## Reconciler Hardening Status
+1. [x] Single-run lock (no overlap).
+2. [ ] Scheduler verified end-to-end (runs every 10 min with secret).
+3. [x] Retry/backoff for transient ML/Telegram failures.
+4. [x] Run history table + retention cleanup.
+
 ## Next Session TODO: Build Environment Stages
 Goal: establish clear `local` / `staging` / `production` workflow before broader production testing.
 

@@ -1,3 +1,10 @@
+import {
+  isLikelyTransientNetworkError,
+  isRetryableHttpStatus,
+  RetryableRequestError,
+  withRetry,
+} from "../utils/retry";
+
 const ML_API_BASE_URL = "https://api.mercadolibre.com";
 const SEARCH_PAGE_SIZE = 100;
 const ITEM_DETAILS_BATCH_SIZE = 20;
@@ -39,6 +46,29 @@ function buildAuthHeaders(accessToken: string) {
   };
 }
 
+async function fetchMlWithRetry(url: string, init: RequestInit, errorPrefix: string) {
+  return withRetry(
+    async () => {
+      const response = await fetch(url, init);
+      if (response.ok) {
+        return response;
+      }
+
+      const errorText = await response.text();
+      const message = `${errorPrefix}: ${response.status} ${errorText}`;
+      if (isRetryableHttpStatus(response.status)) {
+        throw new RetryableRequestError(message);
+      }
+
+      throw new Error(message);
+    },
+    {
+      shouldRetry: (error) =>
+        error instanceof RetryableRequestError || isLikelyTransientNetworkError(error),
+    },
+  );
+}
+
 export async function getSellerItemIds(options: {
   accessToken: string;
   mlUserId: string;
@@ -58,16 +88,15 @@ export async function getSellerItemIds(options: {
       searchUrl.searchParams.set("scroll_id", scrollId);
     }
 
-    const response = await fetch(searchUrl.toString(), {
-      method: "GET",
-      headers: buildAuthHeaders(accessToken),
-      cache: "no-store",
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`ML items search failed: ${response.status} ${errorText}`);
-    }
+    const response = await fetchMlWithRetry(
+      searchUrl.toString(),
+      {
+        method: "GET",
+        headers: buildAuthHeaders(accessToken),
+        cache: "no-store",
+      },
+      "ML items search failed",
+    );
 
     const payload = (await response.json()) as SellerItemsSearchResponse | null;
     if (!payload) {
@@ -100,16 +129,15 @@ export async function getItemsByIds(options: { accessToken: string; itemIds: str
     const itemsUrl = new URL(`${ML_API_BASE_URL}/items`);
     itemsUrl.searchParams.set("ids", idsBatch.join(","));
 
-    const response = await fetch(itemsUrl.toString(), {
-      method: "GET",
-      headers: buildAuthHeaders(accessToken),
-      cache: "no-store",
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`ML item details failed: ${response.status} ${errorText}`);
-    }
+    const response = await fetchMlWithRetry(
+      itemsUrl.toString(),
+      {
+        method: "GET",
+        headers: buildAuthHeaders(accessToken),
+        cache: "no-store",
+      },
+      "ML item details failed",
+    );
 
     const payload = (await response.json()) as ItemDetailsEntry[];
 
@@ -149,16 +177,15 @@ export async function getItemById(options: { accessToken: string; itemId: string
 }
 
 export async function getOrderById(options: { accessToken: string; orderId: string }) {
-  const response = await fetch(`${ML_API_BASE_URL}/orders/${options.orderId}`, {
-    method: "GET",
-    headers: buildAuthHeaders(options.accessToken),
-    cache: "no-store",
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`ML order details failed: ${response.status} ${errorText}`);
-  }
+  const response = await fetchMlWithRetry(
+    `${ML_API_BASE_URL}/orders/${options.orderId}`,
+    {
+      method: "GET",
+      headers: buildAuthHeaders(options.accessToken),
+      cache: "no-store",
+    },
+    "ML order details failed",
+  );
 
   const payload = (await response.json()) as {
     id?: string | number;
