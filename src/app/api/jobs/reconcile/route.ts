@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { reconcileInventorySnapshots } from "../../../../../lib/ml/reconcile";
+import { acquireReconcileRunLock, releaseReconcileRunLock } from "../../../../../lib/ml/reconcile-lock";
 
 function isAuthorized(request: NextRequest) {
   const secret = process.env.RECONCILE_CRON_SECRET;
@@ -14,6 +15,14 @@ function isAuthorized(request: NextRequest) {
 export async function POST(request: NextRequest) {
   if (!isAuthorized(request)) {
     return NextResponse.json({ ok: false, error: "forbidden" }, { status: 403 });
+  }
+
+  const lock = await acquireReconcileRunLock();
+  if (!lock) {
+    return NextResponse.json(
+      { ok: false, error: "already_running", message: "reconcile job already in progress" },
+      { status: 409 },
+    );
   }
 
   const startedAt = Date.now();
@@ -40,5 +49,11 @@ export async function POST(request: NextRequest) {
       },
       { status: 500 },
     );
+  } finally {
+    try {
+      await releaseReconcileRunLock(lock);
+    } catch (error) {
+      console.error("[ML reconcile] lock release failed", error);
+    }
   }
 }
