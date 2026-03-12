@@ -42,6 +42,18 @@ export type MlOrderSnapshot = {
 
 export type MlOrderSaleType = "flex" | "full" | "other";
 
+export type MlOrderShipment = {
+  id: string;
+  logisticType: string | null;
+  orderId?: string | null;
+};
+
+export type MlShipmentLabelDocument = {
+  contentType: string;
+  fileName: string;
+  data: ArrayBuffer;
+};
+
 function buildAuthHeaders(accessToken: string) {
   return {
     Authorization: `Bearer ${accessToken}`,
@@ -294,7 +306,25 @@ function extractShipmentCandidates(payload: unknown) {
   });
 }
 
-export async function getOrderSaleType(options: { accessToken: string; orderId: string }) {
+function getFileNameFromContentDisposition(contentDisposition: string | null, fallbackFileName: string) {
+  if (!contentDisposition) {
+    return fallbackFileName;
+  }
+
+  const utf8Match = contentDisposition.match(/filename\*=UTF-8''([^;]+)/i);
+  if (utf8Match?.[1]) {
+    return decodeURIComponent(utf8Match[1]);
+  }
+
+  const asciiMatch = contentDisposition.match(/filename="?([^";]+)"?/i);
+  if (asciiMatch?.[1]) {
+    return asciiMatch[1];
+  }
+
+  return fallbackFileName;
+}
+
+export async function getOrderShipments(options: { accessToken: string; orderId: string }) {
   const shipmentsResponse = await fetchMlWithRetry(
     `${ML_API_BASE_URL}/orders/${options.orderId}/shipments`,
     {
@@ -306,21 +336,17 @@ export async function getOrderSaleType(options: { accessToken: string; orderId: 
   );
 
   const shipmentsPayload = (await shipmentsResponse.json()) as unknown;
-  const candidates = extractShipmentCandidates(shipmentsPayload);
-  for (const candidate of candidates) {
-    const mapped = mapLogisticType(candidate.logisticType);
-    if (mapped) {
-      return mapped;
-    }
-  }
+  return extractShipmentCandidates(shipmentsPayload)
+    .filter((candidate): candidate is MlOrderShipment => typeof candidate.id === "string" && candidate.id.length > 0)
+    .map((candidate) => ({
+      id: candidate.id,
+      logisticType: candidate.logisticType,
+    }));
+}
 
-  const firstShipmentId = candidates.find((candidate) => candidate.id)?.id;
-  if (!firstShipmentId) {
-    return null;
-  }
-
+export async function getShipmentById(options: { accessToken: string; shipmentId: string }) {
   const shipmentResponse = await fetchMlWithRetry(
-    `${ML_API_BASE_URL}/shipments/${firstShipmentId}`,
+    `${ML_API_BASE_URL}/shipments/${options.shipmentId}`,
     {
       method: "GET",
       headers: buildAuthHeaders(options.accessToken),
@@ -329,8 +355,102 @@ export async function getOrderSaleType(options: { accessToken: string; orderId: 
     "ML shipment details failed",
   );
 
-  const shipmentPayload = (await shipmentResponse.json()) as { logistic_type?: unknown } | null;
+  const shipmentPayload = (await shipmentResponse.json()) as
+    | { id?: unknown; logistic_type?: unknown; order_id?: unknown; order?: { id?: unknown } | null }
+    | null;
+  if (!shipmentPayload) {
+    return null;
+  }
+
+  const shipmentId =
+    (typeof shipmentPayload.id === "string" && shipmentPayload.id.length > 0) ||
+    (typeof shipmentPayload.id === "number" && Number.isFinite(shipmentPayload.id))
+      ? String(shipmentPayload.id)
+      : options.shipmentId;
+
   const logisticType =
-    shipmentPayload && typeof shipmentPayload.logistic_type === "string" ? shipmentPayload.logistic_type : null;
-  return mapLogisticType(logisticType);
+    typeof shipmentPayload.logistic_type === "string" && shipmentPayload.logistic_type.length > 0
+      ? shipmentPayload.logistic_type
+      : null;
+  const orderIdRaw =
+    shipmentPayload.order_id ??
+    (shipmentPayload.order && typeof shipmentPayload.order === "object" ? shipmentPayload.order.id : null);
+  const orderId =
+    (typeof orderIdRaw === "string" && orderIdRaw.length > 0) ||
+    (typeof orderIdRaw === "number" && Number.isFinite(orderIdRaw))
+      ? String(orderIdRaw)
+      : null;
+
+  return {
+    id: shipmentId,
+    logisticType,
+    orderId,
+  } satisfies MlOrderShipment;
+}
+
+export async function getShipmentLabelDocument(options: { accessToken: string; shipmentId: string }) {
+  const labelUrl = new URL(`${ML_API_BASE_URL}/shipment_labels`);
+  labelUrl.searchParams.set("shipment_ids", options.shipmentId);
+  labelUrl.searchParams.set("response_type", "pdf");
+
+  const labelResponse = await fetchMlWithRetry(
+    labelUrl.toString(),
+    {
+      method: "GET",
+      headers: buildAuthHeaders(options.accessToken),
+      cache: "no-store",
+    },
+    "ML shipment label failed",
+  );
+
+  const contentType = labelResponse.headers.get("content-type") ?? "application/pdf";
+  const fileName = getFileNameFromContentDisposition(
+    labelResponse.headers.get("content-disposition"),
+    `shipment-label-${options.shipmentId}.pdf`,
+  );
+
+  return {
+    contentType,
+    fileName,
+    data: await labelResponse.arrayBuffer(),
+  } satisfies MlShipmentLabelDocument;
+}
+
+export async function getPrimaryOrderShipment(options: { accessToken: string; orderId: string }) {
+  const shipments = await getOrderShipments(options);
+  if (shipments.length === 0) {
+    return null;
+  }
+
+  const firstWithLogisticType = shipments.find((shipment) => shipment.logisticType);
+  if (firstWithLogisticType) {
+    return firstWithLogisticType;
+  }
+
+  return getShipmentById({
+    accessToken: options.accessToken,
+    shipmentId: shipments[0].id,
+  });
+}
+
+export async function getOrderSaleType(options: { accessToken: string; orderId: string }) {
+  const shipments = await getOrderShipments(options);
+  const candidates = shipments;
+  for (const candidate of candidates) {
+    const mapped = mapLogisticType(candidate.logisticType);
+    if (mapped) {
+      return mapped;
+    }
+  }
+
+  const firstShipmentId = candidates[0]?.id;
+  if (!firstShipmentId) {
+    return null;
+  }
+
+  const shipment = await getShipmentById({
+    accessToken: options.accessToken,
+    shipmentId: firstShipmentId,
+  });
+  return mapLogisticType(shipment?.logisticType);
 }

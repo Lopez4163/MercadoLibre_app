@@ -1,7 +1,13 @@
 import { prisma } from "../db/prisma";
 import type { MlOrderSaleType } from "../ml/api";
+import type { TelegramInlineButton } from "../telegram/bot";
 import { sendTelegramMessage } from "../telegram/bot";
-import { buildLowStockMessage, buildOrderSoldMessage, buildOutOfStockMessage } from "../telegram/messages";
+import {
+  buildLowStockMessage,
+  buildOrderLabelReadyMessage,
+  buildOrderSoldMessage,
+  buildOutOfStockMessage,
+} from "../telegram/messages";
 
 type OrderSoldNotificationInput = {
   userId: string;
@@ -9,6 +15,7 @@ type OrderSoldNotificationInput = {
   status?: string;
   totalAmount?: number;
   saleType?: MlOrderSaleType | null;
+  inlineButtons?: TelegramInlineButton[];
   lines: Array<{
     itemId: string;
     title: string;
@@ -55,7 +62,9 @@ export async function sendOrderSoldNotification(input: OrderSoldNotificationInpu
     lines: input.lines,
   });
 
-  await sendTelegramMessage(account.chatId, message);
+  await sendTelegramMessage(account.chatId, message, {
+    inlineButtons: input.inlineButtons,
+  });
   return { sent: true as const };
 }
 
@@ -66,6 +75,13 @@ type OutOfStockNotificationInput = {
   previousStock: number;
   currentStock: number;
   source: "orders_v2" | "items";
+};
+
+type OrderLabelReadyNotificationInput = {
+  userId: string;
+  orderId: string;
+  shipmentId: string;
+  inlineButtons: TelegramInlineButton[];
 };
 
 export async function sendOutOfStockNotification(input: OutOfStockNotificationInput) {
@@ -92,6 +108,32 @@ export async function sendOutOfStockNotification(input: OutOfStockNotificationIn
   });
 
   await sendTelegramMessage(account.chatId, message);
+  return { sent: true as const };
+}
+
+export async function sendOrderLabelReadyNotification(input: OrderLabelReadyNotificationInput) {
+  const settings = await getNotificationSettings(input.userId);
+  if (!settings.notifyEverySale) {
+    return { sent: false as const, reason: "notify_every_sale_disabled" as const };
+  }
+
+  const account = await prisma.telegramAccount.findUnique({
+    where: { userId: input.userId },
+    select: { chatId: true },
+  });
+
+  if (!account?.chatId) {
+    return { sent: false as const, reason: "telegram_not_connected" as const };
+  }
+
+  const message = buildOrderLabelReadyMessage({
+    orderId: input.orderId,
+    shipmentId: input.shipmentId,
+  });
+
+  await sendTelegramMessage(account.chatId, message, {
+    inlineButtons: input.inlineButtons,
+  });
   return { sent: true as const };
 }
 

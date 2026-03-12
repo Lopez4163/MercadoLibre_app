@@ -117,6 +117,19 @@ export function buildOrderSoldMessage(input: {
   return message.join("\n");
 }
 
+export function buildOrderLabelReadyMessage(input: {
+  orderId: string;
+  shipmentId: string;
+}) {
+  return [
+    "📄 Label ready",
+    "",
+    `🧾 Orden: ${input.orderId}`,
+    `📦 Envio: ${input.shipmentId}`,
+    "La guia ya esta disponible para descargar.",
+  ].join("\n");
+}
+
 export function buildOutOfStockMessage(input: {
   itemId: string;
   itemTitle: string;
