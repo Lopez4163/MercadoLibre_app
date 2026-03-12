@@ -1,9 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "../../../../../lib/db/prisma";
 import { exchangeAuthorizationCode, getMlUserProfile } from "../../../../../lib/ml/auth";
+import { setSessionCookie } from "../../../../../lib/auth/session";
+import {
+  clearOAuthStateCookie,
+  getOAuthStateReturnTo,
+  getOAuthStateTokenFromRequest,
+  isValidOAuthStatePair,
+} from "../../../../../lib/auth/oauth-state";
+import { normalizeNextPath } from "../../../../../lib/auth/next-path";
 
 function getSafeBaseUrl(request: NextRequest) {
-  console.log("HIT")
   const configured = process.env.APP_BASE_URL ?? process.env.NEXTAUTH_URL;
   const origin = configured ?? request.nextUrl.origin;
 
@@ -18,9 +25,19 @@ function getSafeBaseUrl(request: NextRequest) {
 export async function GET(request: NextRequest) {
   const url = new URL(request.url);
   const code = url.searchParams.get("code");
+  const state = url.searchParams.get("state") ?? undefined;
+  const stateFromCookie = getOAuthStateTokenFromRequest(request);
 
-  if (!code) {
-    return NextResponse.redirect(new URL("/login?error=missing_code", request.url));
+  if (!code || !state) {
+    const response = NextResponse.redirect(new URL("/login?error=missing_oauth_params", request.url));
+    clearOAuthStateCookie(response);
+    return response;
+  }
+
+  if (!isValidOAuthStatePair(state, stateFromCookie)) {
+    const response = NextResponse.redirect(new URL("/login?error=invalid_oauth_state", request.url));
+    clearOAuthStateCookie(response);
+    return response;
   }
 
   try {
@@ -47,18 +64,17 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    const response = NextResponse.redirect(new URL("/dashboard", getSafeBaseUrl(request)));
-    response.cookies.set("ml_user_id", user.id, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      path: "/",
-      maxAge: 60 * 60 * 24 * 7,
-    });
+    const requestedPath = normalizeNextPath(getOAuthStateReturnTo(stateFromCookie));
+    const destinationPath = requestedPath ?? "/dashboard";
+    const response = NextResponse.redirect(new URL(destinationPath, getSafeBaseUrl(request)));
+    setSessionCookie(response, user.id);
+    clearOAuthStateCookie(response);
 
     return response;
   } catch (error) {
     console.error("ML OAuth callback failed:", error);
-    return NextResponse.redirect(new URL("/login?error=oauth_failed", request.url));
+    const response = NextResponse.redirect(new URL("/login?error=oauth_failed", request.url));
+    clearOAuthStateCookie(response);
+    return response;
   }
 }

@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { processMercadoLibreWebhook } from "../../../../../lib/ml/webhooks";
+import {
+  getExpectedMlWebhookSecret,
+  getProvidedMlWebhookSecret,
+  verifyMlWebhookSecret,
+} from "../../../../../lib/ml/webhook-auth";
 
 export async function GET() {
   return NextResponse.json(
@@ -13,6 +18,15 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
+  const isAuthorized = verifyMlWebhookSecret({
+    expectedSecret: getExpectedMlWebhookSecret(),
+    providedSecret: getProvidedMlWebhookSecret(request),
+  });
+
+  if (!isAuthorized) {
+    return NextResponse.json({ ok: false, error: "forbidden" }, { status: 403 });
+  }
+
   let body: unknown = null;
   try {
     body = await request.json();

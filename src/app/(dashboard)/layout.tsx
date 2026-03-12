@@ -1,13 +1,15 @@
 import ThemeToggle from "../../../components/ui/ThemeToggle";
+import Link from "next/link";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { prisma } from "../../../lib/db/prisma";
+import { getSessionUserIdFromCookieStore } from "../../../lib/auth/session";
 
 export default async function DashboardLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   const cookieStore = await cookies();
-  const sessionUserId = cookieStore.get("ml_user_id")?.value;
+  const sessionUserId = getSessionUserIdFromCookieStore(cookieStore);
 
   if (!sessionUserId) {
     redirect("/login");
@@ -37,6 +39,18 @@ export default async function DashboardLayout({
             <h1 className="text-lg font-semibold tracking-tight text-[var(--text-1)]">Seller Operations</h1>
           </div>
           <div className="flex items-center gap-3">
+            <Link
+              href="/dashboard"
+              className="inline-flex h-9 items-center border border-[var(--border-1)] bg-[var(--surface-2)] px-3 text-sm font-semibold text-[var(--text-1)] hover:bg-[var(--surface-1)]"
+            >
+              Dashboard
+            </Link>
+            <Link
+              href="/billing"
+              className="inline-flex h-9 items-center border border-[var(--border-1)] bg-[var(--surface-2)] px-3 text-sm font-semibold text-[var(--text-1)] hover:bg-[var(--surface-1)]"
+            >
+              Billing
+            </Link>
             <ThemeToggle />
             <form action="/api/auth/logout" method="post">
               <button

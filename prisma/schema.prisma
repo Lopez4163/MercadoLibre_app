@@ -11,6 +11,7 @@ model User {
   id             String           @id @default(cuid())
   email          String           @unique
   mlUserId       String           @unique
+  stripeCustomerId String?        @unique
   accessToken    String
   refreshToken   String
   tokenExpiresAt DateTime
@@ -21,6 +22,7 @@ model User {
   telegramConnectTokens TelegramConnectToken[]
   mlWebhookEvents MlWebhookEvent[]
   items           Item[]
+  billingSubscription BillingSubscription?
 }
 
 model TelegramAccount {
@@ -108,4 +110,25 @@ model ReconcileRun {
 
   @@index([startedAt])
   @@index([status, startedAt])
+}
+
+model BillingSubscription {
+  id                  String   @id @default(cuid())
+  userId              String   @unique
+  stripeSubscriptionId String  @unique
+  stripeCustomerId    String
+  status              String
+  priceId             String?
+  currentPeriodStart  DateTime?
+  currentPeriodEnd    DateTime?
+  cancelAtPeriodEnd   Boolean  @default(false)
+  canceledAt          DateTime?
+  trialStart          DateTime?
+  trialEnd            DateTime?
+  latestInvoiceId     String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  user                User     @relation(fields: [userId], references: [id])
+
+  @@index([status, currentPeriodEnd])
 }

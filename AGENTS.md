@@ -24,9 +24,9 @@ Core flow is implemented:
 5. Reconciler compares ML truth to local snapshots and can trigger transitions.
 
 ## Implemented Features
-1. OAuth + session cookie:
+1. OAuth + signed session cookie:
    - `src/app/api/ml/callback/route.ts`
-   - cookie: `ml_user_id`
+   - cookie: `ml_session` (httpOnly, signed, expiring)
 2. Token lifecycle:
    - `lib/ml/auth.ts`
    - `lib/ml/tokens.ts`
@@ -52,6 +52,17 @@ Core flow is implemented:
    - `src/app/page.tsx`
    - `src/app/connect/ml/page.tsx`
    - `components/layout/Navbar.tsx`
+9. Stripe billing core:
+   - `src/app/api/billing/checkout/route.ts`
+   - `src/app/api/billing/webhook/route.ts`
+   - `src/app/api/billing/status/route.ts`
+   - `lib/stripe/client.ts`
+   - `lib/billing/entitlements.ts`
+10. Trial entry and post-login routing:
+   - `src/app/start-trial/page.tsx`
+   - `lib/auth/next-path.ts`
+   - `src/app/api/ml/oauth/start/route.ts` (`next` support)
+   - `src/app/api/ml/callback/route.ts` (signed return path handling)
 
 ## Current Alert Behavior
 1. `orders_v2` events send order sold alerts (`notifyEverySale`).
@@ -95,9 +106,9 @@ Core flow is implemented:
 4. [x] Run history table + retention cleanup.
 
 ## Must Fix Before Production Access (Cousin/User Beta)
-1. [ ] Replace raw `ml_user_id` cookie trust with signed/encrypted server session auth.
-2. [ ] Add OAuth `state` generation + callback verification (CSRF protection).
-3. [ ] Add Mercado Libre webhook authentication/verification (comparable to Telegram secret gating).
+1. [x] Replace raw `ml_user_id` cookie trust with signed/encrypted server session auth.
+2. [x] Add OAuth `state` generation + callback verification (CSRF protection).
+3. [x] Add Mercado Libre webhook authentication/verification (comparable to Telegram secret gating).
 4. [ ] Verify hosted scheduler end-to-end in staging then production:
    - Every 10 minutes
    - `POST /api/jobs/reconcile`
@@ -108,6 +119,67 @@ Core flow is implemented:
    - sale alerts
    - low-stock/sold-out transitions
    - webhook dedupe
+
+## Optional Production Hardening
+1. [ ] Fail closed for ML webhook auth in production:
+   - If `NODE_ENV=production` and `ML_WEBHOOK_SECRET` is missing, return `500` from `/api/webhooks/mercadolibre` to prevent unauthenticated webhook processing.
+
+## Stripe Flows
+### Recommended SaaS Billing Flow
+1. User logs in via Mercado Libre OAuth and reaches dashboard.
+2. User starts on free tier with clear usage limits.
+3. `Start Free Trial` CTA is shown in dashboard/billing.
+4. On CTA click (or paid-feature gate), backend creates Stripe Checkout Session with trial.
+5. User completes card entry in Stripe Checkout.
+6. Stripe webhook updates local subscription state (`trialing`, `active`, `past_due`, `canceled`).
+7. App access is gated from DB subscription status (webhook-driven source of truth).
+8. Billing page shows plan state, renewal/trial date, and Stripe Billing Portal link.
+
+### Landing Page `Start Free Trial` Link Flow
+1. User clicks `Start Free Trial` on landing page.
+2. `/start-trial` routes user:
+   - unauthenticated -> `/login?next=/billing?intent=trial`
+   - authenticated -> `/billing?intent=trial`
+3. Login page passes safe `next` to `/api/ml/oauth/start`.
+4. OAuth callback validates signed state and redirects to signed return path.
+5. Billing page auto-starts checkout when `intent=trial` and user is not already entitled.
+6. After Checkout return, app still waits for webhook-driven DB state for final entitlement.
+
+### Local Stripe Listener (Dev)
+1. Start app locally (`npm run dev` or `npm run dev:ngrok`).
+2. Run Stripe listener to local app webhook route:
+   - `stripe listen --forward-to http://localhost:3000/api/billing/webhook`
+3. Copy the shown webhook signing secret (`whsec_...`) into local env:
+   - `STRIPE_WEBHOOK_SECRET=<whsec_from_stripe_listen>`
+4. Trigger success event for webhook testing:
+   - `stripe trigger checkout.session.completed`
+
+### Stripe TODO (Implementation Plan)
+1. [x] Add billing Prisma models linked to `User` (`stripeCustomerId`, subscription state table).
+2. [x] Add Stripe server client utility (`STRIPE_SECRET_KEY` validation + shared initialization).
+3. [x] Implement `POST /api/billing/checkout`:
+   - Auth required (`ml_session`)
+   - Create/reuse Stripe customer
+   - Create Stripe Checkout subscription session with `STRIPE_PRICE_ID` and trial
+4. [x] Implement `POST /api/billing/webhook`:
+   - Verify signature with `STRIPE_WEBHOOK_SECRET`
+   - Process key events:
+     - `checkout.session.completed`
+     - `customer.subscription.updated`
+     - `customer.subscription.deleted`
+     - `invoice.paid`
+     - `invoice.payment_failed`
+   - Upsert local subscription state from webhook payload
+5. [x] Add entitlement helper for app gating (`trialing`/`active` access).
+6. [x] Add tests for each Stripe step and run:
+   - `npm run test`
+   - `npm run lint`
+7. [x] Add minimal UI wiring:
+   - `Start Free Trial` button -> checkout endpoint
+   - Billing status view from DB subscription state
+8. [ ] Add Billing Portal entrypoint (after core checkout/webhook is stable).
+9. [ ] Add webhook event integration tests for Stripe payload variants.
+10. [ ] Validate staging webhook delivery + entitlement transitions end-to-end.
 
 ## Next Session TODO: Build Environment Stages
 Goal: establish clear `local` / `staging` / `production` workflow before broader production testing.
@@ -124,6 +196,7 @@ Goal: establish clear `local` / `staging` / `production` workflow before broader
    - `TELEGRAM_BOT_TOKEN`
    - `TELEGRAM_BOT_USERNAME`
    - `TELEGRAM_WEBHOOK_SECRET`
+   - `ML_WEBHOOK_SECRET`
    - `RECONCILE_CRON_SECRET`
 4. [x] Ensure staging/prod secrets are different (especially webhook + cron secrets).
 5. [x] Set deployment flow:
@@ -131,7 +204,8 @@ Goal: establish clear `local` / `staging` / `production` workflow before broader
    - Deploy to production only from protected branch/tag.
 6. [x] Run Prisma migrations in staging and verify schema/indexes.
 7. [ ] Wire webhooks to staging first:
-   - Mercado Libre webhook -> staging endpoint
+   - Mercado Libre webhook -> staging endpoint with secret query:
+     - `https://<staging-domain>/api/webhooks/mercadolibre?secret=<ML_WEBHOOK_SECRET>`
    - Telegram webhook -> staging endpoint
 8. [ ] Configure staging reconcile scheduler:
    - Every 10 minutes
@@ -158,13 +232,55 @@ Goal: establish clear `local` / `staging` / `production` workflow before broader
 7. `TELEGRAM_BOT_TOKEN`
 8. `TELEGRAM_BOT_USERNAME`
 9. `TELEGRAM_WEBHOOK_SECRET`
-10. `RECONCILE_CRON_SECRET`
+10. `ML_WEBHOOK_SECRET`
+11. `RECONCILE_CRON_SECRET`
+12. `STRIPE_SECRET_KEY`
+13. `STRIPE_PRICE_ID`
+14. `STRIPE_WEBHOOK_SECRET`
 
 Optional:
 1. `APP_BASE_URL`
 2. `RECONCILE_USER_BATCH_SIZE`
 3. `MP_ACCESS_TOKEN`
 4. `MP_PUBLIC_KEY`
+5. `STRIPE_TRIAL_DAYS`
+6. `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`
+
+## Prisma Law (Team Workflow)
+Use this as the required database workflow for all future schema changes.
+
+1. Development schema updates (normal path):
+   - Edit `prisma/schema.prisma`.
+   - Create migration locally from an interactive terminal:
+     - `npx prisma migrate dev --name <change_name>`
+   - Commit both:
+     - `prisma/schema.prisma`
+     - `prisma/migrations/<timestamp>_<change_name>/migration.sql`
+   - Regenerate client when needed:
+     - `npx prisma generate`
+
+2. Shared environments (staging/production):
+   - Never use `migrate dev`.
+   - Apply committed migrations only:
+     - `npx prisma migrate deploy`
+
+3. Drift handling:
+   - If dev data can be discarded:
+     - `npx prisma migrate reset`
+     - then continue with normal `migrate dev` flow.
+   - If data must be preserved:
+     - Do not reset.
+     - Baseline/resolve migration history first, then continue with normal migration flow.
+
+4. Guardrails:
+   - Do not use `prisma db push` on shared/staging/production databases.
+   - Avoid manual DB schema changes outside Prisma migrations.
+   - `prisma/migrations` in git is the source of truth.
+
+5. This repo specific:
+   - Create migrations locally in an interactive terminal.
+   - In CI/deployment and non-interactive environments, use only:
+     - `npx prisma migrate deploy`
 
 ## MVP+ Done Criteria
 Consider this phase done when all are true:

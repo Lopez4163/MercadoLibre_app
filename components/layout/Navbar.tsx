@@ -2,10 +2,11 @@ import Link from "next/link";
 import { cookies } from "next/headers";
 import ThemeToggle from "../ui/ThemeToggle";
 import { prisma } from "../../lib/db/prisma";
+import { getSessionUserIdFromCookieStore } from "../../lib/auth/session";
 
 export default async function Navbar() {
   const cookieStore = await cookies();
-  const sessionUserId = cookieStore.get("ml_user_id")?.value;
+  const sessionUserId = getSessionUserIdFromCookieStore(cookieStore);
   const sessionUser = sessionUserId
     ? await prisma.user.findUnique({
         where: { id: sessionUserId },
@@ -28,6 +29,12 @@ export default async function Navbar() {
                 className="inline-flex h-9 items-center border border-[var(--border-1)] bg-[var(--surface-2)] px-4 text-sm font-semibold text-[var(--text-1)] hover:bg-[var(--surface-1)]"
               >
                 Dashboard
+              </Link>
+              <Link
+                href="/billing"
+                className="inline-flex h-9 items-center border border-[var(--border-1)] bg-[var(--surface-2)] px-4 text-sm font-semibold text-[var(--text-1)] hover:bg-[var(--surface-1)]"
+              >
+                Billing
               </Link>
               <form action="/api/auth/logout" method="post">
                 <button

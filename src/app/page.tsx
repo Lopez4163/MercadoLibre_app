@@ -19,10 +19,10 @@ export default function HomePage() {
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Link
-                href="/connect/ml"
+                href="/start-trial"
                 className="inline-flex h-11 items-center border border-[var(--accent)] bg-[var(--accent)] px-5 text-sm font-semibold text-[var(--accent-contrast)] hover:bg-transparent hover:text-[var(--text-1)]"
               >
-                Start Connecting
+                Start Free Trial
               </Link>
               <Link
                 href="/dashboard"
@@ -132,10 +132,10 @@ export default function HomePage() {
           </div>
           <div className="flex flex-wrap gap-3">
             <Link
-              href="/connect/ml"
+              href="/start-trial"
               className="inline-flex h-11 items-center border border-[var(--accent)] bg-[var(--accent)] px-5 text-sm font-semibold text-[var(--accent-contrast)] hover:bg-transparent hover:text-[var(--text-1)]"
             >
-              Get Started
+              Start Free Trial
             </Link>
             <Link
               href="/login"

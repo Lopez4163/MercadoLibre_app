@@ -1,7 +1,14 @@
 import Link from "next/link";
 
-const mlAuthUrl = `https://auth.mercadolibre.com.co/authorization?response_type=code&client_id=${process.env.NEXT_PUBLIC_ML_CLIENT_ID}&redirect_uri=${process.env.NEXT_PUBLIC_ML_REDIRECT_URL}&scope=read_listings%20read_orders%20offline_access%20write_listings`;
-export default function LoginComponent() {
+type LoginComponentProps = {
+  nextPath?: string | null;
+};
+
+export default function LoginComponent(props: LoginComponentProps) {
+  const oauthStartHref = props.nextPath
+    ? `/api/ml/oauth/start?next=${encodeURIComponent(props.nextPath)}`
+    : "/api/ml/oauth/start";
+
   return (
     <section className="mx-auto mt-12 w-full max-w-md border border-[var(--border-1)] bg-[var(--surface-1)] p-6">
       <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--text-3)]">
@@ -13,7 +20,7 @@ export default function LoginComponent() {
       </p>
 
       <a
-        href={mlAuthUrl}
+        href={oauthStartHref}
         className="mt-6 inline-flex h-11 w-full items-center justify-center border border-[var(--accent)] bg-[var(--accent)] px-4 text-sm font-semibold text-[var(--accent-contrast)] hover:bg-transparent hover:text-[var(--text-1)]"
       >
         Continue with Mercado Libre
