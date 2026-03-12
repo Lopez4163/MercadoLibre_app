@@ -52,6 +52,17 @@ Core flow is implemented:
    - `src/app/page.tsx`
    - `src/app/connect/ml/page.tsx`
    - `components/layout/Navbar.tsx`
+9. Stripe billing core:
+   - `src/app/api/billing/checkout/route.ts`
+   - `src/app/api/billing/webhook/route.ts`
+   - `src/app/api/billing/status/route.ts`
+   - `lib/stripe/client.ts`
+   - `lib/billing/entitlements.ts`
+10. Trial entry and post-login routing:
+   - `src/app/start-trial/page.tsx`
+   - `lib/auth/next-path.ts`
+   - `src/app/api/ml/oauth/start/route.ts` (`next` support)
+   - `src/app/api/ml/callback/route.ts` (signed return path handling)
 
 ## Current Alert Behavior
 1. `orders_v2` events send order sold alerts (`notifyEverySale`).
@@ -126,11 +137,13 @@ Core flow is implemented:
 
 ### Landing Page `Start Free Trial` Link Flow
 1. User clicks `Start Free Trial` on landing page.
-2. If not authenticated, redirect to Mercado Libre OAuth login.
-3. After OAuth callback success, redirect to onboarding billing step (or dashboard trial intent route).
-4. Show short trial confirmation modal/page and continue button.
-5. Backend creates Stripe Checkout Session and redirects user to Stripe.
-6. After Checkout return + webhook confirmation, user lands in dashboard with trial active state.
+2. `/start-trial` routes user:
+   - unauthenticated -> `/login?next=/billing?intent=trial`
+   - authenticated -> `/billing?intent=trial`
+3. Login page passes safe `next` to `/api/ml/oauth/start`.
+4. OAuth callback validates signed state and redirects to signed return path.
+5. Billing page auto-starts checkout when `intent=trial` and user is not already entitled.
+6. After Checkout return, app still waits for webhook-driven DB state for final entitlement.
 
 ### Local Stripe Listener (Dev)
 1. Start app locally (`npm run dev` or `npm run dev:ngrok`).
@@ -142,13 +155,13 @@ Core flow is implemented:
    - `stripe trigger checkout.session.completed`
 
 ### Stripe TODO (Implementation Plan)
-1. [ ] Add billing Prisma models linked to `User` (`stripeCustomerId`, subscription state table).
-2. [ ] Add Stripe server client utility (`STRIPE_SECRET_KEY` validation + shared initialization).
-3. [ ] Implement `POST /api/billing/checkout`:
+1. [x] Add billing Prisma models linked to `User` (`stripeCustomerId`, subscription state table).
+2. [x] Add Stripe server client utility (`STRIPE_SECRET_KEY` validation + shared initialization).
+3. [x] Implement `POST /api/billing/checkout`:
    - Auth required (`ml_session`)
    - Create/reuse Stripe customer
    - Create Stripe Checkout subscription session with `STRIPE_PRICE_ID` and trial
-4. [ ] Implement `POST /api/billing/webhook`:
+4. [x] Implement `POST /api/billing/webhook`:
    - Verify signature with `STRIPE_WEBHOOK_SECRET`
    - Process key events:
      - `checkout.session.completed`
@@ -157,14 +170,16 @@ Core flow is implemented:
      - `invoice.paid`
      - `invoice.payment_failed`
    - Upsert local subscription state from webhook payload
-5. [ ] Add entitlement helper for app gating (`trialing`/`active` access).
-6. [ ] Add tests for each Stripe step and run:
+5. [x] Add entitlement helper for app gating (`trialing`/`active` access).
+6. [x] Add tests for each Stripe step and run:
    - `npm run test`
    - `npm run lint`
-7. [ ] Add minimal UI wiring:
+7. [x] Add minimal UI wiring:
    - `Start Free Trial` button -> checkout endpoint
    - Billing status view from DB subscription state
-   - Billing portal entrypoint (after core checkout/webhook is stable)
+8. [ ] Add Billing Portal entrypoint (after core checkout/webhook is stable).
+9. [ ] Add webhook event integration tests for Stripe payload variants.
+10. [ ] Validate staging webhook delivery + entitlement transitions end-to-end.
 
 ## Next Session TODO: Build Environment Stages
 Goal: establish clear `local` / `staging` / `production` workflow before broader production testing.
@@ -219,12 +234,17 @@ Goal: establish clear `local` / `staging` / `production` workflow before broader
 9. `TELEGRAM_WEBHOOK_SECRET`
 10. `ML_WEBHOOK_SECRET`
 11. `RECONCILE_CRON_SECRET`
+12. `STRIPE_SECRET_KEY`
+13. `STRIPE_PRICE_ID`
+14. `STRIPE_WEBHOOK_SECRET`
 
 Optional:
 1. `APP_BASE_URL`
 2. `RECONCILE_USER_BATCH_SIZE`
 3. `MP_ACCESS_TOKEN`
 4. `MP_PUBLIC_KEY`
+5. `STRIPE_TRIAL_DAYS`
+6. `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`
 
 ## Prisma Law (Team Workflow)
 Use this as the required database workflow for all future schema changes.
