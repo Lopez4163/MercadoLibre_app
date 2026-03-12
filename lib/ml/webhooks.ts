@@ -8,7 +8,14 @@ import {
   sendOrderSoldNotification,
   sendOutOfStockNotification,
 } from "../notifications/sender";
-import { getItemById, getOrderById, getOrderSaleType, getPrimaryOrderShipment, getShipmentById } from "./api";
+import {
+  getItemById,
+  getOrderById,
+  getOrderSaleType,
+  getPrimaryOrderShipment,
+  getShipmentById,
+  getShipmentLabelDocument,
+} from "./api";
 import { withUserMlAccessToken } from "./tokens";
 
 type MlWebhookBody = {
@@ -115,6 +122,20 @@ function buildOrderLabelButtonUrl(input: {
     }),
   );
   return labelUrl.toString();
+}
+
+function isLabelNotReadyMlError(error: unknown) {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+
+  const message = error.message.toLowerCase();
+  return (
+    message.includes("not_printable_status") ||
+    message.includes("invalid_shipment_ff_public") ||
+    message.includes(" 404") ||
+    message.includes("not found")
+  );
 }
 
 async function getNotificationSettings(userId: string) {
@@ -403,32 +424,37 @@ async function handleShipmentEvent(options: {
     return { processed: false as const, reason: "shipment_without_order" as const };
   }
 
-  const labelNotificationKey = `shipment_label:${mlUserId}:${shipmentId}`;
-  const createdLabelEvent = await prisma.mlWebhookEvent
-    .create({
-      data: {
-        eventKey: labelNotificationKey,
-        userId,
-        mlUserId,
-        topic: "shipment_label_ready",
-        action: "notify",
-        resource: `/shipments/${shipmentId}`,
-      },
-      select: { id: true },
-    })
-    .catch(() => null);
-
-  if (!createdLabelEvent) {
-    console.log("[ML webhook] shipment label duplicate", {
-      eventKey,
-      shipmentId,
-      orderId,
-      labelNotificationKey,
-    });
-    return { processed: false as const, reason: "shipment_label_duplicate" as const };
-  }
-
   try {
+    await getShipmentLabelDocument({
+      accessToken,
+      shipmentId,
+    });
+
+    const labelNotificationKey = `shipment_label:${mlUserId}:${shipmentId}`;
+    const createdLabelEvent = await prisma.mlWebhookEvent
+      .create({
+        data: {
+          eventKey: labelNotificationKey,
+          userId,
+          mlUserId,
+          topic: "shipment_label_ready",
+          action: "notify",
+          resource: `/shipments/${shipmentId}`,
+        },
+        select: { id: true },
+      })
+      .catch(() => null);
+
+    if (!createdLabelEvent) {
+      console.log("[ML webhook] shipment label duplicate", {
+        eventKey,
+        shipmentId,
+        orderId,
+        labelNotificationKey,
+      });
+      return { processed: false as const, reason: "shipment_label_duplicate" as const };
+    }
+
     const labelButtonUrl = buildOrderLabelButtonUrl({
       userId,
       orderId,
@@ -462,6 +488,19 @@ async function handleShipmentEvent(options: {
       notified: notifyResult.sent,
     };
   } catch (error) {
+    if (isLabelNotReadyMlError(error)) {
+      console.log("[ML webhook] shipment label not ready", {
+        eventKey,
+        shipmentId,
+        orderId,
+      });
+
+      return {
+        processed: false as const,
+        reason: "shipment_label_not_ready" as const,
+      };
+    }
+
     console.error("[ML webhook] shipment label setup failed", {
       eventKey,
       shipmentId,
