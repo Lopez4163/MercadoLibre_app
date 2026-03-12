@@ -28,18 +28,48 @@ type VerifyMlWebhookSecretInput = {
   providedSecret?: string | null;
 };
 
+function normalizeSecret(value: string | null | undefined) {
+  if (!value) {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  if (
+    (trimmed.startsWith("\"") && trimmed.endsWith("\"")) ||
+    (trimmed.startsWith("'") && trimmed.endsWith("'"))
+  ) {
+    return trimmed.slice(1, -1).trim() || null;
+  }
+
+  return trimmed;
+}
+
 export function verifyMlWebhookSecret(input: VerifyMlWebhookSecretInput) {
-  const expected = input.expectedSecret ?? null;
+  const expectedRaw = input.expectedSecret ?? null;
 
   // Allow all requests when auth secret is not configured.
-  if (!expected) {
+  if (!expectedRaw) {
     return true;
   }
 
-  const provided = input.providedSecret ?? null;
+  const provided = normalizeSecret(input.providedSecret);
   if (!provided) {
     return false;
   }
 
-  return provided === expected;
+  const expectedValues = expectedRaw
+    .split(",")
+    .map((value) => normalizeSecret(value))
+    .filter((value): value is string => Boolean(value));
+
+  // Treat malformed config like missing config to preserve current behavior.
+  if (expectedValues.length === 0) {
+    return true;
+  }
+
+  return expectedValues.includes(provided);
 }
