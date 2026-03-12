@@ -37,4 +37,22 @@ describe("verifyMlWebhookSecret", () => {
       }),
     ).toBe(false);
   });
+
+  it("accepts matching secret with surrounding quotes/whitespace", () => {
+    expect(
+      verifyMlWebhookSecret({
+        expectedSecret: ' "abc123" ',
+        providedSecret: " abc123 ",
+      }),
+    ).toBe(true);
+  });
+
+  it("accepts matching secret from a comma-separated allow-list", () => {
+    expect(
+      verifyMlWebhookSecret({
+        expectedSecret: "new-secret, old-secret",
+        providedSecret: "old-secret",
+      }),
+    ).toBe(true);
+  });
 });
