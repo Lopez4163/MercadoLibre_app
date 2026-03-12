@@ -141,6 +141,31 @@ Core flow is implemented:
 4. Trigger success event for webhook testing:
    - `stripe trigger checkout.session.completed`
 
+### Stripe TODO (Implementation Plan)
+1. [ ] Add billing Prisma models linked to `User` (`stripeCustomerId`, subscription state table).
+2. [ ] Add Stripe server client utility (`STRIPE_SECRET_KEY` validation + shared initialization).
+3. [ ] Implement `POST /api/billing/checkout`:
+   - Auth required (`ml_session`)
+   - Create/reuse Stripe customer
+   - Create Stripe Checkout subscription session with `STRIPE_PRICE_ID` and trial
+4. [ ] Implement `POST /api/billing/webhook`:
+   - Verify signature with `STRIPE_WEBHOOK_SECRET`
+   - Process key events:
+     - `checkout.session.completed`
+     - `customer.subscription.updated`
+     - `customer.subscription.deleted`
+     - `invoice.paid`
+     - `invoice.payment_failed`
+   - Upsert local subscription state from webhook payload
+5. [ ] Add entitlement helper for app gating (`trialing`/`active` access).
+6. [ ] Add tests for each Stripe step and run:
+   - `npm run test`
+   - `npm run lint`
+7. [ ] Add minimal UI wiring:
+   - `Start Free Trial` button -> checkout endpoint
+   - Billing status view from DB subscription state
+   - Billing portal entrypoint (after core checkout/webhook is stable)
+
 ## Next Session TODO: Build Environment Stages
 Goal: establish clear `local` / `staging` / `production` workflow before broader production testing.
 
@@ -200,6 +225,42 @@ Optional:
 2. `RECONCILE_USER_BATCH_SIZE`
 3. `MP_ACCESS_TOKEN`
 4. `MP_PUBLIC_KEY`
+
+## Prisma Law (Team Workflow)
+Use this as the required database workflow for all future schema changes.
+
+1. Development schema updates (normal path):
+   - Edit `prisma/schema.prisma`.
+   - Create migration locally from an interactive terminal:
+     - `npx prisma migrate dev --name <change_name>`
+   - Commit both:
+     - `prisma/schema.prisma`
+     - `prisma/migrations/<timestamp>_<change_name>/migration.sql`
+   - Regenerate client when needed:
+     - `npx prisma generate`
+
+2. Shared environments (staging/production):
+   - Never use `migrate dev`.
+   - Apply committed migrations only:
+     - `npx prisma migrate deploy`
+
+3. Drift handling:
+   - If dev data can be discarded:
+     - `npx prisma migrate reset`
+     - then continue with normal `migrate dev` flow.
+   - If data must be preserved:
+     - Do not reset.
+     - Baseline/resolve migration history first, then continue with normal migration flow.
+
+4. Guardrails:
+   - Do not use `prisma db push` on shared/staging/production databases.
+   - Avoid manual DB schema changes outside Prisma migrations.
+   - `prisma/migrations` in git is the source of truth.
+
+5. This repo specific:
+   - Create migrations locally in an interactive terminal.
+   - In CI/deployment and non-interactive environments, use only:
+     - `npx prisma migrate deploy`
 
 ## MVP+ Done Criteria
 Consider this phase done when all are true:
