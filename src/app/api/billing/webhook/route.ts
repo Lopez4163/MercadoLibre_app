@@ -1,7 +1,7 @@
 import Stripe from "stripe";
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "../../../../../../lib/db/prisma";
-import { getStripe, getStripeWebhookSecret } from "../../../../../../lib/stripe/client";
+import { prisma } from "../../../../../lib/db/prisma";
+import { getStripe, getStripeWebhookSecret } from "../../../../../lib/stripe/client";
 
 export const runtime = "nodejs";
 
@@ -79,8 +79,8 @@ async function upsertSubscriptionState(subscription: Stripe.Subscription, fallba
     stripeCustomerId,
     status: subscription.status,
     priceId,
-    currentPeriodStart: toDate(subscription.current_period_start),
-    currentPeriodEnd: toDate(subscription.current_period_end),
+    currentPeriodStart: toDate(subscription.items.data[0]?.current_period_start),
+    currentPeriodEnd: toDate(subscription.items.data[0]?.current_period_end),
     cancelAtPeriodEnd: subscription.cancel_at_period_end,
     canceledAt: toDate(subscription.canceled_at),
     trialStart: toDate(subscription.trial_start),
@@ -170,9 +170,9 @@ export async function POST(request: NextRequest) {
       case "invoice.payment_failed": {
         const invoice = event.data.object as Stripe.Invoice;
         const subscriptionId =
-          typeof invoice.subscription === "string"
-            ? invoice.subscription
-            : invoice.subscription?.id ?? null;
+          typeof invoice.parent?.subscription_details?.subscription === "string"
+            ? invoice.parent.subscription_details.subscription
+            : invoice.parent?.subscription_details?.subscription?.id ?? null;
 
         if (subscriptionId) {
           await syncBySubscriptionId(subscriptionId);

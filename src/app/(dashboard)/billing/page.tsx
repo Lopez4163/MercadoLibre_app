@@ -1,9 +1,9 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { prisma } from "../../../../../lib/db/prisma";
-import { getSessionUserIdFromCookieStore } from "../../../../../lib/auth/session";
-import { getUserBillingEntitlement } from "../../../../../lib/billing/entitlements";
-import StartFreeTrialButton from "../../../../../components/billing/StartFreeTrialButton";
+import { prisma } from "../../../../lib/db/prisma";
+import { getSessionUserIdFromCookieStore } from "../../../../lib/auth/session";
+import { getUserBillingEntitlement } from "../../../../lib/billing/entitlements";
+import StartFreeTrialButton from "../../../../components/billing/StartFreeTrialButton";
 
 function formatDate(value: Date | null) {
   if (!value) {
@@ -33,9 +33,16 @@ function statusTone(status: string | null) {
   return "text-[var(--text-3)]";
 }
 
-export default async function BillingPage() {
+type BillingPageProps = {
+  searchParams?: Promise<{ intent?: string | string[] }>;
+};
+
+export default async function BillingPage({ searchParams }: BillingPageProps) {
   const cookieStore = await cookies();
   const userId = getSessionUserIdFromCookieStore(cookieStore);
+  const params = (await searchParams) ?? {};
+  const intentParam = Array.isArray(params.intent) ? params.intent[0] : params.intent;
+  const autoStartTrial = intentParam === "trial";
 
   if (!userId) {
     redirect("/login");
@@ -115,7 +122,10 @@ export default async function BillingPage() {
           Checkout is hosted by Stripe. Access is granted once webhook events confirm your subscription state.
         </p>
         <div className="mt-4">
-          <StartFreeTrialButton initiallyEntitled={entitlement.hasAccess} />
+          <StartFreeTrialButton
+            initiallyEntitled={entitlement.hasAccess}
+            autoStart={autoStartTrial}
+          />
         </div>
       </section>
     </main>

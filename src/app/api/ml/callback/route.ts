@@ -4,9 +4,11 @@ import { exchangeAuthorizationCode, getMlUserProfile } from "../../../../../lib/
 import { setSessionCookie } from "../../../../../lib/auth/session";
 import {
   clearOAuthStateCookie,
+  getOAuthStateReturnTo,
   getOAuthStateTokenFromRequest,
   isValidOAuthStatePair,
 } from "../../../../../lib/auth/oauth-state";
+import { normalizeNextPath } from "../../../../../lib/auth/next-path";
 
 function getSafeBaseUrl(request: NextRequest) {
   const configured = process.env.APP_BASE_URL ?? process.env.NEXTAUTH_URL;
@@ -62,7 +64,9 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    const response = NextResponse.redirect(new URL("/dashboard", getSafeBaseUrl(request)));
+    const requestedPath = normalizeNextPath(getOAuthStateReturnTo(stateFromCookie));
+    const destinationPath = requestedPath ?? "/dashboard";
+    const response = NextResponse.redirect(new URL(destinationPath, getSafeBaseUrl(request)));
     setSessionCookie(response, user.id);
     clearOAuthStateCookie(response);
 

@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "../../../../../../lib/db/prisma";
-import { getSessionUserIdFromRequest } from "../../../../../../lib/auth/session";
-import { getStripe, getStripePriceId } from "../../../../../../lib/stripe/client";
-import { getUserBillingEntitlement } from "../../../../../../lib/billing/entitlements";
+import { prisma } from "../../../../../lib/db/prisma";
+import { getSessionUserIdFromRequest } from "../../../../../lib/auth/session";
+import { getStripe, getStripePriceId } from "../../../../../lib/stripe/client";
+import { getUserBillingEntitlement } from "../../../../../lib/billing/entitlements";
 
 function getRedirectBase(request: NextRequest) {
   const configured = process.env.APP_BASE_URL ?? process.env.NEXTAUTH_URL;

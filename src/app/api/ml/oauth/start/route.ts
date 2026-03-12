@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createOAuthStateToken, setOAuthStateCookie } from "../../../../../../lib/auth/oauth-state";
+import { normalizeNextPath } from "../../../../../../lib/auth/next-path";
 
 const ML_AUTH_URL = "https://auth.mercadolibre.com.co/authorization";
 const ML_SCOPE = "read_listings read_orders offline_access write_listings";
@@ -20,7 +21,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(new URL("/login?error=oauth_config_missing", request.url));
   }
 
-  const state = createOAuthStateToken();
+  const returnTo = normalizeNextPath(request.nextUrl.searchParams.get("next"));
+  const state = createOAuthStateToken({ returnTo: returnTo ?? undefined });
   const authUrl = new URL(ML_AUTH_URL);
   authUrl.searchParams.set("response_type", "code");
   authUrl.searchParams.set("client_id", clientId);

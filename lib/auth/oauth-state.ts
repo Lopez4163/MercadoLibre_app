@@ -7,6 +7,7 @@ const OAUTH_STATE_TTL_SECONDS = 60 * 10;
 
 type OAuthStatePayload = {
   n: string;
+  r?: string;
   iat: number;
   exp: number;
   v: number;
@@ -16,6 +17,7 @@ type OAuthStateOptions = {
   secret?: string;
   now?: Date;
   ttlSeconds?: number;
+  returnTo?: string;
 };
 
 function encodeBase64Url(value: string) {
@@ -53,6 +55,7 @@ export function createOAuthStateToken(options?: OAuthStateOptions) {
   const ttlSeconds = options?.ttlSeconds ?? OAUTH_STATE_TTL_SECONDS;
   const payload: OAuthStatePayload = {
     n: randomBytes(24).toString("base64url"),
+    ...(options?.returnTo ? { r: options.returnTo } : {}),
     iat: issuedAtSeconds,
     exp: issuedAtSeconds + ttlSeconds,
     v: OAUTH_STATE_VERSION,
@@ -78,14 +81,8 @@ export function isValidOAuthStateToken(token: string | undefined, options?: OAut
     return false;
   }
 
-  let payload: OAuthStatePayload;
-  try {
-    payload = JSON.parse(decodeBase64Url(encodedPayload)) as OAuthStatePayload;
-  } catch {
-    return false;
-  }
-
-  if (payload.v !== OAUTH_STATE_VERSION || typeof payload.n !== "string") {
+  const payload = decodeOAuthStatePayload(encodedPayload);
+  if (!payload) {
     return false;
   }
 
@@ -131,4 +128,37 @@ export function clearOAuthStateCookie(response: NextResponse) {
 
 export function getOAuthStateTokenFromRequest(request: NextRequest) {
   return request.cookies.get(OAUTH_STATE_COOKIE_NAME)?.value;
+}
+
+function decodeOAuthStatePayload(encodedPayload: string): OAuthStatePayload | null {
+  let payload: OAuthStatePayload;
+  try {
+    payload = JSON.parse(decodeBase64Url(encodedPayload)) as OAuthStatePayload;
+  } catch {
+    return null;
+  }
+
+  if (payload.v !== OAUTH_STATE_VERSION || typeof payload.n !== "string") {
+    return null;
+  }
+
+  if (payload.r !== undefined && typeof payload.r !== "string") {
+    return null;
+  }
+
+  return payload;
+}
+
+export function getOAuthStateReturnTo(token: string | undefined, options?: OAuthStateOptions) {
+  if (!isValidOAuthStateToken(token, options) || !token) {
+    return null;
+  }
+
+  const [encodedPayload] = token.split(".");
+  if (!encodedPayload) {
+    return null;
+  }
+
+  const payload = decodeOAuthStatePayload(encodedPayload);
+  return payload?.r ?? null;
 }

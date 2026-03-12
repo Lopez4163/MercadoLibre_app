@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { createOAuthStateToken, isValidOAuthStatePair, isValidOAuthStateToken } from "./oauth-state";
+import {
+  createOAuthStateToken,
+  getOAuthStateReturnTo,
+  isValidOAuthStatePair,
+  isValidOAuthStateToken,
+} from "./oauth-state";
 
 describe("oauth state", () => {
   it("validates a fresh signed state token", () => {
@@ -57,5 +62,18 @@ describe("oauth state", () => {
         secret: "test-secret",
       }),
     ).toBe(false);
+  });
+
+  it("extracts signed returnTo when present", () => {
+    const state = createOAuthStateToken({
+      secret: "test-secret",
+      returnTo: "/billing?intent=trial",
+    });
+
+    expect(
+      getOAuthStateReturnTo(state, {
+        secret: "test-secret",
+      }),
+    ).toBe("/billing?intent=trial");
   });
 });

@@ -4,10 +4,18 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { prisma } from "../../../../lib/db/prisma";
 import { getSessionUserIdFromCookieStore } from "../../../../lib/auth/session";
+import { normalizeNextPath } from "../../../../lib/auth/next-path";
 
-export default async function LoginPage() {
+type LoginPageProps = {
+  searchParams?: Promise<{ next?: string | string[] }>;
+};
+
+export default async function LoginPage({ searchParams }: LoginPageProps) {
   const cookieStore = await cookies();
   const sessionUserId = getSessionUserIdFromCookieStore(cookieStore);
+  const params = (await searchParams) ?? {};
+  const nextValue = Array.isArray(params.next) ? params.next[0] : params.next;
+  const safeNext = normalizeNextPath(nextValue);
 
   if (sessionUserId) {
     const user = await prisma.user.findUnique({
@@ -15,14 +23,14 @@ export default async function LoginPage() {
       select: { id: true },
     });
     if (user) {
-      redirect("/dashboard");
+      redirect(safeNext ?? "/dashboard");
     }
   }
 
   return (
     <main className="min-h-screen">
       <Navbar />
-      <LoginComponent />
+      <LoginComponent nextPath={safeNext} />
     </main>
   );
 }

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "../../../../../../lib/db/prisma";
-import { getSessionUserIdFromRequest } from "../../../../../../lib/auth/session";
-import { getUserBillingEntitlement } from "../../../../../../lib/billing/entitlements";
+import { prisma } from "../../../../../lib/db/prisma";
+import { getSessionUserIdFromRequest } from "../../../../../lib/auth/session";
+import { getUserBillingEntitlement } from "../../../../../lib/billing/entitlements";
 
 export async function GET(request: NextRequest) {
   const userId = getSessionUserIdFromRequest(request);
