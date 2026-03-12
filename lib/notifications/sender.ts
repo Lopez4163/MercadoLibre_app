@@ -1,4 +1,5 @@
 import { prisma } from "../db/prisma";
+import type { MlOrderSaleType } from "../ml/api";
 import { sendTelegramMessage } from "../telegram/bot";
 import { buildLowStockMessage, buildOrderSoldMessage, buildOutOfStockMessage } from "../telegram/messages";
 
@@ -7,6 +8,7 @@ type OrderSoldNotificationInput = {
   orderId: string;
   status?: string;
   totalAmount?: number;
+  saleType?: MlOrderSaleType | null;
   lines: Array<{
     itemId: string;
     title: string;
@@ -49,6 +51,7 @@ export async function sendOrderSoldNotification(input: OrderSoldNotificationInpu
     orderId: input.orderId,
     status: input.status,
     totalAmount: input.totalAmount,
+    saleType: input.saleType,
     lines: input.lines,
   });
 

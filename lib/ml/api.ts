@@ -40,6 +40,8 @@ export type MlOrderSnapshot = {
   lines: MlOrderLine[];
 };
 
+export type MlOrderSaleType = "flex" | "full" | "other";
+
 function buildAuthHeaders(accessToken: string) {
   return {
     Authorization: `Bearer ${accessToken}`,
@@ -236,4 +238,99 @@ export async function getOrderById(options: { accessToken: string; orderId: stri
     totalAmount: Number.isFinite(Number(payload.total_amount)) ? Number(payload.total_amount) : undefined,
     lines,
   } satisfies MlOrderSnapshot;
+}
+
+function mapLogisticType(logisticType: string | null | undefined): MlOrderSaleType | null {
+  if (!logisticType) {
+    return null;
+  }
+
+  const normalized = logisticType.toLowerCase();
+  if (normalized === "self_service") {
+    return "flex";
+  }
+
+  if (normalized === "fulfillment") {
+    return "full";
+  }
+
+  return "other";
+}
+
+function extractShipmentCandidates(payload: unknown) {
+  const directList = Array.isArray(payload) ? payload : null;
+  const wrappedList =
+    !Array.isArray(payload) &&
+    typeof payload === "object" &&
+    payload !== null &&
+    "shipments" in payload &&
+    Array.isArray((payload as { shipments?: unknown }).shipments)
+      ? ((payload as { shipments: unknown[] }).shipments ?? null)
+      : null;
+
+  const list = directList ?? wrappedList;
+  if (!list) {
+    return [] as Array<{ id: string | null; logisticType: string | null }>;
+  }
+
+  return list.map((entry) => {
+    const idRaw =
+      typeof entry === "object" && entry !== null && "id" in entry
+        ? (entry as { id?: unknown }).id
+        : null;
+    const logisticTypeRaw =
+      typeof entry === "object" && entry !== null && "logistic_type" in entry
+        ? (entry as { logistic_type?: unknown }).logistic_type
+        : null;
+
+    const id =
+      (typeof idRaw === "string" && idRaw.length > 0) ||
+      (typeof idRaw === "number" && Number.isFinite(idRaw))
+        ? String(idRaw)
+        : null;
+    const logisticType = typeof logisticTypeRaw === "string" && logisticTypeRaw.length > 0 ? logisticTypeRaw : null;
+
+    return { id, logisticType };
+  });
+}
+
+export async function getOrderSaleType(options: { accessToken: string; orderId: string }) {
+  const shipmentsResponse = await fetchMlWithRetry(
+    `${ML_API_BASE_URL}/orders/${options.orderId}/shipments`,
+    {
+      method: "GET",
+      headers: buildAuthHeaders(options.accessToken),
+      cache: "no-store",
+    },
+    "ML order shipments failed",
+  );
+
+  const shipmentsPayload = (await shipmentsResponse.json()) as unknown;
+  const candidates = extractShipmentCandidates(shipmentsPayload);
+  for (const candidate of candidates) {
+    const mapped = mapLogisticType(candidate.logisticType);
+    if (mapped) {
+      return mapped;
+    }
+  }
+
+  const firstShipmentId = candidates.find((candidate) => candidate.id)?.id;
+  if (!firstShipmentId) {
+    return null;
+  }
+
+  const shipmentResponse = await fetchMlWithRetry(
+    `${ML_API_BASE_URL}/shipments/${firstShipmentId}`,
+    {
+      method: "GET",
+      headers: buildAuthHeaders(options.accessToken),
+      cache: "no-store",
+    },
+    "ML shipment details failed",
+  );
+
+  const shipmentPayload = (await shipmentResponse.json()) as { logistic_type?: unknown } | null;
+  const logisticType =
+    shipmentPayload && typeof shipmentPayload.logistic_type === "string" ? shipmentPayload.logistic_type : null;
+  return mapLogisticType(logisticType);
 }

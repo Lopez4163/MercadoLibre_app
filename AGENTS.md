@@ -98,6 +98,11 @@ Core flow is implemented:
 2. Add item-level batch controls if catalog size grows significantly.
 3. Consider DB-cached inventory reads for dashboard as usage scales.
 4. Optional resolver improvement for `fbm_stock_operations` item mapping.
+5. Add shipping-label delivery flow for order alerts:
+   - Generate short-lived signed label URL per order/shipment
+   - Add Telegram inline `Download Label` button on sale alerts
+   - Fetch ML shipment label on demand from backend and stream PDF
+   - Show clean fallback when label is not ready or unavailable
 
 ## Reconciler Hardening Status
 1. [x] Single-run lock (no overlap).

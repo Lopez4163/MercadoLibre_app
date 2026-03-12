@@ -5,7 +5,7 @@ import {
   sendOrderSoldNotification,
   sendOutOfStockNotification,
 } from "../notifications/sender";
-import { getItemById, getOrderById } from "./api";
+import { getItemById, getOrderById, getOrderSaleType } from "./api";
 import { withUserMlAccessToken } from "./tokens";
 
 type MlWebhookBody = {
@@ -121,11 +121,34 @@ async function handleOrderEvent(options: {
     return { processed: false as const, reason: "order_fetch_failed_or_empty" as const };
   }
 
+  let saleType: Awaited<ReturnType<typeof getOrderSaleType>> = null;
+  let saleTypeReason = "not_available";
+
+  try {
+    saleType = await getOrderSaleType({
+      accessToken,
+      orderId: order.id,
+    });
+    if (saleType) {
+      saleTypeReason = "resolved";
+    }
+  } catch (error) {
+    saleTypeReason = error instanceof Error ? error.message : "unknown_error";
+  }
+
+  console.log("[ML webhook] sale type lookup", {
+    eventKey,
+    orderId: order.id,
+    saleType,
+    reason: saleTypeReason,
+  });
+
   const orderNotifyResult = await sendOrderSoldNotification({
     userId,
     orderId: order.id,
     status: order.status,
     totalAmount: order.totalAmount,
+    saleType,
     lines: order.lines,
   }).catch(() => ({ sent: false as const, reason: "telegram_send_failed" as const }));
 
@@ -257,6 +280,7 @@ async function handleOrderEvent(options: {
   console.log("[ML webhook] order processed", {
     eventKey,
     orderId: order.id,
+    saleType,
     lineCount: order.lines.length,
     telegramNotified: orderNotifyResult.sent,
     notifyReason: "reason" in orderNotifyResult ? orderNotifyResult.reason : undefined,
