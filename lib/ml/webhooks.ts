@@ -1,11 +1,21 @@
+import { getAppBaseUrl } from "../app/base-url";
 import { createHash } from "crypto";
+import { createOrderLabelToken } from "../labels/token";
 import { prisma } from "../db/prisma";
 import {
   sendLowStockNotification,
+  sendOrderLabelReadyNotification,
   sendOrderSoldNotification,
   sendOutOfStockNotification,
 } from "../notifications/sender";
-import { getItemById, getOrderById } from "./api";
+import {
+  getItemById,
+  getOrderById,
+  getOrderSaleType,
+  getPrimaryOrderShipment,
+  getShipmentById,
+  getShipmentLabelDocument,
+} from "./api";
 import { withUserMlAccessToken } from "./tokens";
 
 type MlWebhookBody = {
@@ -76,6 +86,11 @@ function extractOrderId(resource: string) {
   return match?.[1] ?? null;
 }
 
+function extractShipmentId(resource: string) {
+  const match = resource.match(/\/shipments\/([^/?]+)/i);
+  return match?.[1] ?? null;
+}
+
 function isOrderEvent(topic: string, resource: string, action: string) {
   const combined = `${topic}|${resource}|${action}`.toLowerCase();
   return combined.includes("orders_v2") || combined.includes("/orders/");
@@ -84,6 +99,43 @@ function isOrderEvent(topic: string, resource: string, action: string) {
 function isItemSnapshotEvent(topic: string, resource: string, action: string) {
   const combined = `${topic}|${resource}|${action}`.toLowerCase();
   return combined.includes("item") || combined.includes("/items/") || combined.includes("fbm_stock_operations");
+}
+
+function isShipmentEvent(topic: string, resource: string, action: string) {
+  const combined = `${topic}|${resource}|${action}`.toLowerCase();
+  return combined.includes("shipment") || combined.includes("/shipments/");
+}
+
+function buildOrderLabelButtonUrl(input: {
+  userId: string;
+  orderId: string;
+  shipmentId: string;
+}) {
+  const baseUrl = getAppBaseUrl();
+  const labelUrl = new URL(`/api/orders/${input.orderId}/label`, baseUrl);
+  labelUrl.searchParams.set(
+    "token",
+    createOrderLabelToken({
+      userId: input.userId,
+      orderId: input.orderId,
+      shipmentId: input.shipmentId,
+    }),
+  );
+  return labelUrl.toString();
+}
+
+function isLabelNotReadyMlError(error: unknown) {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+
+  const message = error.message.toLowerCase();
+  return (
+    message.includes("not_printable_status") ||
+    message.includes("invalid_shipment_ff_public") ||
+    message.includes(" 404") ||
+    message.includes("not found")
+  );
 }
 
 async function getNotificationSettings(userId: string) {
@@ -121,11 +173,81 @@ async function handleOrderEvent(options: {
     return { processed: false as const, reason: "order_fetch_failed_or_empty" as const };
   }
 
+  let saleType: Awaited<ReturnType<typeof getOrderSaleType>> = null;
+  let saleTypeReason = "not_available";
+  let shipmentId: string | null = null;
+  let labelButtonUrl: string | null = null;
+  let labelButtonSkippedReason = "not_attempted";
+
+  try {
+    saleType = await getOrderSaleType({
+      accessToken,
+      orderId: order.id,
+    });
+    if (saleType) {
+      saleTypeReason = "resolved";
+    }
+  } catch (error) {
+    saleTypeReason = error instanceof Error ? error.message : "unknown_error";
+  }
+
+  try {
+    const shipment = await getPrimaryOrderShipment({
+      accessToken,
+      orderId: order.id,
+    });
+
+    shipmentId = shipment?.id ?? null;
+
+    if (!shipmentId) {
+      labelButtonSkippedReason = "no_shipment";
+    } else {
+      labelButtonUrl = buildOrderLabelButtonUrl({
+        userId,
+        orderId: order.id,
+        shipmentId,
+      });
+      labelButtonSkippedReason = "attached";
+    }
+  } catch (error) {
+    if (error instanceof Error && error.message.includes("APP_BASE_URL")) {
+      labelButtonSkippedReason = "missing_base_url";
+    } else {
+      labelButtonSkippedReason = "label_link_setup_failed";
+    }
+
+    console.error("[ML webhook] label link setup failed", {
+      eventKey,
+      orderId: order.id,
+      labelButtonSkippedReason,
+      error,
+    });
+  }
+
+  console.log("[ML webhook] sale type lookup", {
+    eventKey,
+    orderId: order.id,
+    saleType,
+    reason: saleTypeReason,
+    shipmentId,
+    hasLabelButton: Boolean(labelButtonUrl),
+    labelButtonSkippedReason,
+  });
+
   const orderNotifyResult = await sendOrderSoldNotification({
     userId,
     orderId: order.id,
     status: order.status,
     totalAmount: order.totalAmount,
+    saleType,
+    inlineButtons: labelButtonUrl
+      ? [
+          {
+            text: "Download Label",
+            url: labelButtonUrl,
+          },
+        ]
+      : undefined,
     lines: order.lines,
   }).catch(() => ({ sent: false as const, reason: "telegram_send_failed" as const }));
 
@@ -257,6 +379,7 @@ async function handleOrderEvent(options: {
   console.log("[ML webhook] order processed", {
     eventKey,
     orderId: order.id,
+    saleType,
     lineCount: order.lines.length,
     telegramNotified: orderNotifyResult.sent,
     notifyReason: "reason" in orderNotifyResult ? orderNotifyResult.reason : undefined,
@@ -267,6 +390,129 @@ async function handleOrderEvent(options: {
     orderId: order.id,
     notified: orderNotifyResult.sent,
   };
+}
+
+async function handleShipmentEvent(options: {
+  userId: string;
+  mlUserId: string;
+  accessToken: string;
+  resource: string;
+  eventKey: string;
+}) {
+  const { userId, mlUserId, accessToken, resource, eventKey } = options;
+
+  const shipmentId = extractShipmentId(resource);
+  if (!shipmentId) {
+    console.log("[ML webhook] missing shipment id", {
+      eventKey,
+      resource,
+    });
+    return { processed: false as const, reason: "missing_shipment_id" as const };
+  }
+
+  const shipment = await getShipmentById({
+    accessToken,
+    shipmentId,
+  }).catch(() => null);
+
+  const orderId = shipment?.orderId ?? null;
+  if (!orderId) {
+    console.log("[ML webhook] shipment without order context", {
+      eventKey,
+      shipmentId,
+    });
+    return { processed: false as const, reason: "shipment_without_order" as const };
+  }
+
+  try {
+    await getShipmentLabelDocument({
+      accessToken,
+      shipmentId,
+    });
+
+    const labelNotificationKey = `shipment_label:${mlUserId}:${shipmentId}`;
+    const createdLabelEvent = await prisma.mlWebhookEvent
+      .create({
+        data: {
+          eventKey: labelNotificationKey,
+          userId,
+          mlUserId,
+          topic: "shipment_label_ready",
+          action: "notify",
+          resource: `/shipments/${shipmentId}`,
+        },
+        select: { id: true },
+      })
+      .catch(() => null);
+
+    if (!createdLabelEvent) {
+      console.log("[ML webhook] shipment label duplicate", {
+        eventKey,
+        shipmentId,
+        orderId,
+        labelNotificationKey,
+      });
+      return { processed: false as const, reason: "shipment_label_duplicate" as const };
+    }
+
+    const labelButtonUrl = buildOrderLabelButtonUrl({
+      userId,
+      orderId,
+      shipmentId,
+    });
+
+    const notifyResult = await sendOrderLabelReadyNotification({
+      userId,
+      orderId,
+      shipmentId,
+      inlineButtons: [
+        {
+          text: "Download Label",
+          url: labelButtonUrl,
+        },
+      ],
+    }).catch(() => ({ sent: false as const, reason: "telegram_send_failed" as const }));
+
+    console.log("[ML webhook] shipment label notification", {
+      eventKey,
+      shipmentId,
+      orderId,
+      telegramNotified: notifyResult.sent,
+      notifyReason: "reason" in notifyResult ? notifyResult.reason : undefined,
+    });
+
+    return {
+      processed: true as const,
+      orderId,
+      shipmentId,
+      notified: notifyResult.sent,
+    };
+  } catch (error) {
+    if (isLabelNotReadyMlError(error)) {
+      console.log("[ML webhook] shipment label not ready", {
+        eventKey,
+        shipmentId,
+        orderId,
+      });
+
+      return {
+        processed: false as const,
+        reason: "shipment_label_not_ready" as const,
+      };
+    }
+
+    console.error("[ML webhook] shipment label setup failed", {
+      eventKey,
+      shipmentId,
+      orderId,
+      error,
+    });
+
+    return {
+      processed: false as const,
+      reason: "shipment_label_setup_failed" as const,
+    };
+  }
 }
 
 async function handleItemSnapshotEvent(options: {
@@ -441,8 +687,9 @@ export async function processMercadoLibreWebhook(input: ProcessMlWebhookInput) {
 
   const matchesOrder = isOrderEvent(topic, resource, action);
   const matchesItemSnapshot = isItemSnapshotEvent(topic, resource, action);
+  const matchesShipment = isShipmentEvent(topic, resource, action);
 
-  if (!mlUserId || !resource || (!matchesOrder && !matchesItemSnapshot)) {
+  if (!mlUserId || !resource || (!matchesOrder && !matchesItemSnapshot && !matchesShipment)) {
     console.log("[ML webhook] ignored", {
       reason: "non_supported_topic_or_missing_fields",
       mlUserId,
@@ -520,6 +767,16 @@ export async function processMercadoLibreWebhook(input: ProcessMlWebhookInput) {
         userId: user.id,
         accessToken,
         orderId,
+        eventKey,
+      });
+    }
+
+    if (matchesShipment) {
+      return handleShipmentEvent({
+        userId: user.id,
+        mlUserId,
+        accessToken,
+        resource,
         eventKey,
       });
     }

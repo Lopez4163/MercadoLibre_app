@@ -18,6 +18,15 @@ type SendMessageResult = {
   message_id: number;
 };
 
+export type TelegramInlineButton = {
+  text: string;
+  url: string;
+};
+
+type TelegramSendMessageOptions = {
+  inlineButtons?: TelegramInlineButton[];
+};
+
 type WebhookInfoResult = {
   url: string;
   pending_update_count: number;
@@ -73,11 +82,25 @@ async function telegramRequest<T>(method: string, body?: Record<string, unknown>
   );
 }
 
-export async function sendTelegramMessage(chatId: string, text: string) {
+export async function sendTelegramMessage(
+  chatId: string,
+  text: string,
+  options?: TelegramSendMessageOptions,
+) {
+  const inlineButtons = options?.inlineButtons?.filter(
+    (button) => button.text.trim().length > 0 && button.url.trim().length > 0,
+  );
+
   return telegramRequest<SendMessageResult>("sendMessage", {
     chat_id: chatId,
     text,
     disable_web_page_preview: true,
+    reply_markup:
+      inlineButtons && inlineButtons.length > 0
+        ? {
+            inline_keyboard: [inlineButtons.map((button) => ({ text: button.text, url: button.url }))],
+          }
+        : undefined,
   });
 }
 
