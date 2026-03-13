@@ -43,7 +43,6 @@ export function buildOrderSoldMessage(input: {
   orderId: string;
   status?: string;
   totalAmount?: number;
-  saleType?: "flex" | "full" | "other" | null;
   lines: Array<{
     itemId: string;
     title: string;
@@ -80,15 +79,6 @@ export function buildOrderSoldMessage(input: {
     return `📌 Estado: ${capitalize(status)}`;
   };
 
-  const saleTypeLabel =
-    input.saleType === "flex"
-      ? "🚚 Tipo de venta: Flex"
-      : input.saleType === "full"
-        ? "🏬 Tipo de venta: Full"
-        : input.saleType === "other"
-          ? "🚛 Tipo de venta: Otra"
-          : null;
-
   const itemLines = input.lines
     .slice(0, 3)
     .map((line) => `• ${line.quantity} x ${line.title}`);
@@ -107,7 +97,6 @@ export function buildOrderSoldMessage(input: {
     `📦 Unidades: ${totalUnits}`,
     formattedTotal ? `💰 Total: ${formattedTotal}` : null,
     statusLabel(input.status),
-    saleTypeLabel,
     itemLines.length > 0 ? "" : null,
     itemLines.length > 0 ? "🛍 Productos" : null,
     ...itemLines,
@@ -120,14 +109,27 @@ export function buildOrderSoldMessage(input: {
 export function buildOrderLabelReadyMessage(input: {
   orderId: string;
   shipmentId: string;
+  saleType?: "flex" | "full" | "other" | null;
 }) {
+  const saleTypeLabel =
+    input.saleType === "flex"
+      ? "🚚 Tipo de venta: Flex"
+      : input.saleType === "full"
+        ? "🏬 Tipo de venta: Full"
+        : input.saleType === "other"
+          ? "🚛 Tipo de venta: Otra"
+          : null;
+
   return [
     "📄 Label ready",
     "",
     `🧾 Orden: ${input.orderId}`,
     `📦 Envio: ${input.shipmentId}`,
+    saleTypeLabel,
     "La guia ya esta disponible para descargar.",
-  ].join("\n");
+  ]
+    .filter(Boolean)
+    .join("\n");
 }
 
 export function buildOutOfStockMessage(input: {
