@@ -46,10 +46,16 @@ export default async function DashboardLayout({
               Dashboard
             </Link>
             <Link
-              href="/billing"
+              href="/settings"
               className="inline-flex h-9 items-center border border-[var(--border-1)] bg-[var(--surface-2)] px-3 text-sm font-semibold text-[var(--text-1)] hover:bg-[var(--surface-1)]"
             >
-              Billing
+              Settings
+            </Link>
+            <Link
+              href="/profile"
+              className="inline-flex h-9 items-center border border-[var(--border-1)] bg-[var(--surface-2)] px-3 text-sm font-semibold text-[var(--text-1)] hover:bg-[var(--surface-1)]"
+            >
+              Profile
             </Link>
             <ThemeToggle />
             <form action="/api/auth/logout" method="post">

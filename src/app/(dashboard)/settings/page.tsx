@@ -1,3 +1,5 @@
+import { redirect } from "next/navigation";
+
 export default function SettingsPage() {
-  return <main>Settings page</main>;
+  redirect("/settings/notifications");
 }

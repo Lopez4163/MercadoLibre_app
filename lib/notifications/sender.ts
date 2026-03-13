@@ -14,7 +14,6 @@ type OrderSoldNotificationInput = {
   orderId: string;
   status?: string;
   totalAmount?: number;
-  saleType?: MlOrderSaleType | null;
   inlineButtons?: TelegramInlineButton[];
   lines: Array<{
     itemId: string;
@@ -58,7 +57,6 @@ export async function sendOrderSoldNotification(input: OrderSoldNotificationInpu
     orderId: input.orderId,
     status: input.status,
     totalAmount: input.totalAmount,
-    saleType: input.saleType,
     lines: input.lines,
   });
 
@@ -81,6 +79,7 @@ type OrderLabelReadyNotificationInput = {
   userId: string;
   orderId: string;
   shipmentId: string;
+  saleType?: MlOrderSaleType | null;
   inlineButtons: TelegramInlineButton[];
 };
 
@@ -129,6 +128,7 @@ export async function sendOrderLabelReadyNotification(input: OrderLabelReadyNoti
   const message = buildOrderLabelReadyMessage({
     orderId: input.orderId,
     shipmentId: input.shipmentId,
+    saleType: input.saleType,
   });
 
   await sendTelegramMessage(account.chatId, message, {

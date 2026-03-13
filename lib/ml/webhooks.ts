@@ -11,10 +11,10 @@ import {
 import {
   getItemById,
   getOrderById,
-  getOrderSaleType,
   getPrimaryOrderShipment,
   getShipmentById,
   getShipmentLabelDocument,
+  type MlOrderSaleType,
 } from "./api";
 import { withUserMlAccessToken } from "./tokens";
 
@@ -124,6 +124,24 @@ function buildOrderLabelButtonUrl(input: {
   return labelUrl.toString();
 }
 
+function mapShipmentSaleType(logisticType: string | null | undefined): MlOrderSaleType | null {
+  if (!logisticType) {
+    return null;
+  }
+
+  const normalized = logisticType.toLowerCase();
+
+  if (normalized === "self_service") {
+    return "flex";
+  }
+
+  if (normalized === "fulfillment") {
+    return "full";
+  }
+
+  return "other";
+}
+
 function isLabelNotReadyMlError(error: unknown) {
   if (!(error instanceof Error)) {
     return false;
@@ -173,23 +191,9 @@ async function handleOrderEvent(options: {
     return { processed: false as const, reason: "order_fetch_failed_or_empty" as const };
   }
 
-  let saleType: Awaited<ReturnType<typeof getOrderSaleType>> = null;
-  let saleTypeReason = "not_available";
   let shipmentId: string | null = null;
   let labelButtonUrl: string | null = null;
   let labelButtonSkippedReason = "not_attempted";
-
-  try {
-    saleType = await getOrderSaleType({
-      accessToken,
-      orderId: order.id,
-    });
-    if (saleType) {
-      saleTypeReason = "resolved";
-    }
-  } catch (error) {
-    saleTypeReason = error instanceof Error ? error.message : "unknown_error";
-  }
 
   try {
     const shipment = await getPrimaryOrderShipment({
@@ -224,11 +228,9 @@ async function handleOrderEvent(options: {
     });
   }
 
-  console.log("[ML webhook] sale type lookup", {
+  console.log("[ML webhook] order shipment lookup", {
     eventKey,
     orderId: order.id,
-    saleType,
-    reason: saleTypeReason,
     shipmentId,
     hasLabelButton: Boolean(labelButtonUrl),
     labelButtonSkippedReason,
@@ -239,7 +241,6 @@ async function handleOrderEvent(options: {
     orderId: order.id,
     status: order.status,
     totalAmount: order.totalAmount,
-    saleType,
     inlineButtons: labelButtonUrl
       ? [
           {
@@ -379,7 +380,6 @@ async function handleOrderEvent(options: {
   console.log("[ML webhook] order processed", {
     eventKey,
     orderId: order.id,
-    saleType,
     lineCount: order.lines.length,
     telegramNotified: orderNotifyResult.sent,
     notifyReason: "reason" in orderNotifyResult ? orderNotifyResult.reason : undefined,
@@ -416,6 +416,7 @@ async function handleShipmentEvent(options: {
   }).catch(() => null);
 
   const orderId = shipment?.orderId ?? null;
+  const saleType = mapShipmentSaleType(shipment?.logisticType);
   if (!orderId) {
     console.log("[ML webhook] shipment without order context", {
       eventKey,
@@ -465,6 +466,7 @@ async function handleShipmentEvent(options: {
       userId,
       orderId,
       shipmentId,
+      saleType,
       inlineButtons: [
         {
           text: "Download Label",
@@ -477,6 +479,7 @@ async function handleShipmentEvent(options: {
       eventKey,
       shipmentId,
       orderId,
+      saleType,
       telegramNotified: notifyResult.sent,
       notifyReason: "reason" in notifyResult ? notifyResult.reason : undefined,
     });

@@ -3,8 +3,8 @@
 ## Product Mission
 Build a SaaS for Mercado Libre sellers that delivers inventory-risk notifications to Telegram and provides a clean operations dashboard.
 
-## Current Repo Assessment (March 5, 2026)
-Status: **MVP+ operational**.
+## Current Repo Assessment (March 12, 2026)
+Status: **MVP+ operational with upgraded logged-in dashboard flow**.
 
 Core flow is implemented:
 1. Mercado Libre OAuth + token persistence.
@@ -15,6 +15,8 @@ Core flow is implemented:
 6. Webhook ingestion with idempotency and dedupe.
 7. Order sold, low-stock, and sold-out alert dispatch logic.
 8. Batched reconciler route and core reconcile engine.
+9. Telegram shipping-label flow with signed download route and shipment-ready follow-up alerts.
+10. Logged-in dashboard shell with top navigation, profile page, settings workspace, and stats tab.
 
 ## Architecture Snapshot
 1. Dashboard currently reads inventory live from ML via `/api/ml/items`.
@@ -22,6 +24,10 @@ Core flow is implemented:
 3. ML webhook events are deduped via `MlWebhookEvent.eventKey`.
 4. Telegram delivery is gated by per-user notification settings.
 5. Reconciler compares ML truth to local snapshots and can trigger transitions.
+6. Logged-in UX is split between:
+   - `/dashboard` for operational overview
+   - `/settings/*` for configuration
+   - `/profile` for account summary
 
 ## Implemented Features
 1. OAuth + signed session cookie:
@@ -63,14 +69,45 @@ Core flow is implemented:
    - `lib/auth/next-path.ts`
    - `src/app/api/ml/oauth/start/route.ts` (`next` support)
    - `src/app/api/ml/callback/route.ts` (signed return path handling)
+11. Order sale type + shipping label flow:
+   - `lib/ml/api.ts`
+   - `lib/ml/webhooks.ts`
+   - `lib/notifications/sender.ts`
+   - `lib/telegram/bot.ts`
+   - `lib/telegram/messages.ts`
+   - `lib/labels/token.ts`
+   - `src/app/api/orders/[orderId]/label/route.ts`
+   - `lib/app/base-url.ts`
+12. Logged-in dashboard shell + settings workspace:
+   - `src/app/(dashboard)/layout.tsx`
+   - `src/app/(dashboard)/dashboard/page.tsx`
+   - `components/dashboard/DashboardWorkspace.tsx`
+   - `src/app/(dashboard)/profile/page.tsx`
+   - `src/app/(dashboard)/settings/layout.tsx`
+   - `components/layout/SettingsSidebarNav.tsx`
+   - `src/app/(dashboard)/settings/notifications/page.tsx`
+   - `src/app/(dashboard)/settings/telegram/page.tsx`
+   - `src/app/(dashboard)/settings/billing/page.tsx`
+   - `components/dashboard/NotificationRulesCard.tsx`
+   - `components/dashboard/TelegramSettingsCard.tsx`
 
 ## Current Alert Behavior
 1. `orders_v2` events send order sold alerts (`notifyEverySale`).
-2. Sold-out alerts fire on transition `previousStock > 0 && currentStock === 0` (`notifySoldOut`).
-3. Low-stock alerts fire on crossing `previousStock > threshold && currentStock <= threshold && currentStock > 0` (`notifyLowStock`).
-4. Duplicate low-stock notifications are prevented with `Item.lowStockAlertedAt`.
-5. Low-stock alert state resets when stock recovers above threshold.
-6. Unsupported topics (e.g., `shipments`) are logged and ignored by design.
+2. Order sold alerts remain the primary sale notification.
+3. Order sold alerts try to include an inline `Download Label` button when a shipment already exists at order-processing time.
+4. `shipments` events are now supported for label-ready follow-ups:
+   - no Telegram message is sent until ML label fetch succeeds
+   - once the label is printable, a second Telegram `Label ready` message is sent with `Download Label`
+   - label-ready follow-up can include sale type derived from shipment logistic type:
+     - `self_service` -> `Flex`
+     - `fulfillment` -> `Full`
+     - else -> `Other`
+   - duplicate shipment retries are deduped by `shipment_label:<mlUserId>:<shipmentId>`
+5. Sold-out alerts fire on transition `previousStock > 0 && currentStock === 0` (`notifySoldOut`).
+6. Low-stock alerts fire on crossing `previousStock > threshold && currentStock <= threshold && currentStock > 0` (`notifyLowStock`).
+7. Duplicate low-stock notifications are prevented with `Item.lowStockAlertedAt`.
+8. Low-stock alert state resets when stock recovers above threshold.
+9. Unsupported topics outside order/item/shipment flows are logged and ignored by design.
 
 ## Data Models In Use
 1. `User` (ML identity + tokens)
@@ -90,19 +127,48 @@ Core flow is implemented:
 ## Known Notes
 1. Dashboard inventory source is still live ML API (not DB-cached UI read).
 2. Local snapshot is used for alerts and reconciliation, not as current table source.
-3. Turbopack `.next` cache corruption can occur in local dev after abrupt restarts; clear `.next` and restart if needed.
-4. Duplicate `orders_v2` inserts are expected and handled via `eventKey` unique dedupe.
+3. Logged-in dashboard now uses a top-nav shell:
+   - `Dashboard`
+   - `Settings`
+   - `Profile`
+   - `Logout`
+4. Settings is now a dedicated sidebar workspace with:
+   - `Notifications`
+   - `Telegram`
+   - `Billing`
+5. Dashboard tabs currently include:
+   - `Overview`
+   - `Inventory`
+   - `Orders`
+   - `Stats`
+   - `Alerts`
+6. Stats tab uses ML item fields only (`sold_quantity`, `available_quantity`, `price`, `status`) and currently includes:
+   - Top Seller
+   - Total Units Sold
+   - Fast Movers At Risk
+   - Dormant Stock
+   - Sell-Through Leaders
+   - Catalog Value
+   - Risk Rate
+7. Turbopack `.next` cache corruption can occur in local dev after abrupt restarts; clear `.next` and restart if needed.
+8. Duplicate `orders_v2` inserts are expected and handled via `eventKey` unique dedupe.
+9. Duplicate shipment-label follow-up attempts are expected and handled via `shipment_label:<mlUserId>:<shipmentId>` dedupe.
+10. `Label not ready` from the signed label route means shipment exists but ML has not exposed a printable label at that moment, or that shipment mode does not provide one.
+11. `npm run dev:ngrok` interleaves Next and ngrok logs heavily; prefer separate terminals for webhook debugging.
 
 ## Remaining Gaps (Post-MVP Hardening)
 1. Ensure reconciler scheduler is active in hosted environment.
 2. Add item-level batch controls if catalog size grows significantly.
 3. Consider DB-cached inventory reads for dashboard as usage scales.
 4. Optional resolver improvement for `fbm_stock_operations` item mapping.
-5. Add shipping-label delivery flow for order alerts:
-   - Generate short-lived signed label URL per order/shipment
-   - Add Telegram inline `Download Label` button on sale alerts
-   - Fetch ML shipment label on demand from backend and stream PDF
-   - Show clean fallback when label is not ready or unavailable
+5. Shipping-label flow is implemented for v1, but could be hardened further:
+   - Distinguish `not ready yet` vs `no printable label for this shipment mode` in UI/logging
+   - Optionally store Telegram `message_id` and edit/reply to the original order message instead of sending a second label-ready message
+   - Add focused integration coverage for shipment-ready timing and label dedupe
+6. Dashboard/orders UI is still partial:
+   - `Orders` tab is still a product placeholder, not a true order feed
+   - dashboard stats are ML-item-derived only, not time-windowed analytics
+7. Consider extracting reusable stat/list card primitives if the dashboard keeps growing.
 
 ## Reconciler Hardening Status
 1. [x] Single-run lock (no overlap).
