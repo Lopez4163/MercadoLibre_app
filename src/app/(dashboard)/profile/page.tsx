@@ -24,6 +24,7 @@ export default async function ProfilePage() {
     select: {
       email: true,
       mlUserId: true,
+      mlNickname: true,
       createdAt: true,
       telegramAccount: {
         select: {
@@ -50,10 +51,14 @@ export default async function ProfilePage() {
         <p className="text-sm text-[var(--text-2)]">Core account and connection details for the logged-in seller.</p>
       </section>
 
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
         <article className="border border-[var(--border-1)] bg-[var(--surface-1)] p-4">
           <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-3)]">Email</p>
           <p className="mt-3 text-base font-semibold text-[var(--text-1)]">{user.email}</p>
+        </article>
+        <article className="border border-[var(--border-1)] bg-[var(--surface-1)] p-4">
+          <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-3)]">Store name</p>
+          <p className="mt-3 text-base font-semibold text-[var(--text-1)]">{user.mlNickname ?? "N/A"}</p>
         </article>
         <article className="border border-[var(--border-1)] bg-[var(--surface-1)] p-4">
           <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-3)]">ML User ID</p>

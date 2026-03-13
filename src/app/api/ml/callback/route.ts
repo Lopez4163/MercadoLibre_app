@@ -45,6 +45,7 @@ export async function GET(request: NextRequest) {
     const profile = await getMlUserProfile(tokenData.access_token);
 
     const email = profile.email ?? `${profile.id}@mercadolibre.local`;
+    const mlNickname = profile.nickname ?? null;
     const tokenExpiresAt = new Date(Date.now() + tokenData.expires_in * 1000);
 
     const user = await prisma.user.upsert({
@@ -52,12 +53,14 @@ export async function GET(request: NextRequest) {
       create: {
         email,
         mlUserId: String(profile.id),
+        mlNickname,
         accessToken: tokenData.access_token,
         refreshToken: tokenData.refresh_token,
         tokenExpiresAt,
       },
       update: {
         email,
+        mlNickname,
         accessToken: tokenData.access_token,
         refreshToken: tokenData.refresh_token,
         tokenExpiresAt,

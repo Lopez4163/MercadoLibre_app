@@ -1,9 +1,8 @@
-import ThemeToggle from "../../../components/ui/ThemeToggle";
-import Link from "next/link";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { prisma } from "../../../lib/db/prisma";
 import { getSessionUserIdFromCookieStore } from "../../../lib/auth/session";
+import DashboardHeaderNav from "../../../components/layout/DashboardHeaderNav";
 
 export default async function DashboardLayout({
   children,
@@ -38,35 +37,7 @@ export default async function DashboardLayout({
             </p>
             <h1 className="text-lg font-semibold tracking-tight text-[var(--text-1)]">Seller Operations</h1>
           </div>
-          <div className="flex items-center gap-3">
-            <Link
-              href="/dashboard"
-              className="inline-flex h-9 items-center border border-[var(--border-1)] bg-[var(--surface-2)] px-3 text-sm font-semibold text-[var(--text-1)] hover:bg-[var(--surface-1)]"
-            >
-              Dashboard
-            </Link>
-            <Link
-              href="/settings"
-              className="inline-flex h-9 items-center border border-[var(--border-1)] bg-[var(--surface-2)] px-3 text-sm font-semibold text-[var(--text-1)] hover:bg-[var(--surface-1)]"
-            >
-              Settings
-            </Link>
-            <Link
-              href="/profile"
-              className="inline-flex h-9 items-center border border-[var(--border-1)] bg-[var(--surface-2)] px-3 text-sm font-semibold text-[var(--text-1)] hover:bg-[var(--surface-1)]"
-            >
-              Profile
-            </Link>
-            <ThemeToggle />
-            <form action="/api/auth/logout" method="post">
-              <button
-                type="submit"
-                className="inline-flex h-9 items-center border border-[var(--border-1)] bg-[var(--surface-2)] px-3 text-sm font-semibold text-[var(--text-1)] hover:bg-[var(--surface-1)]"
-              >
-                Logout
-              </button>
-            </form>
-          </div>
+          <DashboardHeaderNav />
         </div>
       </header>
       <div className="mx-auto w-full max-w-7xl px-6 py-6">{children}</div>
