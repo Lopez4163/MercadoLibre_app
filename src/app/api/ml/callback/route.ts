@@ -22,6 +22,40 @@ function getSafeBaseUrl(request: NextRequest) {
   return origin;
 }
 
+function getMlAvatarUrl(profile: {
+  thumbnail?:
+    | string
+    | {
+        picture_id?: string;
+        picture_url?: string;
+      };
+  picture?: string;
+  logo?: string;
+}) {
+  const thumbnailFromObject =
+    profile.thumbnail && typeof profile.thumbnail === "object"
+      ? profile.thumbnail.picture_url
+      : undefined;
+  const candidates = [profile.picture, profile.thumbnail, thumbnailFromObject, profile.logo];
+
+  for (const candidate of candidates) {
+    if (typeof candidate !== "string") {
+      continue;
+    }
+
+    const trimmed = candidate.trim();
+    if (!trimmed) {
+      continue;
+    }
+
+    if (/^https?:\/\//i.test(trimmed)) {
+      return trimmed;
+    }
+  }
+
+  return null;
+}
+
 export async function GET(request: NextRequest) {
   const url = new URL(request.url);
   const code = url.searchParams.get("code");
@@ -46,6 +80,7 @@ export async function GET(request: NextRequest) {
 
     const email = profile.email ?? `${profile.id}@mercadolibre.local`;
     const mlNickname = profile.nickname ?? null;
+    const mlAvatarUrl = getMlAvatarUrl(profile);
     const tokenExpiresAt = new Date(Date.now() + tokenData.expires_in * 1000);
 
     const user = await prisma.user.upsert({
@@ -54,6 +89,7 @@ export async function GET(request: NextRequest) {
         email,
         mlUserId: String(profile.id),
         mlNickname,
+        mlAvatarUrl,
         accessToken: tokenData.access_token,
         refreshToken: tokenData.refresh_token,
         tokenExpiresAt,
@@ -61,6 +97,7 @@ export async function GET(request: NextRequest) {
       update: {
         email,
         mlNickname,
+        mlAvatarUrl,
         accessToken: tokenData.access_token,
         refreshToken: tokenData.refresh_token,
         tokenExpiresAt,
