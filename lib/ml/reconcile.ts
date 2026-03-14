@@ -1,5 +1,6 @@
 import { prisma } from "../db/prisma";
 import { sendLowStockNotification, sendOutOfStockNotification } from "../notifications/sender";
+import { ACTIVE_SUBSCRIPTION_STATUSES } from "../billing/entitlements";
 import { getItemsByIds, getSellerItemIds } from "./api";
 import { withUserMlAccessToken } from "./tokens";
 
@@ -216,6 +217,15 @@ export async function reconcileInventorySnapshots(options?: ReconcileOptions): P
     const users: ReconcileUser[] = await prisma.user.findMany({
       where: {
         mlUserId: { not: "" },
+        accessToken: { not: "" },
+        refreshToken: { not: "" },
+        billingSubscription: {
+          is: {
+            status: {
+              in: Array.from(ACTIVE_SUBSCRIPTION_STATUSES),
+            },
+          },
+        },
       },
       select: {
         id: true,

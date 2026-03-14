@@ -10,6 +10,11 @@ const settingsNavItems = [
     description: "Alert rules and thresholds",
   },
   {
+    href: "/settings/mercadolibre",
+    label: "Mercado Libre",
+    description: "Connection and account access",
+  },
+  {
     href: "/settings/telegram",
     label: "Telegram",
     description: "Delivery channel and test ping",

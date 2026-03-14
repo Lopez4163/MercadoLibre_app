@@ -1,6 +1,14 @@
 import { prisma } from "../db/prisma";
 
-const ACTIVE_SUBSCRIPTION_STATUSES = new Set(["trialing", "active"]);
+export const ACTIVE_SUBSCRIPTION_STATUSES = new Set(["trialing", "active"]);
+
+export function isBillingStatusActive(status: string | null | undefined) {
+  if (!status) {
+    return false;
+  }
+
+  return ACTIVE_SUBSCRIPTION_STATUSES.has(status);
+}
 
 export type BillingEntitlement = {
   hasAccess: boolean;
@@ -15,7 +23,7 @@ export async function getUserBillingEntitlement(userId: string): Promise<Billing
 
   const status = subscription?.status ?? null;
   return {
-    hasAccess: status ? ACTIVE_SUBSCRIPTION_STATUSES.has(status) : false,
+    hasAccess: isBillingStatusActive(status),
     status,
   };
 }
