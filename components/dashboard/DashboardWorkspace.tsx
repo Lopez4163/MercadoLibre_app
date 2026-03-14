@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import InventoryTable from "./InventoryTable";
 
 type InventoryItem = {
@@ -25,6 +25,49 @@ type NotificationSettingsPayload = {
   notifySoldOut: boolean;
   notifyLowStock: boolean;
   lowStockThreshold: number;
+};
+
+type OrderLine = {
+  mlItemId: string;
+  title: string;
+  quantity: number;
+  unitPrice: number | null;
+};
+
+type OrderNotification = {
+  eventType: string;
+  status: string;
+  reason: string | null;
+  createdAt: string;
+};
+
+type DashboardOrder = {
+  id: string;
+  mlOrderId: string;
+  status: string;
+  saleType: string | null;
+  totalAmount: number | null;
+  createdAt: string;
+  createdAtMl: string | null;
+  updatedAtMl: string | null;
+  lastSeenAt: string;
+  lines: OrderLine[];
+  latestNotification: OrderNotification | null;
+  labelUrl: string | null;
+};
+
+type OrdersRecentResponse = {
+  ok: boolean;
+  error?: string;
+  message?: string;
+  orders?: DashboardOrder[];
+  pagination?: {
+    page: number;
+    pageSize: number;
+    total: number;
+    totalPages: number;
+    hasNextPage: boolean;
+  };
 };
 
 type DashboardWorkspaceProps = {
@@ -70,6 +113,45 @@ function toggleLabel(value: boolean | null) {
   return value ? "On" : "Off";
 }
 
+function formatDateTime(value: string | null) {
+  if (!value) {
+    return "N/A";
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return "N/A";
+  }
+
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(date);
+}
+
+function orderStatusTone(status: string) {
+  const normalized = status.toLowerCase();
+  if (normalized.includes("paid") || normalized.includes("confirmed")) {
+    return "text-emerald-300 border-emerald-500/40 bg-emerald-500/10";
+  }
+  if (normalized.includes("cancel") || normalized.includes("closed")) {
+    return "text-red-300 border-red-500/40 bg-red-500/10";
+  }
+  return "text-amber-300 border-amber-500/40 bg-amber-500/10";
+}
+
+function telegramStatusTone(status: string | null) {
+  if (!status) {
+    return "text-[var(--text-3)] border-[var(--border-1)] bg-[var(--bg-0)]";
+  }
+  if (status === "sent") {
+    return "text-emerald-300 border-emerald-500/40 bg-emerald-500/10";
+  }
+  return "text-red-300 border-red-500/40 bg-red-500/10";
+}
+
 export default function DashboardWorkspace({
   mlName,
   billingHasAccess,
@@ -83,6 +165,14 @@ export default function DashboardWorkspace({
   const [lastUpdatedAt, setLastUpdatedAt] = useState<number | null>(null);
   const [telegramConnected, setTelegramConnected] = useState<boolean | null>(null);
   const [notificationSettings, setNotificationSettings] = useState<NotificationSettingsPayload | null>(null);
+  const [orders, setOrders] = useState<DashboardOrder[]>([]);
+  const [ordersLoading, setOrdersLoading] = useState(false);
+  const [ordersError, setOrdersError] = useState<string | null>(null);
+  const [ordersPage, setOrdersPage] = useState(1);
+  const [ordersTotalPages, setOrdersTotalPages] = useState(1);
+  const [ordersTotal, setOrdersTotal] = useState(0);
+  const [orderStatusFilter, setOrderStatusFilter] = useState("all");
+  const [ordersLoadedOnce, setOrdersLoadedOnce] = useState(false);
 
   async function loadInventory(options?: { initial?: boolean }) {
     const initial = options?.initial ?? false;
@@ -154,6 +244,41 @@ export default function DashboardWorkspace({
     }
   }
 
+  const loadOrders = useCallback(async (options?: { page?: number; status?: string }) => {
+    const page = options?.page ?? ordersPage;
+    const status = options?.status ?? orderStatusFilter;
+
+    try {
+      setOrdersLoading(true);
+      setOrdersError(null);
+
+      const query = new URLSearchParams({
+        page: String(page),
+        pageSize: "25",
+      });
+      if (status !== "all") {
+        query.set("status", status);
+      }
+
+      const response = await fetch(`/api/orders/recent?${query.toString()}`, { cache: "no-store" });
+      const data = (await response.json()) as OrdersRecentResponse;
+
+      if (!response.ok || !data.ok) {
+        throw new Error(data.message ?? data.error ?? "Failed to fetch orders");
+      }
+
+      setOrders(data.orders ?? []);
+      setOrdersPage(data.pagination?.page ?? page);
+      setOrdersTotalPages(data.pagination?.totalPages ?? 1);
+      setOrdersTotal(data.pagination?.total ?? 0);
+      setOrdersLoadedOnce(true);
+    } catch (error) {
+      setOrdersError(error instanceof Error ? error.message : "Unknown error");
+    } finally {
+      setOrdersLoading(false);
+    }
+  }, [orderStatusFilter, ordersPage]);
+
   useEffect(() => {
     void Promise.all([
       loadInventory({ initial: true }),
@@ -161,6 +286,12 @@ export default function DashboardWorkspace({
       loadNotificationSettings(),
     ]);
   }, []);
+
+  useEffect(() => {
+    if (activeTab === "orders" && !ordersLoadedOnce) {
+      void loadOrders({ page: 1, status: orderStatusFilter });
+    }
+  }, [activeTab, loadOrders, orderStatusFilter, ordersLoadedOnce]);
 
   const soldOutItems = useMemo(
     () => items.filter((item) => item.available_quantity === 0).length,
@@ -514,44 +645,195 @@ export default function DashboardWorkspace({
       ) : null}
 
       {activeTab === "orders" ? (
-        <section className="grid gap-4 lg:grid-cols-2">
+        <section className="space-y-4">
           <article className="border border-[var(--border-1)] bg-[var(--surface-1)] p-5">
-            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--text-3)]">Orders</p>
-            <h3 className="mt-2 text-xl font-semibold tracking-tight text-[var(--text-1)]">
-              Order workspace is the next UI layer
-            </h3>
-            <p className="mt-3 text-sm text-[var(--text-2)]">
-              The backend already processes order webhooks, sale notifications, shipment labels, and dedupe. The dashboard still needs a dedicated order feed.
-            </p>
-            <ul className="mt-4 space-y-3 text-sm text-[var(--text-2)]">
-              <li>Orders trigger Telegram sale alerts immediately.</li>
-              <li>Shipment label follow-ups are sent only once the label is actually ready.</li>
-              <li>Webhook dedupe prevents duplicated sale and label notifications.</li>
-            </ul>
-          </article>
+            <div className="flex flex-wrap items-end justify-between gap-4">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--text-3)]">Orders</p>
+                <h3 className="mt-2 text-xl font-semibold tracking-tight text-[var(--text-1)]">Recent Order Activity</h3>
+                <p className="mt-2 text-sm text-[var(--text-2)]">
+                  Last 30 days of order events and latest Telegram delivery state.
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <select
+                  value={orderStatusFilter}
+                  onChange={(event) => {
+                    const value = event.target.value;
+                    setOrderStatusFilter(value);
+                    setOrdersPage(1);
+                    void loadOrders({ page: 1, status: value });
+                  }}
+                  className="h-10 border border-[var(--border-1)] bg-[var(--bg-0)] px-3 text-sm text-[var(--text-1)]"
+                >
+                  <option value="all">All statuses</option>
+                  <option value="paid">Paid</option>
+                  <option value="confirmed">Confirmed</option>
+                  <option value="cancelled">Cancelled</option>
+                </select>
+                <button
+                  type="button"
+                  onClick={() => void loadOrders({ page: ordersPage, status: orderStatusFilter })}
+                  disabled={ordersLoading}
+                  className="inline-flex h-10 items-center border border-[var(--border-1)] bg-[var(--surface-2)] px-4 text-xs font-semibold uppercase tracking-wide text-[var(--text-1)] hover:bg-[var(--surface-1)] disabled:opacity-60"
+                >
+                  {ordersLoading ? "Refreshing..." : "Refresh"}
+                </button>
+              </div>
+            </div>
 
-          <article className="border border-[var(--border-1)] bg-[var(--surface-1)] p-5">
-            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--text-3)]">Next Actions</p>
-            <div className="mt-4 grid gap-3">
-              <Link
-                href="/settings/telegram"
-                className="inline-flex h-11 items-center justify-center border border-[var(--border-1)] bg-[var(--surface-2)] px-4 text-sm font-semibold text-[var(--text-1)] hover:bg-[var(--surface-1)]"
-              >
-                Verify Telegram delivery
-              </Link>
-              <Link
-                href="/profile"
-                className="inline-flex h-11 items-center justify-center border border-[var(--border-1)] bg-[var(--surface-2)] px-4 text-sm font-semibold text-[var(--text-1)] hover:bg-[var(--surface-1)]"
-              >
-                Review account profile
-              </Link>
-              <button
-                type="button"
-                onClick={() => setActiveTab("inventory")}
-                className="inline-flex h-11 items-center justify-center border border-[var(--accent)] bg-[var(--accent)] px-4 text-sm font-semibold text-[var(--accent-contrast)] hover:bg-transparent hover:text-[var(--text-1)]"
-              >
-                Inspect inventory risk
-              </button>
+            <div className="mt-4 grid gap-3 md:grid-cols-3">
+              <div className="border border-[var(--border-1)] bg-[var(--bg-0)] p-4">
+                <p className="text-xs uppercase tracking-wide text-[var(--text-3)]">Orders in Range</p>
+                <p className="mt-2 text-3xl font-semibold text-[var(--text-1)]">{ordersTotal.toLocaleString("en-US")}</p>
+              </div>
+              <div className="border border-[var(--border-1)] bg-[var(--bg-0)] p-4">
+                <p className="text-xs uppercase tracking-wide text-[var(--text-3)]">Telegram Sent</p>
+                <p className="mt-2 text-3xl font-semibold text-emerald-300">
+                  {orders.filter((order) => order.latestNotification?.status === "sent").length}
+                </p>
+              </div>
+              <div className="border border-[var(--border-1)] bg-[var(--bg-0)] p-4">
+                <p className="text-xs uppercase tracking-wide text-[var(--text-3)]">Telegram Failed</p>
+                <p className="mt-2 text-3xl font-semibold text-red-300">
+                  {orders.filter((order) => order.latestNotification?.status === "failed").length}
+                </p>
+              </div>
+            </div>
+
+            {ordersError ? (
+              <p className="mt-4 border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-200">{ordersError}</p>
+            ) : null}
+
+            <div className="mt-4 overflow-x-auto border border-[var(--border-1)]">
+              <table className="min-w-full divide-y divide-[var(--border-1)] text-left">
+                <thead className="bg-[var(--surface-2)]">
+                  <tr>
+                    <th className="px-3 py-3 text-xs font-semibold uppercase tracking-wide text-[var(--text-3)]">Order</th>
+                    <th className="px-3 py-3 text-xs font-semibold uppercase tracking-wide text-[var(--text-3)]">Items</th>
+                    <th className="px-3 py-3 text-xs font-semibold uppercase tracking-wide text-[var(--text-3)]">Qty</th>
+                    <th className="px-3 py-3 text-xs font-semibold uppercase tracking-wide text-[var(--text-3)]">Created</th>
+                    <th className="px-3 py-3 text-xs font-semibold uppercase tracking-wide text-[var(--text-3)]">Status</th>
+                    <th className="px-3 py-3 text-xs font-semibold uppercase tracking-wide text-[var(--text-3)]">Total</th>
+                    <th className="px-3 py-3 text-xs font-semibold uppercase tracking-wide text-[var(--text-3)]">Sale Type</th>
+                    <th className="px-3 py-3 text-xs font-semibold uppercase tracking-wide text-[var(--text-3)]">Telegram</th>
+                    <th className="px-3 py-3 text-xs font-semibold uppercase tracking-wide text-[var(--text-3)]">Label</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[var(--border-1)] bg-[var(--surface-1)]">
+                  {ordersLoading && orders.length === 0 ? (
+                    <tr>
+                      <td colSpan={9} className="px-3 py-6 text-center text-sm text-[var(--text-2)]">
+                        Loading orders...
+                      </td>
+                    </tr>
+                  ) : null}
+                  {!ordersLoading && orders.length === 0 ? (
+                    <tr>
+                      <td colSpan={9} className="px-3 py-6 text-center text-sm text-[var(--text-2)]">
+                        No orders found for this filter.
+                      </td>
+                    </tr>
+                  ) : null}
+                  {orders.map((order) => (
+                    <tr key={order.id}>
+                      <td className="px-3 py-3 align-top">
+                        <p className="font-mono text-sm font-semibold text-[var(--text-1)]">{order.mlOrderId}</p>
+                        <p className="mt-1 text-xs text-[var(--text-3)]">
+                          {order.lines.length} line{order.lines.length === 1 ? "" : "s"}
+                        </p>
+                      </td>
+                      <td className="px-3 py-3 align-top">
+                        {order.lines.length === 0 ? (
+                          <p className="text-sm text-[var(--text-3)]">N/A</p>
+                        ) : (
+                          <div className="space-y-1">
+                            {order.lines.slice(0, 2).map((line) => (
+                              <p key={`${order.id}:${line.mlItemId}`} className="max-w-[280px] truncate text-sm text-[var(--text-2)]">
+                                {line.title}
+                              </p>
+                            ))}
+                            {order.lines.length > 2 ? (
+                              <p className="text-xs text-[var(--text-3)]">+{order.lines.length - 2} more</p>
+                            ) : null}
+                          </div>
+                        )}
+                      </td>
+                      <td className="px-3 py-3 align-top text-sm font-semibold text-[var(--text-1)]">
+                        {order.lines.reduce((sum, line) => sum + line.quantity, 0).toLocaleString("en-US")}
+                      </td>
+                      <td className="px-3 py-3 align-top text-sm text-[var(--text-2)]">{formatDateTime(order.createdAtMl ?? order.createdAt)}</td>
+                      <td className="px-3 py-3 align-top">
+                        <span className={`inline-flex border px-2 py-1 text-xs font-semibold uppercase ${orderStatusTone(order.status)}`}>
+                          {order.status}
+                        </span>
+                      </td>
+                      <td className="px-3 py-3 align-top text-sm font-semibold text-[var(--text-1)]">
+                        {order.totalAmount === null ? "N/A" : `$${order.totalAmount.toLocaleString("en-US")}`}
+                      </td>
+                      <td className="px-3 py-3 align-top text-sm text-[var(--text-2)]">{order.saleType ?? "N/A"}</td>
+                      <td className="px-3 py-3 align-top">
+                        <span
+                          className={`inline-flex border px-2 py-1 text-xs font-semibold uppercase ${telegramStatusTone(
+                            order.latestNotification?.status ?? null,
+                          )}`}
+                        >
+                          {order.latestNotification?.status ?? "none"}
+                        </span>
+                        {order.latestNotification?.reason ? (
+                          <p className="mt-1 text-xs text-[var(--text-3)]">{order.latestNotification.reason}</p>
+                        ) : null}
+                      </td>
+                      <td className="px-3 py-3 align-top">
+                        {order.labelUrl ? (
+                          <a
+                            href={order.labelUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex h-8 items-center border border-[var(--accent)] bg-[var(--accent)] px-3 text-xs font-semibold uppercase tracking-wide text-[var(--accent-contrast)] hover:bg-transparent hover:text-[var(--text-1)]"
+                          >
+                            Download
+                          </a>
+                        ) : (
+                          <span className="text-xs text-[var(--text-3)]">Not ready</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="mt-4 flex items-center justify-between gap-3">
+              <p className="text-xs text-[var(--text-3)]">
+                Page {ordersPage} of {ordersTotalPages}
+              </p>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const nextPage = Math.max(1, ordersPage - 1);
+                    setOrdersPage(nextPage);
+                    void loadOrders({ page: nextPage, status: orderStatusFilter });
+                  }}
+                  disabled={ordersLoading || ordersPage <= 1}
+                  className="inline-flex h-9 items-center border border-[var(--border-1)] bg-[var(--surface-2)] px-3 text-xs font-semibold uppercase tracking-wide text-[var(--text-1)] disabled:opacity-50"
+                >
+                  Prev
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const nextPage = Math.min(ordersTotalPages, ordersPage + 1);
+                    setOrdersPage(nextPage);
+                    void loadOrders({ page: nextPage, status: orderStatusFilter });
+                  }}
+                  disabled={ordersLoading || ordersPage >= ordersTotalPages}
+                  className="inline-flex h-9 items-center border border-[var(--border-1)] bg-[var(--surface-2)] px-3 text-xs font-semibold uppercase tracking-wide text-[var(--text-1)] disabled:opacity-50"
+                >
+                  Next
+                </button>
+              </div>
             </div>
           </article>
         </section>

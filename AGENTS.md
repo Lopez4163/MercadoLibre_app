@@ -195,6 +195,23 @@ Core flow is implemented:
 1. [ ] Fail closed for ML webhook auth in production:
    - If `NODE_ENV=production` and `ML_WEBHOOK_SECRET` is missing, return `500` from `/api/webhooks/mercadolibre` to prevent unauthenticated webhook processing.
 
+## API Hardening TODO
+1. [ ] Harden `POST /api/jobs/orders-cleanup`:
+   - Add rate limiting (very low request ceiling).
+   - Optionally enforce scheduler IP allow-list in production.
+   - Keep generic error responses only.
+2. [ ] Harden `GET /api/orders/recent`:
+   - Validate `status` filter values against an explicit allow-list.
+   - Add per-user rate limiting.
+   - Keep `pageSize` cap (`<= 100`) enforced.
+3. [ ] Improve label-link security model:
+   - Replace stored signed `labelButtonUrl` usage with on-demand signed URL generation.
+   - Keep short-lived signed URLs, but support next-day printing via regenerated tokens.
+4. [ ] Add focused tests for new API paths:
+   - Unauthorized/forbidden coverage for jobs + orders APIs.
+   - Invalid query/date-range validation coverage.
+   - Orders notification-log + label-link response coverage.
+
 ## Stripe Flows
 ### Recommended SaaS Billing Flow
 1. User logs in via Mercado Libre OAuth and reaches dashboard.
