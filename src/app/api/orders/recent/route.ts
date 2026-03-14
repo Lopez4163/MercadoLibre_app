@@ -15,6 +15,7 @@ const DEFAULT_PAGE = 1;
 const DEFAULT_PAGE_SIZE = 25;
 const MAX_PAGE_SIZE = 100;
 const MS_IN_30_DAYS = 30 * 24 * 60 * 60 * 1000;
+const ORDER_STATUS_ALLOW_LIST = ["paid", "confirmed", "cancelled"] as const;
 const ORDERS_RECENT_RATE_LIMIT = {
   limit: 60,
   windowMs: 60_000,
@@ -53,6 +54,30 @@ function extractLabelUrlFromPayload(payload: unknown) {
 
   const candidate = (payload as { labelButtonUrl?: unknown }).labelButtonUrl;
   return typeof candidate === "string" && candidate.length > 0 ? candidate : null;
+}
+
+function parseStatuses(statusParam: string | null) {
+  if (!statusParam || statusParam.trim().toLowerCase() === "all") {
+    return { ok: true as const, statuses: [] as string[] };
+  }
+
+  const allowedSet = new Set<string>(ORDER_STATUS_ALLOW_LIST);
+  const parsed = statusParam
+    .split(",")
+    .map((status) => status.trim().toLowerCase())
+    .filter((status) => status.length > 0);
+
+  const uniqueStatuses = Array.from(new Set(parsed));
+  if (uniqueStatuses.length === 0) {
+    return { ok: false as const, invalid: ["(empty)"] };
+  }
+
+  const invalid = uniqueStatuses.filter((status) => !allowedSet.has(status));
+  if (invalid.length > 0) {
+    return { ok: false as const, invalid };
+  }
+
+  return { ok: true as const, statuses: uniqueStatuses };
 }
 
 export async function GET(request: NextRequest) {
@@ -111,14 +136,19 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const statusParam = query.get("status");
-  const statuses =
-    statusParam && statusParam !== "all"
-      ? statusParam
-          .split(",")
-          .map((status) => status.trim())
-          .filter((status) => status.length > 0)
-      : [];
+  const parsedStatuses = parseStatuses(query.get("status"));
+  if (!parsedStatuses.ok) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: "invalid_status_filter",
+        message: `Allowed statuses: all, ${ORDER_STATUS_ALLOW_LIST.join(", ")}`,
+        invalid: parsedStatuses.invalid,
+      },
+      { status: 400 },
+    );
+  }
+  const statuses = parsedStatuses.statuses;
 
   const where = {
     userId: sessionUserId,

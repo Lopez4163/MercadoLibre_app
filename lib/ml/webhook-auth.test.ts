@@ -11,6 +11,16 @@ describe("verifyMlWebhookSecret", () => {
     ).toBe(true);
   });
 
+  it("rejects request when expected secret is not configured in strict mode", () => {
+    expect(
+      verifyMlWebhookSecret({
+        expectedSecret: undefined,
+        providedSecret: null,
+        strict: true,
+      }),
+    ).toBe(false);
+  });
+
   it("accepts matching header/query secret", () => {
     expect(
       verifyMlWebhookSecret({
@@ -54,5 +64,15 @@ describe("verifyMlWebhookSecret", () => {
         providedSecret: "old-secret",
       }),
     ).toBe(true);
+  });
+
+  it("rejects malformed expected secret in strict mode", () => {
+    expect(
+      verifyMlWebhookSecret({
+        expectedSecret: " , '   ' ",
+        providedSecret: "anything",
+        strict: true,
+      }),
+    ).toBe(false);
   });
 });

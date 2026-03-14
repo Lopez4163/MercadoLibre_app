@@ -79,9 +79,19 @@ async function processStartCommand(update: TelegramWebhookUpdate) {
 }
 
 export async function POST(request: NextRequest) {
-  const expectedSecret = process.env.TELEGRAM_WEBHOOK_SECRET;
+  const strictMode = process.env.NODE_ENV === "production";
+  const expectedSecret = process.env.TELEGRAM_WEBHOOK_SECRET?.trim() ?? "";
+
+  if (strictMode && !expectedSecret) {
+    console.error("telegram webhook secret missing in production");
+    return NextResponse.json(
+      { ok: false, error: "webhook_secret_unavailable" },
+      { status: 500 },
+    );
+  }
+
   if (expectedSecret) {
-    const headerSecret = request.headers.get("x-telegram-bot-api-secret-token");
+    const headerSecret = request.headers.get("x-telegram-bot-api-secret-token")?.trim();
     if (headerSecret !== expectedSecret) {
       return NextResponse.json({ ok: false, error: "forbidden" }, { status: 403 });
     }
