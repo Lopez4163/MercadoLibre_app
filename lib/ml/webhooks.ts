@@ -14,6 +14,7 @@ import {
   getPrimaryOrderShipment,
   getShipmentById,
   getShipmentLabelDocument,
+  type MlOrderSnapshot,
   type MlOrderSaleType,
 } from "./api";
 import { withUserMlAccessToken } from "./tokens";
@@ -170,6 +171,106 @@ async function getNotificationSettings(userId: string) {
   });
 }
 
+function getOrderExpiryDate(now: Date) {
+  return new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+}
+
+async function ensureOrderRecord(options: { userId: string; mlOrderId: string }) {
+  const now = new Date();
+  return prisma.order.upsert({
+    where: {
+      userId_mlOrderId: {
+        userId: options.userId,
+        mlOrderId: options.mlOrderId,
+      },
+    },
+    create: {
+      userId: options.userId,
+      mlOrderId: options.mlOrderId,
+      status: "unknown",
+      lastSeenAt: now,
+      expiresAt: getOrderExpiryDate(now),
+    },
+    update: {
+      lastSeenAt: now,
+      expiresAt: getOrderExpiryDate(now),
+    },
+    select: {
+      id: true,
+    },
+  });
+}
+
+async function persistOrderSnapshot(options: {
+  userId: string;
+  order: MlOrderSnapshot;
+  saleType: MlOrderSaleType | null;
+}) {
+  const { userId, order, saleType } = options;
+  const persistedOrder = await ensureOrderRecord({
+    userId,
+    mlOrderId: order.id,
+  });
+
+  await prisma.order.update({
+    where: {
+      id: persistedOrder.id,
+    },
+    data: {
+      status: order.status ?? "unknown",
+      totalAmount: order.totalAmount,
+      saleType,
+      createdAtMl: null,
+      updatedAtMl: null,
+    },
+  });
+
+  await prisma.orderLine.deleteMany({
+    where: {
+      orderId: persistedOrder.id,
+    },
+  });
+
+  if (order.lines.length > 0) {
+    await prisma.orderLine.createMany({
+      data: order.lines.map((line) => ({
+        orderId: persistedOrder.id,
+        mlItemId: line.itemId,
+        title: line.title,
+        quantity: line.quantity,
+        unitPrice: null,
+      })),
+    });
+  }
+
+  return persistedOrder;
+}
+
+async function logOrderNotification(options: {
+  userId: string;
+  mlOrderId: string;
+  eventType: string;
+  status: string;
+  reason?: string;
+  payload?: Record<string, unknown>;
+}) {
+  const orderRecord = await ensureOrderRecord({
+    userId: options.userId,
+    mlOrderId: options.mlOrderId,
+  });
+
+  await prisma.orderNotificationLog.create({
+    data: {
+      orderId: orderRecord.id,
+      channel: "telegram",
+      eventType: options.eventType,
+      status: options.status,
+      reason: options.reason ?? null,
+      payload: options.payload ?? null,
+    },
+  });
+}
+
 async function handleOrderEvent(options: {
   userId: string;
   accessToken: string;
@@ -192,6 +293,7 @@ async function handleOrderEvent(options: {
   }
 
   let shipmentId: string | null = null;
+  let saleType: MlOrderSaleType | null = null;
   let labelButtonUrl: string | null = null;
   let labelButtonSkippedReason = "not_attempted";
 
@@ -202,6 +304,7 @@ async function handleOrderEvent(options: {
     });
 
     shipmentId = shipment?.id ?? null;
+    saleType = mapShipmentSaleType(shipment?.logisticType);
 
     if (!shipmentId) {
       labelButtonSkippedReason = "no_shipment";
@@ -228,6 +331,12 @@ async function handleOrderEvent(options: {
     });
   }
 
+  await persistOrderSnapshot({
+    userId,
+    order,
+    saleType,
+  });
+
   console.log("[ML webhook] order shipment lookup", {
     eventKey,
     orderId: order.id,
@@ -251,6 +360,21 @@ async function handleOrderEvent(options: {
       : undefined,
     lines: order.lines,
   }).catch(() => ({ sent: false as const, reason: "telegram_send_failed" as const }));
+
+  await logOrderNotification({
+    userId,
+    mlOrderId: order.id,
+    eventType: "order_sold",
+    status: orderNotifyResult.sent ? "sent" : "failed",
+    reason: "reason" in orderNotifyResult ? orderNotifyResult.reason : undefined,
+    payload: {
+      eventKey,
+      shipmentId,
+      labelButtonUrl,
+      hasLabelButton: Boolean(labelButtonUrl),
+      labelButtonSkippedReason,
+    },
+  });
 
   const lineItemIds = order.lines.map((line) => line.itemId);
   const notificationSettings = await getNotificationSettings(userId);
@@ -474,6 +598,20 @@ async function handleShipmentEvent(options: {
         },
       ],
     }).catch(() => ({ sent: false as const, reason: "telegram_send_failed" as const }));
+
+    await logOrderNotification({
+      userId,
+      mlOrderId: orderId,
+      eventType: "label_ready",
+      status: notifyResult.sent ? "sent" : "failed",
+      reason: "reason" in notifyResult ? notifyResult.reason : undefined,
+      payload: {
+        eventKey,
+        shipmentId,
+        saleType,
+        labelButtonUrl,
+      },
+    });
 
     console.log("[ML webhook] shipment label notification", {
       eventKey,

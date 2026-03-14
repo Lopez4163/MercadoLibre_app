@@ -1,0 +1,174 @@
+import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "../../../../../lib/db/prisma";
+import { getSessionUserIdFromRequest } from "../../../../../lib/auth/session";
+
+const DEFAULT_PAGE = 1;
+const DEFAULT_PAGE_SIZE = 25;
+const MAX_PAGE_SIZE = 100;
+const MS_IN_30_DAYS = 30 * 24 * 60 * 60 * 1000;
+
+function parsePositiveInt(value: string | null, fallback: number) {
+  if (!value) {
+    return fallback;
+  }
+
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed < 1) {
+    return fallback;
+  }
+
+  return Math.floor(parsed);
+}
+
+function parseDateOrNull(value: string | null) {
+  if (!value) {
+    return null;
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+
+  return date;
+}
+
+function extractLabelUrlFromPayload(payload: unknown) {
+  if (!payload || typeof payload !== "object") {
+    return null;
+  }
+
+  const candidate = (payload as { labelButtonUrl?: unknown }).labelButtonUrl;
+  return typeof candidate === "string" && candidate.length > 0 ? candidate : null;
+}
+
+export async function GET(request: NextRequest) {
+  const sessionUserId = getSessionUserIdFromRequest(request);
+  if (!sessionUserId) {
+    return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
+  }
+
+  const query = request.nextUrl.searchParams;
+  const page = parsePositiveInt(query.get("page"), DEFAULT_PAGE);
+  const pageSize = Math.min(parsePositiveInt(query.get("pageSize"), DEFAULT_PAGE_SIZE), MAX_PAGE_SIZE);
+  const skip = (page - 1) * pageSize;
+
+  const now = new Date();
+  const defaultDateFrom = new Date(now.getTime() - MS_IN_30_DAYS);
+  const dateFrom = parseDateOrNull(query.get("dateFrom")) ?? defaultDateFrom;
+  const dateTo = parseDateOrNull(query.get("dateTo")) ?? now;
+  if (dateFrom > dateTo) {
+    return NextResponse.json(
+      { ok: false, error: "invalid_date_range", message: "dateFrom must be before or equal to dateTo" },
+      { status: 400 },
+    );
+  }
+
+  const statusParam = query.get("status");
+  const statuses =
+    statusParam && statusParam !== "all"
+      ? statusParam
+          .split(",")
+          .map((status) => status.trim())
+          .filter((status) => status.length > 0)
+      : [];
+
+  const where = {
+    userId: sessionUserId,
+    createdAt: {
+      gte: dateFrom,
+      lte: dateTo,
+    },
+    ...(statuses.length > 0 ? { status: { in: statuses } } : {}),
+  };
+
+  const [orders, total] = await Promise.all([
+    prisma.order.findMany({
+      where,
+      orderBy: {
+        createdAt: "desc",
+      },
+      skip,
+      take: pageSize,
+      include: {
+        lines: {
+          select: {
+            mlItemId: true,
+            title: true,
+            quantity: true,
+            unitPrice: true,
+          },
+        },
+        notifications: {
+          orderBy: {
+            createdAt: "desc",
+          },
+          take: 10,
+          select: {
+            eventType: true,
+            status: true,
+            reason: true,
+            createdAt: true,
+            payload: true,
+          },
+        },
+      },
+    }),
+    prisma.order.count({ where }),
+  ]);
+
+  return NextResponse.json(
+    {
+      ok: true,
+      filters: {
+        status: statuses,
+        dateFrom: dateFrom.toISOString(),
+        dateTo: dateTo.toISOString(),
+      },
+      pagination: {
+        page,
+        pageSize,
+        total,
+        totalPages: Math.max(1, Math.ceil(total / pageSize)),
+        hasNextPage: skip + orders.length < total,
+      },
+      orders: orders.map((order) => {
+        const latestNotification = order.notifications[0] ?? null;
+        const latestLabelNotification = order.notifications.find(
+          (notification) => notification.eventType === "label_ready" && notification.status === "sent",
+        );
+        const labelUrl =
+          extractLabelUrlFromPayload(latestLabelNotification?.payload) ??
+          extractLabelUrlFromPayload(latestNotification?.payload);
+
+        return {
+          id: order.id,
+          mlOrderId: order.mlOrderId,
+          status: order.status,
+          saleType: order.saleType,
+          totalAmount: order.totalAmount === null ? null : Number(order.totalAmount),
+          createdAt: order.createdAt,
+          createdAtMl: order.createdAtMl,
+          updatedAtMl: order.updatedAtMl,
+          lastSeenAt: order.lastSeenAt,
+          lines: order.lines.map((line) => ({
+            mlItemId: line.mlItemId,
+            title: line.title,
+            quantity: line.quantity,
+            unitPrice: line.unitPrice === null ? null : Number(line.unitPrice),
+          })),
+          latestNotification: latestNotification
+            ? {
+                eventType: latestNotification.eventType,
+                status: latestNotification.status,
+                reason: latestNotification.reason,
+                createdAt: latestNotification.createdAt,
+              }
+            : null,
+          labelUrl,
+        };
+      }),
+    },
+    { status: 200 },
+  );
+}

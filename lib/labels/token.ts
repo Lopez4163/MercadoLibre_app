@@ -1,7 +1,7 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 
 const ORDER_LABEL_TOKEN_VERSION = 1;
-const ORDER_LABEL_TOKEN_TTL_SECONDS = 60 * 30;
+const ORDER_LABEL_TOKEN_TTL_SECONDS = 60 * 60 * 24;
 
 type OrderLabelTokenPayload = {
   uid: string;

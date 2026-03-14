@@ -11,6 +11,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "reconcile:check": "bash scripts/reconcile-check.sh",
+    "orders:cleanup": "node scripts/cleanup-expired-orders.mjs",
+    "orders:cleanup:check": "bash scripts/orders-cleanup-check.sh",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio"
