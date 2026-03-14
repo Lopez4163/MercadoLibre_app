@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { motion } from "framer-motion";
 import InventoryTable from "./InventoryTable";
 
 type InventoryItem = {
@@ -73,6 +74,13 @@ type OrdersRecentResponse = {
     totalPages: number;
     hasNextPage: boolean;
   };
+};
+
+type TodayActivity = {
+  orders: number;
+  unitsSold: number;
+  alertsSent: number;
+  alertsFailed: number;
 };
 
 type DashboardWorkspaceProps = {
@@ -184,6 +192,17 @@ function topSellerRankTone(rank: number) {
   return "border-[var(--border-1)] bg-[var(--surface-2)] text-[var(--text-2)]";
 }
 
+function RefreshSpinner() {
+  return (
+    <motion.span
+      aria-hidden="true"
+      className="inline-block h-3.5 w-3.5 rounded-full border-2 border-current border-r-transparent"
+      animate={{ rotate: 360 }}
+      transition={{ duration: 0.8, ease: "linear", repeat: Number.POSITIVE_INFINITY }}
+    />
+  );
+}
+
 export default function DashboardWorkspace({
   mlName,
   billingHasAccess,
@@ -205,6 +224,14 @@ export default function DashboardWorkspace({
   const [ordersTotal, setOrdersTotal] = useState(0);
   const [orderStatusFilter, setOrderStatusFilter] = useState("all");
   const [ordersLoadedOnce, setOrdersLoadedOnce] = useState(false);
+  const [todayActivity, setTodayActivity] = useState<TodayActivity>({
+    orders: 0,
+    unitsSold: 0,
+    alertsSent: 0,
+    alertsFailed: 0,
+  });
+  const [todayActivityLoading, setTodayActivityLoading] = useState(true);
+  const [todayActivityError, setTodayActivityError] = useState<string | null>(null);
 
   async function loadInventory(options?: { initial?: boolean }) {
     const initial = options?.initial ?? false;
@@ -311,13 +338,60 @@ export default function DashboardWorkspace({
     }
   }, [orderStatusFilter, ordersPage]);
 
+  const loadTodayActivity = useCallback(async () => {
+    try {
+      setTodayActivityLoading(true);
+      setTodayActivityError(null);
+
+      const startOfDay = new Date();
+      startOfDay.setHours(0, 0, 0, 0);
+      const endOfDay = new Date(startOfDay);
+      endOfDay.setDate(endOfDay.getDate() + 1);
+
+      const query = new URLSearchParams({
+        page: "1",
+        pageSize: "100",
+        dateFrom: startOfDay.toISOString(),
+        dateTo: endOfDay.toISOString(),
+      });
+      const response = await fetch(`/api/orders/recent?${query.toString()}`, { cache: "no-store" });
+      const data = (await response.json()) as OrdersRecentResponse;
+
+      if (!response.ok || !data.ok) {
+        throw new Error(data.message ?? data.error ?? "Failed to fetch today's activity");
+      }
+
+      const todayOrders = data.orders ?? [];
+      const unitsSold = todayOrders.reduce((sum, order) => {
+        return (
+          sum +
+          order.lines.reduce((lineSum, line) => {
+            return lineSum + line.quantity;
+          }, 0)
+        );
+      }, 0);
+
+      setTodayActivity({
+        orders: data.pagination?.total ?? todayOrders.length,
+        unitsSold,
+        alertsSent: todayOrders.filter((order) => order.latestNotification?.status === "sent").length,
+        alertsFailed: todayOrders.filter((order) => order.latestNotification?.status === "failed").length,
+      });
+    } catch (error) {
+      setTodayActivityError(error instanceof Error ? error.message : "Unknown error");
+    } finally {
+      setTodayActivityLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     void Promise.all([
       loadInventory({ initial: true }),
       loadTelegramStatus(),
       loadNotificationSettings(),
+      loadTodayActivity(),
     ]);
-  }, []);
+  }, [loadTodayActivity]);
 
   useEffect(() => {
     if (activeTab === "orders" && !ordersLoadedOnce) {
@@ -534,47 +608,209 @@ export default function DashboardWorkspace({
 
       {activeTab === "overview" ? (
         <section className="grid gap-4 xl:grid-cols-[minmax(0,1.3fr)_minmax(320px,0.7fr)]">
-          <article className="border border-[var(--border-1)] bg-[var(--surface-1)] p-5">
-            <div className="flex items-end justify-between gap-3">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--text-3)]">
-                  Inventory Performance
-                </p>
-                <h3 className="mt-2 text-xl font-semibold tracking-tight text-[var(--text-1)]">
-                  Stock posture at a glance
-                </h3>
+          <div className="space-y-4">
+            <article className="border border-[var(--border-1)] bg-[var(--surface-1)] p-5">
+              <div className="flex items-end justify-between gap-3">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--text-3)]">
+                    Inventory Performance
+                  </p>
+                  <h3 className="mt-2 text-xl font-semibold tracking-tight text-[var(--text-1)]">
+                    Stock posture at a glance
+                  </h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => void loadInventory()}
+                  disabled={refreshing}
+                  className="inline-flex h-9 items-center border border-[var(--border-1)] bg-[var(--surface-2)] px-3 text-xs font-semibold uppercase tracking-wide text-[var(--text-1)] hover:bg-[var(--surface-1)] disabled:opacity-60"
+                >
+                  {refreshing ? (
+                    <span className="inline-flex items-center gap-2">
+                      <RefreshSpinner />
+                      Refreshing...
+                    </span>
+                  ) : (
+                    "Refresh"
+                  )}
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={() => void loadInventory()}
-                disabled={refreshing}
-                className="inline-flex h-9 items-center border border-[var(--border-1)] bg-[var(--surface-2)] px-3 text-xs font-semibold uppercase tracking-wide text-[var(--text-1)] hover:bg-[var(--surface-1)] disabled:opacity-60"
-              >
-                {refreshing ? "Refreshing..." : "Refresh"}
-              </button>
-            </div>
 
-            <div className="mt-5 grid gap-3 sm:grid-cols-2">
-              <div className="border border-red-500/50 bg-red-500/10 p-4">
-                <p className="text-xs font-semibold uppercase tracking-wide text-red-300">Sold Out</p>
-                <p className="mt-3 text-4xl font-semibold tracking-tight text-red-200">{soldOutItems}</p>
+              <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                <div className="border border-red-500/50 bg-red-500/10 p-4">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-red-300">Sold Out</p>
+                  <p className="mt-3 text-4xl font-semibold tracking-tight text-red-200">{soldOutItems}</p>
+                </div>
+                <div className="border border-orange-500/50 bg-orange-500/10 p-4">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-orange-300">Critical</p>
+                  <p className="mt-3 text-4xl font-semibold tracking-tight text-orange-200">{criticalItems}</p>
+                </div>
+                <div className="border border-amber-500/50 bg-amber-500/10 p-4">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-amber-300">Low</p>
+                  <p className="mt-3 text-4xl font-semibold tracking-tight text-amber-200">{lowItems}</p>
+                </div>
+                <div className="border border-emerald-500/50 bg-emerald-500/10 p-4">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-emerald-300">Healthy</p>
+                  <p className="mt-3 text-4xl font-semibold tracking-tight text-emerald-200">{healthyItems}</p>
+                </div>
               </div>
-              <div className="border border-orange-500/50 bg-orange-500/10 p-4">
-                <p className="text-xs font-semibold uppercase tracking-wide text-orange-300">Critical</p>
-                <p className="mt-3 text-4xl font-semibold tracking-tight text-orange-200">{criticalItems}</p>
+            </article>
+
+            <article className="border border-[var(--border-1)] bg-[var(--surface-1)] p-5">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--text-3)]">
+                    Top 3 Best Sellers
+                  </p>
+                  <h3 className="mt-2 text-lg font-semibold tracking-tight text-[var(--text-1)]">
+                    Snapshot by units sold
+                  </h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("stats")}
+                  className="inline-flex h-8 items-center border border-[var(--border-1)] bg-[var(--surface-2)] px-3 text-xs font-semibold uppercase tracking-wide text-[var(--text-1)] hover:bg-[var(--surface-1)]"
+                >
+                  View Full Stats
+                </button>
               </div>
-              <div className="border border-amber-500/50 bg-amber-500/10 p-4">
-                <p className="text-xs font-semibold uppercase tracking-wide text-amber-300">Low</p>
-                <p className="mt-3 text-4xl font-semibold tracking-tight text-amber-200">{lowItems}</p>
+
+              <div className="mt-4 space-y-3">
+                {topSellers.length === 0 ? (
+                  <div className="border border-[var(--border-1)] bg-[var(--bg-0)] p-4">
+                    <p className="text-sm text-[var(--text-2)]">No sales data available yet.</p>
+                  </div>
+                ) : (
+                  topSellers.map((item, index) => (
+                    <div
+                      key={item.id}
+                      className="flex items-center justify-between gap-3 border border-[var(--border-1)] bg-[var(--bg-0)] px-3 py-3"
+                    >
+                      <div className="flex min-w-0 items-center gap-3">
+                        <span
+                          className={`inline-flex h-7 w-7 shrink-0 items-center justify-center border text-xs font-semibold ${topSellerRankTone(index + 1)}`}
+                        >
+                          {index + 1}
+                        </span>
+                        <p className="truncate text-sm font-semibold text-[var(--text-1)]">
+                          {item.title ?? item.id}
+                        </p>
+                      </div>
+                      <span className="shrink-0 text-xs text-[var(--text-3)]">
+                        Sold:{" "}
+                        <span className="font-semibold text-[var(--text-1)]">
+                          {(item.sold_quantity ?? 0).toLocaleString("en-US")}
+                        </span>
+                      </span>
+                    </div>
+                  ))
+                )}
               </div>
-              <div className="border border-emerald-500/50 bg-emerald-500/10 p-4">
-                <p className="text-xs font-semibold uppercase tracking-wide text-emerald-300">Healthy</p>
-                <p className="mt-3 text-4xl font-semibold tracking-tight text-emerald-200">{healthyItems}</p>
+            </article>
+
+            <article className="border border-[var(--border-1)] bg-[var(--surface-1)] p-5">
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--text-3)]">
+                  Notification Status
+                </p>
+                <Link
+                  href="/settings/notifications"
+                  className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--text-3)] hover:text-[var(--text-1)]"
+                >
+                  Edit
+                </Link>
               </div>
-            </div>
-          </article>
+              <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                <div className="border border-[var(--border-1)] bg-[var(--bg-0)] p-4">
+                  <p className="text-xs uppercase tracking-wide text-[var(--text-3)]">Every Sale</p>
+                  <p className="mt-2 text-2xl font-semibold text-[var(--text-1)]">
+                    {toggleLabel(notificationSettings?.notifyEverySale ?? null)}
+                  </p>
+                </div>
+                <div className="border border-[var(--border-1)] bg-[var(--bg-0)] p-4">
+                  <p className="text-xs uppercase tracking-wide text-[var(--text-3)]">Sold Out</p>
+                  <p className="mt-2 text-2xl font-semibold text-[var(--text-1)]">
+                    {toggleLabel(notificationSettings?.notifySoldOut ?? null)}
+                  </p>
+                </div>
+                <div className="border border-[var(--border-1)] bg-[var(--bg-0)] p-4">
+                  <p className="text-xs uppercase tracking-wide text-[var(--text-3)]">Low Stock</p>
+                  <p className="mt-2 text-2xl font-semibold text-[var(--text-1)]">
+                    {toggleLabel(notificationSettings?.notifyLowStock ?? null)}
+                  </p>
+                </div>
+                <div className="border border-[var(--border-1)] bg-[var(--bg-0)] p-4">
+                  <p className="text-xs uppercase tracking-wide text-[var(--text-3)]">Threshold</p>
+                  <p className="mt-2 text-2xl font-semibold text-[var(--text-1)]">
+                    {notificationSettings ? notificationSettings.lowStockThreshold : "Checking"}
+                  </p>
+                </div>
+              </div>
+            </article>
+          </div>
 
           <div className="grid gap-4">
+            <article className="border border-[var(--border-1)] bg-[var(--surface-1)] p-5">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--text-3)]">
+                    Today Activity
+                  </p>
+                  <h3 className="mt-2 text-lg font-semibold tracking-tight text-[var(--text-1)]">
+                    Daily operational pulse
+                  </h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => void loadTodayActivity()}
+                  disabled={todayActivityLoading}
+                  className="inline-flex h-8 items-center border border-[var(--border-1)] bg-[var(--surface-2)] px-3 text-xs font-semibold uppercase tracking-wide text-[var(--text-1)] hover:bg-[var(--surface-1)] disabled:opacity-60"
+                >
+                  {todayActivityLoading ? (
+                    <span className="inline-flex items-center gap-2">
+                      <RefreshSpinner />
+                      Refreshing...
+                    </span>
+                  ) : (
+                    "Refresh"
+                  )}
+                </button>
+              </div>
+
+              {todayActivityError ? (
+                <p className="mt-4 border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-200">
+                  {todayActivityError}
+                </p>
+              ) : null}
+
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                <div className="border border-[var(--border-1)] bg-[var(--bg-0)] p-4">
+                  <p className="text-xs uppercase tracking-wide text-[var(--text-3)]">Orders Today</p>
+                  <p className="mt-2 text-3xl font-semibold text-[var(--text-1)]">
+                    {todayActivity.orders.toLocaleString("en-US")}
+                  </p>
+                </div>
+                <div className="border border-[var(--border-1)] bg-[var(--bg-0)] p-4">
+                  <p className="text-xs uppercase tracking-wide text-[var(--text-3)]">Units Sold Today</p>
+                  <p className="mt-2 text-3xl font-semibold text-[var(--text-1)]">
+                    {todayActivity.unitsSold.toLocaleString("en-US")}
+                  </p>
+                </div>
+                <div className="border border-[var(--border-1)] bg-[var(--bg-0)] p-4">
+                  <p className="text-xs uppercase tracking-wide text-[var(--text-3)]">Alerts Sent</p>
+                  <p className="mt-2 text-3xl font-semibold text-emerald-300">
+                    {todayActivity.alertsSent.toLocaleString("en-US")}
+                  </p>
+                </div>
+                <div className="border border-[var(--border-1)] bg-[var(--bg-0)] p-4">
+                  <p className="text-xs uppercase tracking-wide text-[var(--text-3)]">Alerts Failed</p>
+                  <p className="mt-2 text-3xl font-semibold text-red-300">
+                    {todayActivity.alertsFailed.toLocaleString("en-US")}
+                  </p>
+                </div>
+              </div>
+            </article>
+
             <article className="border border-[var(--border-1)] bg-[var(--surface-1)] p-5">
               <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--text-3)]">
                 Operations Status
@@ -610,44 +846,6 @@ export default function DashboardWorkspace({
             </article>
 
           </div>
-
-          <article className="border border-[var(--border-1)] bg-[var(--surface-1)] p-5">
-            <div className="flex items-center justify-between gap-3">
-              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--text-3)]">Notification Status</p>
-              <Link
-                href="/settings/notifications"
-                className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--text-3)] hover:text-[var(--text-1)]"
-              >
-                Edit
-              </Link>
-            </div>
-            <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-              <div className="border border-[var(--border-1)] bg-[var(--bg-0)] p-4">
-                <p className="text-xs uppercase tracking-wide text-[var(--text-3)]">Every Sale</p>
-                <p className="mt-2 text-2xl font-semibold text-[var(--text-1)]">
-                  {toggleLabel(notificationSettings?.notifyEverySale ?? null)}
-                </p>
-              </div>
-              <div className="border border-[var(--border-1)] bg-[var(--bg-0)] p-4">
-                <p className="text-xs uppercase tracking-wide text-[var(--text-3)]">Sold Out</p>
-                <p className="mt-2 text-2xl font-semibold text-[var(--text-1)]">
-                  {toggleLabel(notificationSettings?.notifySoldOut ?? null)}
-                </p>
-              </div>
-              <div className="border border-[var(--border-1)] bg-[var(--bg-0)] p-4">
-                <p className="text-xs uppercase tracking-wide text-[var(--text-3)]">Low Stock</p>
-                <p className="mt-2 text-2xl font-semibold text-[var(--text-1)]">
-                  {toggleLabel(notificationSettings?.notifyLowStock ?? null)}
-                </p>
-              </div>
-              <div className="border border-[var(--border-1)] bg-[var(--bg-0)] p-4">
-                <p className="text-xs uppercase tracking-wide text-[var(--text-3)]">Threshold</p>
-                <p className="mt-2 text-2xl font-semibold text-[var(--text-1)]">
-                  {notificationSettings ? notificationSettings.lowStockThreshold : "Checking"}
-                </p>
-              </div>
-            </div>
-          </article>
 
         </section>
       ) : null}
@@ -719,7 +917,14 @@ export default function DashboardWorkspace({
                   disabled={ordersLoading}
                   className="inline-flex h-10 items-center border border-[var(--border-1)] bg-[var(--surface-2)] px-4 text-xs font-semibold uppercase tracking-wide text-[var(--text-1)] hover:bg-[var(--surface-1)] disabled:opacity-60"
                 >
-                  {ordersLoading ? "Refreshing..." : "Refresh"}
+                  {ordersLoading ? (
+                    <span className="inline-flex items-center gap-2">
+                      <RefreshSpinner />
+                      Refreshing...
+                    </span>
+                  ) : (
+                    "Refresh"
+                  )}
                 </button>
               </div>
             </div>
@@ -896,14 +1101,21 @@ export default function DashboardWorkspace({
                   Last sync: {loading ? "Loading..." : formatRelativeTime(lastUpdatedAt)}
                 </p>
               </div>
-              <button
-                type="button"
-                onClick={() => void loadInventory()}
-                disabled={refreshing}
-                className="inline-flex h-9 items-center border border-[var(--border-1)] bg-[var(--surface-2)] px-3 text-xs font-semibold uppercase tracking-wide text-[var(--text-1)] hover:bg-[var(--surface-1)] disabled:opacity-60"
-              >
-                {refreshing ? "Refreshing..." : "Refresh Stats"}
-              </button>
+                <button
+                  type="button"
+                  onClick={() => void loadInventory()}
+                  disabled={refreshing}
+                  className="inline-flex h-9 items-center border border-[var(--border-1)] bg-[var(--surface-2)] px-3 text-xs font-semibold uppercase tracking-wide text-[var(--text-1)] hover:bg-[var(--surface-1)] disabled:opacity-60"
+                >
+                  {refreshing ? (
+                    <span className="inline-flex items-center gap-2">
+                      <RefreshSpinner />
+                      Refreshing...
+                    </span>
+                  ) : (
+                    "Refresh Stats"
+                  )}
+                </button>
             </div>
           </article>
 

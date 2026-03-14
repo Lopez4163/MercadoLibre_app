@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { motion } from "framer-motion";
 import InventorySearchBar from "./InventorySearchBar";
 
 type InventoryItem = {
@@ -81,6 +82,17 @@ function getStockLevel(stock?: number) {
     containerClass: "border-emerald-500/60 bg-emerald-500/10 text-emerald-300",
     dotClass: "bg-emerald-400",
   };
+}
+
+function RefreshSpinner() {
+  return (
+    <motion.span
+      aria-hidden="true"
+      className="inline-block h-3.5 w-3.5 rounded-full border-2 border-current border-r-transparent"
+      animate={{ rotate: 360 }}
+      transition={{ duration: 0.8, ease: "linear", repeat: Number.POSITIVE_INFINITY }}
+    />
+  );
 }
 
 export default function InventoryTable({ items, refreshing, lastUpdatedAt, onRefresh }: InventoryTableProps) {
@@ -167,7 +179,14 @@ export default function InventoryTable({ items, refreshing, lastUpdatedAt, onRef
               disabled={refreshing}
               className="inline-flex h-8 cursor-pointer items-center border border-[var(--border-1)] bg-[var(--surface-2)] px-3 text-[11px] font-semibold uppercase tracking-wide text-[var(--text-1)] hover:bg-[var(--surface-1)] disabled:cursor-not-allowed disabled:text-[var(--text-3)] disabled:hover:bg-[var(--surface-2)]"
             >
-              {refreshing ? "Refreshing..." : "Refresh"}
+              {refreshing ? (
+                <span className="inline-flex items-center gap-2">
+                  <RefreshSpinner />
+                  Refreshing...
+                </span>
+              ) : (
+                "Refresh"
+              )}
             </button>
           </div>
         </div>
