@@ -12,7 +12,7 @@ type HeaderLink = {
 const HEADER_LINKS: HeaderLink[] = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/settings", label: "Settings" },
-  { href: "/profile", label: "Profile" },
+  { href: "/settings/profile", label: "Profile" },
 ];
 
 function isCurrentPath(pathname: string, href: string) {

@@ -19,6 +19,11 @@ const settingsNavItems = [
     label: "Billing",
     description: "Trial and subscription status",
   },
+  {
+    href: "/settings/profile",
+    label: "Profile",
+    description: "Account identity and connection info",
+  },
 ];
 
 export default function SettingsSidebarNav() {
