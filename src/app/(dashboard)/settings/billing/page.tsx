@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import StartFreeTrialButton from "../../../../../components/billing/StartFreeTrialButton";
+import ManageSubscriptionActions from "../../../../../components/billing/ManageSubscriptionActions";
 import { prisma } from "../../../../../lib/db/prisma";
 import { getSessionUserIdFromCookieStore } from "../../../../../lib/auth/session";
 import { getUserBillingEntitlement } from "../../../../../lib/billing/entitlements";
@@ -63,6 +64,7 @@ export default async function BillingSettingsPage({ searchParams }: BillingSetti
   ]);
 
   const billingStatus = subscription?.status ?? "none";
+  const showTrialEnds = subscription?.status === "trialing";
 
   return (
     <div className="space-y-4">
@@ -72,7 +74,7 @@ export default async function BillingSettingsPage({ searchParams }: BillingSetti
           Subscription access is granted through Stripe webhook events after checkout confirmation.
         </p>
 
-        <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+        <div className={`mt-5 grid gap-3 md:grid-cols-2 ${showTrialEnds ? "xl:grid-cols-4" : "xl:grid-cols-3"}`}>
           <article className="border border-[var(--border-1)] bg-[var(--surface-2)] p-4">
             <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-3)]">Entitlement</p>
             <p
@@ -89,12 +91,14 @@ export default async function BillingSettingsPage({ searchParams }: BillingSetti
               {billingStatus}
             </p>
           </article>
-          <article className="border border-[var(--border-1)] bg-[var(--surface-2)] p-4">
-            <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-3)]">Trial Ends</p>
-            <p className="mt-3 text-2xl font-semibold tracking-tight text-[var(--text-1)]">
-              {formatDate(subscription?.trialEnd ?? null)}
-            </p>
-          </article>
+          {showTrialEnds && (
+            <article className="border border-[var(--border-1)] bg-[var(--surface-2)] p-4">
+              <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-3)]">Trial Ends</p>
+              <p className="mt-3 text-2xl font-semibold tracking-tight text-[var(--text-1)]">
+                {formatDate(subscription?.trialEnd ?? null)}
+              </p>
+            </article>
+          )}
           <article className="border border-[var(--border-1)] bg-[var(--surface-2)] p-4">
             <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-3)]">Current Period Ends</p>
             <p className="mt-3 text-2xl font-semibold tracking-tight text-[var(--text-1)]">
@@ -113,15 +117,41 @@ export default async function BillingSettingsPage({ searchParams }: BillingSetti
             <dd className="mt-1 font-medium text-[var(--text-1)]">{subscription?.cancelAtPeriodEnd ? "Yes" : "No"}</dd>
           </div>
         </dl>
+
       </section>
 
       <section className="border border-[var(--border-1)] bg-[var(--surface-1)] p-5">
-        <h3 className="text-lg font-semibold tracking-tight text-[var(--text-1)]">Start Free Trial</h3>
+        <h3 className="text-lg font-semibold tracking-tight text-[var(--text-1)]">Subscription Actions</h3>
         <p className="mt-2 text-sm text-[var(--text-2)]">
-          Checkout is hosted by Stripe. Access changes only after Stripe webhook confirmation.
+          Manage cancellation and trial checkout from one place. Access changes only after Stripe webhook confirmation.
         </p>
-        <div className="mt-4">
-          <StartFreeTrialButton initiallyEntitled={entitlement.hasAccess} autoStart={autoStartTrial} />
+
+        <div className="mt-5 space-y-4">
+          {!entitlement.hasAccess && (
+            <div className="border border-[var(--border-1)] bg-[var(--surface-2)] p-4">
+              <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-3)]">Start Free Trial</p>
+              <p className="mt-2 text-sm text-[var(--text-2)]">
+                Checkout is hosted by Stripe and opens in a secure Stripe page.
+              </p>
+              <div className="mt-4">
+                <StartFreeTrialButton initiallyEntitled={entitlement.hasAccess} autoStart={autoStartTrial} />
+              </div>
+            </div>
+          )}
+
+          <div className="border border-[var(--border-1)] bg-[var(--surface-2)] p-4">
+            <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-3)]">Cancel Or Resume</p>
+            <p className="mt-2 text-sm text-[var(--text-2)]">
+              Canceling sets your plan to end at the close of the current billing period.
+            </p>
+            <div className="mt-4">
+              <ManageSubscriptionActions
+                initialStatus={subscription?.status ?? null}
+                initialCancelAtPeriodEnd={subscription?.cancelAtPeriodEnd ?? false}
+                currentPeriodEndLabel={formatDate(subscription?.currentPeriodEnd ?? null)}
+              />
+            </div>
+          </div>
         </div>
       </section>
     </div>

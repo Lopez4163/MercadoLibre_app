@@ -83,13 +83,20 @@ type TodayActivity = {
   alertsFailed: number;
 };
 
+type TodaySummaryResponse = {
+  ok: boolean;
+  error?: string;
+  message?: string;
+  summary?: TodayActivity;
+};
+
 type DashboardWorkspaceProps = {
   mlName: string;
   billingHasAccess: boolean;
   billingStatus: string;
 };
 
-type DashboardTab = "overview" | "inventory" | "orders" | "alerts" | "stats";
+type DashboardTab = "overview" | "inventory" | "orders" | "notifications" | "stats";
 
 function formatRelativeTime(timestamp: number | null) {
   if (!timestamp) {
@@ -232,6 +239,7 @@ export default function DashboardWorkspace({
   });
   const [todayActivityLoading, setTodayActivityLoading] = useState(true);
   const [todayActivityError, setTodayActivityError] = useState<string | null>(null);
+  const inventoryBusy = loading || refreshing;
 
   async function loadInventory(options?: { initial?: boolean }) {
     const initial = options?.initial ?? false;
@@ -342,41 +350,14 @@ export default function DashboardWorkspace({
     try {
       setTodayActivityLoading(true);
       setTodayActivityError(null);
+      const response = await fetch("/api/orders/today-summary", { cache: "no-store" });
+      const data = (await response.json()) as TodaySummaryResponse;
 
-      const startOfDay = new Date();
-      startOfDay.setHours(0, 0, 0, 0);
-      const endOfDay = new Date(startOfDay);
-      endOfDay.setDate(endOfDay.getDate() + 1);
-
-      const query = new URLSearchParams({
-        page: "1",
-        pageSize: "100",
-        dateFrom: startOfDay.toISOString(),
-        dateTo: endOfDay.toISOString(),
-      });
-      const response = await fetch(`/api/orders/recent?${query.toString()}`, { cache: "no-store" });
-      const data = (await response.json()) as OrdersRecentResponse;
-
-      if (!response.ok || !data.ok) {
+      if (!response.ok || !data.ok || !data.summary) {
         throw new Error(data.message ?? data.error ?? "Failed to fetch today's activity");
       }
 
-      const todayOrders = data.orders ?? [];
-      const unitsSold = todayOrders.reduce((sum, order) => {
-        return (
-          sum +
-          order.lines.reduce((lineSum, line) => {
-            return lineSum + line.quantity;
-          }, 0)
-        );
-      }, 0);
-
-      setTodayActivity({
-        orders: data.pagination?.total ?? todayOrders.length,
-        unitsSold,
-        alertsSent: todayOrders.filter((order) => order.latestNotification?.status === "sent").length,
-        alertsFailed: todayOrders.filter((order) => order.latestNotification?.status === "failed").length,
-      });
+      setTodayActivity(data.summary);
     } catch (error) {
       setTodayActivityError(error instanceof Error ? error.message : "Unknown error");
     } finally {
@@ -595,8 +576,8 @@ export default function DashboardWorkspace({
         <button type="button" className={tabClass("stats")} onClick={() => setActiveTab("stats")}>
           Stats
         </button>
-        <button type="button" className={tabClass("alerts")} onClick={() => setActiveTab("alerts")}>
-          Alerts
+        <button type="button" className={tabClass("notifications")} onClick={() => setActiveTab("notifications")}>
+          Notifications
         </button>
       </section>
 
@@ -622,10 +603,10 @@ export default function DashboardWorkspace({
                 <button
                   type="button"
                   onClick={() => void loadInventory()}
-                  disabled={refreshing}
+                  disabled={inventoryBusy}
                   className="inline-flex h-9 items-center border border-[var(--border-1)] bg-[var(--surface-2)] px-3 text-xs font-semibold uppercase tracking-wide text-[var(--text-1)] hover:bg-[var(--surface-1)] disabled:opacity-60"
                 >
-                  {refreshing ? (
+                  {inventoryBusy ? (
                     <span className="inline-flex items-center gap-2">
                       <RefreshSpinner />
                       Refreshing...
@@ -1104,10 +1085,10 @@ export default function DashboardWorkspace({
                 <button
                   type="button"
                   onClick={() => void loadInventory()}
-                  disabled={refreshing}
+                  disabled={inventoryBusy}
                   className="inline-flex h-9 items-center border border-[var(--border-1)] bg-[var(--surface-2)] px-3 text-xs font-semibold uppercase tracking-wide text-[var(--text-1)] hover:bg-[var(--surface-1)] disabled:opacity-60"
                 >
-                  {refreshing ? (
+                  {inventoryBusy ? (
                     <span className="inline-flex items-center gap-2">
                       <RefreshSpinner />
                       Refreshing...
@@ -1461,21 +1442,21 @@ export default function DashboardWorkspace({
         </section>
       ) : null}
 
-      {activeTab === "alerts" ? (
+      {activeTab === "notifications" ? (
         <section className="space-y-4">
           <article className="border border-[var(--border-1)] bg-[var(--surface-1)] p-5">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--text-3)]">Alerts</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--text-3)]">Notifications</p>
                 <h3 className="mt-2 text-xl font-semibold tracking-tight text-[var(--text-1)]">
-                  Current alert posture
+                  Notification settings
                 </h3>
               </div>
               <Link
                 href="/settings/notifications"
                 className="inline-flex h-9 items-center border border-[var(--accent)] bg-[var(--accent)] px-3 text-xs font-semibold uppercase tracking-wide text-[var(--accent-contrast)] hover:bg-transparent hover:text-[var(--text-1)]"
               >
-                Alert Settings
+                Notification Settings
               </Link>
             </div>
 

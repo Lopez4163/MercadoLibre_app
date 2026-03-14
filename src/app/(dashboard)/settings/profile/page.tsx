@@ -80,7 +80,7 @@ export default async function SettingsProfilePage() {
 
   return (
     <div className="space-y-4">
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
+      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <article className="border border-[var(--border-1)] bg-[var(--surface-1)] p-4">
           <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-3)]">Store image</p>
           <div className="mt-3 h-20 w-20 border border-[var(--border-1)] bg-[var(--surface-2)] p-1">
@@ -101,16 +101,10 @@ export default async function SettingsProfilePage() {
           </div>
         </article>
         <article className="border border-[var(--border-1)] bg-[var(--surface-1)] p-4">
-          <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-3)]">Email</p>
-          <p className="mt-3 text-base font-semibold text-[var(--text-1)]">{user.email}</p>
-        </article>
-        <article className="border border-[var(--border-1)] bg-[var(--surface-1)] p-4">
-          <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-3)]">Store name</p>
-          <p className="mt-3 text-base font-semibold text-[var(--text-1)]">{user.mlNickname ?? "N/A"}</p>
-        </article>
-        <article className="border border-[var(--border-1)] bg-[var(--surface-1)] p-4">
-          <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-3)]">ML User ID</p>
-          <p className="mt-3 text-base font-semibold text-[var(--text-1)]">{user.mlUserId}</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-3)]">Mercado Libre</p>
+          <p className="mt-3 text-base font-semibold text-[var(--text-1)]">
+            {mlConnected ? "Connected" : "Disconnected"}
+          </p>
         </article>
         <article className="border border-[var(--border-1)] bg-[var(--surface-1)] p-4">
           <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-3)]">Telegram</p>
@@ -124,6 +118,30 @@ export default async function SettingsProfilePage() {
             {user.billingSubscription?.status ?? "none"}
           </p>
         </article>
+      </section>
+
+      <section className="border border-[var(--border-1)] bg-[var(--surface-1)] p-5">
+        <h3 className="text-lg font-semibold tracking-tight text-[var(--text-1)]">Store identity</h3>
+        <dl className="mt-4 space-y-4 text-sm text-[var(--text-2)]">
+          <div className="border border-[var(--border-1)] bg-[var(--bg-0)] px-3 py-3">
+            <dt className="text-[var(--text-3)]">Store name</dt>
+            <dd className="mt-1 overflow-x-auto whitespace-nowrap font-medium text-[var(--text-1)]">
+              {user.mlNickname ?? "N/A"}
+            </dd>
+          </div>
+          <div className="border border-[var(--border-1)] bg-[var(--bg-0)] px-3 py-3">
+            <dt className="text-[var(--text-3)]">Email</dt>
+            <dd className="mt-1 overflow-x-auto whitespace-nowrap font-medium text-[var(--text-1)]">
+              {user.email}
+            </dd>
+          </div>
+          <div className="border border-[var(--border-1)] bg-[var(--bg-0)] px-3 py-3">
+            <dt className="text-[var(--text-3)]">ML User ID</dt>
+            <dd className="mt-1 overflow-x-auto whitespace-nowrap font-medium text-[var(--text-1)]">
+              {user.mlUserId}
+            </dd>
+          </div>
+        </dl>
       </section>
 
       <section className="border border-[var(--border-1)] bg-[var(--surface-1)] p-5">
