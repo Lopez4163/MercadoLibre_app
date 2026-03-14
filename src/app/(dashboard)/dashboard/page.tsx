@@ -18,6 +18,7 @@ export default async function DashboardPage() {
       where: { id: userId },
       select: {
         mlUserId: true,
+        mlNickname: true,
       },
     }),
     getUserBillingEntitlement(userId),
@@ -29,7 +30,7 @@ export default async function DashboardPage() {
 
   return (
     <DashboardWorkspace
-      mlUserId={user.mlUserId}
+      mlName={user.mlNickname?.trim() || user.mlUserId}
       billingHasAccess={entitlement.hasAccess}
       billingStatus={entitlement.status ?? "none"}
     />

@@ -153,7 +153,7 @@ export default function InventoryTable({ items, refreshing, lastUpdatedAt, onRef
             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--text-3)]">
               Inventory Table
             </p>
-            <h2 className="mt-1 text-xl font-semibold tracking-tight text-[var(--text-1)]">Items</h2>
+            <h2 className="mt-1 text-xl font-semibold tracking-tight text-[var(--text-1)]">Stock Listings</h2>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             {lastUpdatedAt ? (

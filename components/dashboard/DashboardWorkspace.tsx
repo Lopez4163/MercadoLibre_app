@@ -28,7 +28,7 @@ type NotificationSettingsPayload = {
 };
 
 type DashboardWorkspaceProps = {
-  mlUserId: string;
+  mlName: string;
   billingHasAccess: boolean;
   billingStatus: string;
 };
@@ -71,7 +71,7 @@ function toggleLabel(value: boolean | null) {
 }
 
 export default function DashboardWorkspace({
-  mlUserId,
+  mlName,
   billingHasAccess,
   billingStatus,
 }: DashboardWorkspaceProps) {
@@ -418,16 +418,8 @@ export default function DashboardWorkspace({
                   </span>
                 </div>
                 <div className="flex items-center justify-between border border-[var(--border-1)] bg-[var(--bg-0)] px-3 py-3">
-                  <span className="text-sm text-[var(--text-2)]">Billing Access</span>
-                  <span className={`text-sm font-semibold ${billingHasAccess ? "text-emerald-300" : "text-red-300"}`}>
-                    {billingHasAccess ? "Unlocked" : "Locked"}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between border border-[var(--border-1)] bg-[var(--bg-0)] px-3 py-3">
-                  <span className="text-sm text-[var(--text-2)]">Catalog Size</span>
-                  <span className="text-sm font-semibold text-[var(--text-1)]">
-                    {loading ? "Loading..." : items.length}
-                  </span>
+                  <span className="text-sm text-[var(--text-2)]">ML Name</span>
+                  <span className="text-sm font-semibold text-[var(--text-1)]">{mlName}</span>
                 </div>
                 <div className="flex items-center justify-between border border-[var(--border-1)] bg-[var(--bg-0)] px-3 py-3">
                   <span className="text-sm text-[var(--text-2)]">Last Sync</span>
@@ -436,41 +428,26 @@ export default function DashboardWorkspace({
                   </span>
                 </div>
                 <div className="flex items-center justify-between border border-[var(--border-1)] bg-[var(--bg-0)] px-3 py-3">
-                  <span className="text-sm text-[var(--text-2)]">ML User</span>
-                  <span className="text-sm font-semibold text-[var(--text-1)]">{mlUserId}</span>
+                  <span className="text-sm text-[var(--text-2)]">Catalog Size</span>
+                  <span className="text-sm font-semibold text-[var(--text-1)]">
+                    {loading ? "Loading..." : items.length}
+                  </span>
                 </div>
               </div>
             </article>
 
-            <article className="border border-[var(--border-1)] bg-[var(--surface-1)] p-5">
-              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--text-3)]">Quick Actions</p>
-              <div className="mt-4 grid gap-3">
-                <button
-                  type="button"
-                  onClick={() => setActiveTab("inventory")}
-                  className="inline-flex h-11 items-center justify-center border border-[var(--border-1)] bg-[var(--surface-2)] px-4 text-sm font-semibold text-[var(--text-1)] hover:bg-[var(--surface-1)]"
-                >
-                  Open Inventory Tab
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActiveTab("alerts")}
-                  className="inline-flex h-11 items-center justify-center border border-[var(--border-1)] bg-[var(--surface-2)] px-4 text-sm font-semibold text-[var(--text-1)] hover:bg-[var(--surface-1)]"
-                >
-                  Open Alerts Tab
-                </button>
-                <Link
-                  href="/settings/telegram"
-                  className="inline-flex h-11 items-center justify-center border border-[var(--accent)] bg-[var(--accent)] px-4 text-sm font-semibold text-[var(--accent-contrast)] hover:bg-transparent hover:text-[var(--text-1)]"
-                >
-                  Open Settings
-                </Link>
-              </div>
-            </article>
           </div>
 
           <article className="border border-[var(--border-1)] bg-[var(--surface-1)] p-5">
-            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--text-3)]">Alert Posture</p>
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--text-3)]">Notification Status</p>
+              <Link
+                href="/settings/notifications"
+                className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--text-3)] hover:text-[var(--text-1)]"
+              >
+                Edit
+              </Link>
+            </div>
             <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
               <div className="border border-[var(--border-1)] bg-[var(--bg-0)] p-4">
                 <p className="text-xs uppercase tracking-wide text-[var(--text-3)]">Every Sale</p>
@@ -504,7 +481,7 @@ export default function DashboardWorkspace({
 
       {activeTab === "inventory" ? (
         <section className="space-y-4">
-          <div className="grid gap-3 md:grid-cols-4">
+          <div className="grid gap-3 md:grid-cols-5">
             <article className="border border-[var(--border-1)] bg-[var(--surface-1)] p-4">
               <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-3)]">Total Items</p>
               <p className="mt-3 text-3xl font-semibold tracking-tight text-[var(--text-1)]">{items.length}</p>
@@ -520,6 +497,10 @@ export default function DashboardWorkspace({
             <article className="border border-amber-500/50 bg-amber-500/10 p-4">
               <p className="text-xs font-semibold uppercase tracking-wide text-amber-300">Low</p>
               <p className="mt-3 text-3xl font-semibold tracking-tight text-amber-200">{lowItems}</p>
+            </article>
+            <article className="border border-emerald-500/50 bg-emerald-500/10 p-4">
+              <p className="text-xs font-semibold uppercase tracking-wide text-emerald-300">Healthy</p>
+              <p className="mt-3 text-3xl font-semibold tracking-tight text-emerald-200">{healthyItems}</p>
             </article>
           </div>
 
