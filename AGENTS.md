@@ -130,6 +130,15 @@ Core flow is implemented:
 3. Schedule every 10 minutes:
    - `POST /api/jobs/reconcile`
    - header: `x-reconcile-secret: <RECONCILE_CRON_SECRET>`
+4. Run pre-deploy secret baseline check:
+   - `npm run security:check-env`
+   - blocks deploy if required ML/Telegram/Stripe/Redis/session secrets are missing or weak.
+5. Run webhook provider/config baseline check:
+   - `npm run security:check-webhooks -- --env-file=.env.local`
+   - verifies Telegram provider URL, Stripe endpoint presence/events, and webhook secret enforcement on ML/Telegram/Stripe routes.
+6. Run staging smoke baseline:
+   - `npm run security:smoke-staging -- --env-file=.env.local`
+   - runs env + webhook + scheduler checks and core auth-gate route probes (OAuth start/callback redirects, billing/alerts/telegram protected routes).
 
 ## Known Notes
 1. Dashboard inventory source is still live ML API (not DB-cached UI read).
