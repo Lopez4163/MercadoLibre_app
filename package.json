@@ -13,6 +13,9 @@
     "reconcile:check": "bash scripts/reconcile-check.sh",
     "orders:cleanup": "node scripts/cleanup-expired-orders.mjs",
     "orders:cleanup:check": "bash scripts/orders-cleanup-check.sh",
+    "security:check-env": "node scripts/security-env-check.mjs",
+    "security:check-webhooks": "node scripts/security-webhook-check.mjs",
+    "security:smoke-staging": "node scripts/security-smoke-staging.mjs",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio"
