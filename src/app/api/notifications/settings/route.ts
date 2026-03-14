@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "../../../../../lib/db/prisma";
 import { getSessionUserIdFromRequest } from "../../../../../lib/auth/session";
+import { getUserBillingEntitlement } from "../../../../../lib/billing/entitlements";
 
 type SettingsPayload = {
   notifyEverySale?: boolean;
@@ -27,6 +28,19 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
   }
 
+  const entitlement = await getUserBillingEntitlement(user.id);
+  if (!entitlement.hasAccess) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: "subscription_required",
+        message: "Active subscription required. Start trial in Billing to view notification settings.",
+        subscriptionStatus: entitlement.status,
+      },
+      { status: 402 },
+    );
+  }
+
   const settings = await prisma.notificationSettings.upsert({
     where: { userId: user.id },
     create: {
@@ -48,6 +62,19 @@ export async function POST(request: NextRequest) {
   const user = await getSessionUser(request);
   if (!user) {
     return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
+  }
+
+  const entitlement = await getUserBillingEntitlement(user.id);
+  if (!entitlement.hasAccess) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: "subscription_required",
+        message: "Active subscription required. Start trial in Billing to update notification settings.",
+        subscriptionStatus: entitlement.status,
+      },
+      { status: 402 },
+    );
   }
 
   let payload: SettingsPayload;

@@ -705,25 +705,25 @@ export default function DashboardWorkspace({
                 <div className="border border-[var(--border-1)] bg-[var(--bg-0)] p-4">
                   <p className="text-xs uppercase tracking-wide text-[var(--text-3)]">Every Sale</p>
                   <p className="mt-2 text-2xl font-semibold text-[var(--text-1)]">
-                    {toggleLabel(notificationSettings?.notifyEverySale ?? null)}
+                    {billingHasAccess ? toggleLabel(notificationSettings?.notifyEverySale ?? null) : "Locked"}
                   </p>
                 </div>
                 <div className="border border-[var(--border-1)] bg-[var(--bg-0)] p-4">
                   <p className="text-xs uppercase tracking-wide text-[var(--text-3)]">Sold Out</p>
                   <p className="mt-2 text-2xl font-semibold text-[var(--text-1)]">
-                    {toggleLabel(notificationSettings?.notifySoldOut ?? null)}
+                    {billingHasAccess ? toggleLabel(notificationSettings?.notifySoldOut ?? null) : "Locked"}
                   </p>
                 </div>
                 <div className="border border-[var(--border-1)] bg-[var(--bg-0)] p-4">
                   <p className="text-xs uppercase tracking-wide text-[var(--text-3)]">Low Stock</p>
                   <p className="mt-2 text-2xl font-semibold text-[var(--text-1)]">
-                    {toggleLabel(notificationSettings?.notifyLowStock ?? null)}
+                    {billingHasAccess ? toggleLabel(notificationSettings?.notifyLowStock ?? null) : "Locked"}
                   </p>
                 </div>
                 <div className="border border-[var(--border-1)] bg-[var(--bg-0)] p-4">
                   <p className="text-xs uppercase tracking-wide text-[var(--text-3)]">Threshold</p>
                   <p className="mt-2 text-2xl font-semibold text-[var(--text-1)]">
-                    {notificationSettings ? notificationSettings.lowStockThreshold : "Checking"}
+                    {billingHasAccess ? (notificationSettings ? notificationSettings.lowStockThreshold : "Checking") : "Locked"}
                   </p>
                 </div>
               </div>
@@ -1464,7 +1464,7 @@ export default function DashboardWorkspace({
               <div className="border border-[var(--border-1)] bg-[var(--bg-0)] p-4">
                 <p className="text-xs uppercase tracking-wide text-[var(--text-3)]">Every Sale</p>
                 <p className="mt-2 text-3xl font-semibold text-[var(--text-1)]">
-                  {toggleLabel(notificationSettings?.notifyEverySale ?? null)}
+                  {billingHasAccess ? toggleLabel(notificationSettings?.notifyEverySale ?? null) : "Locked"}
                 </p>
               </div>
               <div className="border border-[var(--border-1)] bg-[var(--bg-0)] p-4">
@@ -1476,19 +1476,21 @@ export default function DashboardWorkspace({
               <div className="border border-[var(--border-1)] bg-[var(--bg-0)] p-4">
                 <p className="text-xs uppercase tracking-wide text-[var(--text-3)]">Sold Out Rule</p>
                 <p className="mt-2 text-3xl font-semibold text-[var(--text-1)]">
-                  {toggleLabel(notificationSettings?.notifySoldOut ?? null)}
+                  {billingHasAccess ? toggleLabel(notificationSettings?.notifySoldOut ?? null) : "Locked"}
                 </p>
               </div>
               <div className="border border-[var(--border-1)] bg-[var(--bg-0)] p-4">
                 <p className="text-xs uppercase tracking-wide text-[var(--text-3)]">Low Stock Rule</p>
                 <p className="mt-2 text-3xl font-semibold text-[var(--text-1)]">
-                  {toggleLabel(notificationSettings?.notifyLowStock ?? null)}
+                  {billingHasAccess ? toggleLabel(notificationSettings?.notifyLowStock ?? null) : "Locked"}
                 </p>
                 <p className="mt-2 text-xs text-[var(--text-3)]">
                   Threshold:{" "}
-                  {notificationSettings
-                    ? `${notificationSettings.lowStockThreshold.toLocaleString("en-US")} units`
-                    : "Checking"}
+                  {billingHasAccess
+                    ? notificationSettings
+                      ? `${notificationSettings.lowStockThreshold.toLocaleString("en-US")} units`
+                      : "Checking"
+                    : "Locked"}
                 </p>
               </div>
             </div>

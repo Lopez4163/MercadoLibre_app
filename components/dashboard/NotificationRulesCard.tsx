@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 
 type NotificationSettingsPayload = {
@@ -33,6 +34,7 @@ export default function NotificationRulesCard() {
   const [testError, setTestError] = useState<string | null>(null);
   const [testSuccess, setTestSuccess] = useState<string | null>(null);
   const [savedSettings, setSavedSettings] = useState<NotificationSettingsPayload | null>(null);
+  const [hasBillingAccess, setHasBillingAccess] = useState(false);
 
   useEffect(() => {
     if (!settingsSuccess) {
@@ -63,15 +65,22 @@ export default function NotificationRulesCard() {
       const data = (await settingsResponse.json()) as {
         ok?: boolean;
         error?: string;
+        message?: string;
         settings?: NotificationSettingsPayload;
       };
       const telegramData = (await telegramResponse.json()) as {
         ok?: boolean;
         connected?: boolean;
       };
+      setTelegramConnected(Boolean(telegramData.ok && telegramData.connected));
+
+      if (settingsResponse.status === 402 || data.error === "subscription_required") {
+        setHasBillingAccess(false);
+        return;
+      }
 
       if (!settingsResponse.ok || !data.ok || !data.settings) {
-        throw new Error(data.error ?? "failed_to_load_settings");
+        throw new Error(data.message ?? data.error ?? "failed_to_load_settings");
       }
 
       const nextSettings = {
@@ -86,8 +95,9 @@ export default function NotificationRulesCard() {
       setNotifyLowStock(nextSettings.notifyLowStock);
       setLowStockThreshold(nextSettings.lowStockThreshold);
       setSavedSettings(nextSettings);
-      setTelegramConnected(Boolean(telegramData.ok && telegramData.connected));
+      setHasBillingAccess(true);
     } catch (error) {
+      setHasBillingAccess(false);
       setSettingsError(error instanceof Error ? error.message : "failed_to_load_settings");
     } finally {
       setSettingsLoading(false);
@@ -116,11 +126,17 @@ export default function NotificationRulesCard() {
       const data = (await response.json()) as {
         ok?: boolean;
         error?: string;
+        message?: string;
         settings?: NotificationSettingsPayload;
       };
 
+      if (response.status === 402 || data.error === "subscription_required") {
+        setHasBillingAccess(false);
+        throw new Error(data.message ?? "subscription_required");
+      }
+
       if (!response.ok || !data.ok || !data.settings) {
-        throw new Error(data.error ?? "failed_to_save_settings");
+        throw new Error(data.message ?? data.error ?? "failed_to_save_settings");
       }
 
       const nextSettings = {
@@ -177,6 +193,7 @@ export default function NotificationRulesCard() {
       savedSettings.notifyLowStock !== notifyLowStock ||
       savedSettings.lowStockThreshold !== lowStockThreshold
     : false;
+  const controlsDisabled = settingsLoading || settingsSaving || !hasBillingAccess;
 
   return (
     <section className="border border-[var(--border-1)] bg-[var(--surface-1)] p-5">
@@ -186,161 +203,188 @@ export default function NotificationRulesCard() {
         Configure which sale and inventory transitions should create Telegram alerts.
       </p>
 
-      <div className="mt-5 divide-y divide-[var(--border-1)] border border-[var(--border-1)] bg-[var(--bg-0)]">
-        <div className="flex items-center justify-between px-3 py-3 text-sm">
-          <span className="text-[var(--text-1)]">Notify on every item sold</span>
+      <div className="relative mt-5">
+        <div
+          className={`transition-opacity ${!hasBillingAccess ? "pointer-events-none opacity-45" : "opacity-100"}`}
+          aria-hidden={!hasBillingAccess}
+        >
+          <div className="divide-y divide-[var(--border-1)] border border-[var(--border-1)] bg-[var(--bg-0)]">
+            <div className="flex items-center justify-between px-3 py-3 text-sm">
+              <span className="text-[var(--text-1)]">Notify on every item sold</span>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={notifyEverySale}
+                onClick={() => setNotifyEverySale((current) => !current)}
+                disabled={controlsDisabled}
+                className={`relative inline-flex h-6 w-11 cursor-pointer items-center border border-[var(--border-1)] transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
+                  notifyEverySale ? "bg-emerald-500/30" : "bg-[var(--surface-1)]"
+                }`}
+              >
+                <span
+                  className={`h-4 w-4 border border-[var(--border-1)] bg-[var(--text-1)] transition-transform ${
+                    notifyEverySale ? "translate-x-[22px]" : "translate-x-[2px]"
+                  }`}
+                />
+              </button>
+            </div>
+
+            <div className="flex items-center justify-between px-3 py-3 text-sm">
+              <span className="text-[var(--text-1)]">Notify on sold out (stock = 0)</span>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={notifySoldOut}
+                onClick={() => setNotifySoldOut((current) => !current)}
+                disabled={controlsDisabled}
+                className={`relative inline-flex h-6 w-11 cursor-pointer items-center border border-[var(--border-1)] transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
+                  notifySoldOut ? "bg-emerald-500/30" : "bg-[var(--surface-1)]"
+                }`}
+              >
+                <span
+                  className={`h-4 w-4 border border-[var(--border-1)] bg-[var(--text-1)] transition-transform ${
+                    notifySoldOut ? "translate-x-[22px]" : "translate-x-[2px]"
+                  }`}
+                />
+              </button>
+            </div>
+
+            <div className="flex items-center justify-between px-3 py-3 text-sm">
+              <span className="text-[var(--text-1)]">Notify on low stock</span>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={notifyLowStock}
+                onClick={() => setNotifyLowStock((current) => !current)}
+                disabled={controlsDisabled}
+                className={`relative inline-flex h-6 w-11 cursor-pointer items-center border border-[var(--border-1)] transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
+                  notifyLowStock ? "bg-emerald-500/30" : "bg-[var(--surface-1)]"
+                }`}
+              >
+                <span
+                  className={`h-4 w-4 border border-[var(--border-1)] bg-[var(--text-1)] transition-transform ${
+                    notifyLowStock ? "translate-x-[22px]" : "translate-x-[2px]"
+                  }`}
+                />
+              </button>
+            </div>
+
+            <div className="flex items-center justify-between px-3 py-3 text-sm">
+              <span className="text-[var(--text-1)]">Low stock threshold</span>
+              <input
+                type="number"
+                min={0}
+                value={lowStockThreshold}
+                disabled={!notifyLowStock || controlsDisabled}
+                onChange={(event) => setLowStockThreshold(Number(event.target.value))}
+                className="h-9 w-24 border border-[var(--border-1)] bg-[var(--surface-1)] px-2 text-right text-[var(--text-1)] disabled:cursor-not-allowed disabled:opacity-60"
+              />
+            </div>
+          </div>
+
           <button
             type="button"
-            role="switch"
-            aria-checked={notifyEverySale}
-            onClick={() => setNotifyEverySale((current) => !current)}
-            disabled={settingsLoading || settingsSaving}
-            className={`relative inline-flex h-6 w-11 cursor-pointer items-center border border-[var(--border-1)] transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
-              notifyEverySale ? "bg-emerald-500/30" : "bg-[var(--surface-1)]"
-            }`}
+            onClick={handleSaveSettings}
+            disabled={controlsDisabled || !hasUnsavedChanges}
+            className="mt-4 inline-flex h-10 w-full cursor-pointer items-center justify-center border border-[var(--accent)] bg-[var(--accent)] px-3 text-sm font-semibold text-[var(--accent-contrast)] hover:bg-[var(--bg-0)] hover:text-[var(--text-1)] disabled:cursor-not-allowed disabled:border-[var(--border-1)] disabled:bg-[var(--surface-2)] disabled:text-[var(--text-3)] disabled:hover:bg-[var(--surface-2)] disabled:hover:text-[var(--text-3)]"
           >
-            <span
-              className={`h-4 w-4 border border-[var(--border-1)] bg-[var(--text-1)] transition-transform ${
-                notifyEverySale ? "translate-x-[22px]" : "translate-x-[2px]"
-              }`}
-            />
+            {settingsSaving ? "Saving..." : "Save Settings"}
           </button>
+
+          <div className="mt-5 border border-[var(--border-1)] bg-[var(--bg-0)] p-3">
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--text-3)]">
+              Test Notifications
+            </p>
+            <p className="mt-2 text-sm text-[var(--text-2)]">
+              Validate alert format, rule behavior, and delivery without waiting for real events.
+            </p>
+
+            <div className="mt-3 grid gap-2 md:grid-cols-[minmax(0,1fr)_180px]">
+              <select
+                value={selectedTestType}
+                onChange={(event) => setSelectedTestType(event.target.value as NotificationTestType)}
+                disabled={controlsDisabled || testRunningType !== null}
+                className="h-10 border border-[var(--border-1)] bg-[var(--surface-2)] px-3 text-sm text-[var(--text-1)] disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {notificationTestOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                disabled={controlsDisabled || testRunningType !== null}
+                onClick={() => runNotificationTest(selectedTestType)}
+                className="inline-flex h-10 cursor-pointer items-center justify-center border border-[var(--border-1)] bg-[var(--surface-2)] px-3 text-[11px] font-semibold uppercase tracking-wide text-[var(--text-1)] hover:bg-[var(--surface-1)] disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {testRunningType ? "Sending..." : "Run Test"}
+              </button>
+            </div>
+
+            <div className="mt-3 border border-[var(--border-1)] bg-[var(--surface-2)] px-3 py-2 text-xs text-[var(--text-2)]">
+              <p className="font-semibold uppercase tracking-wide text-[var(--text-3)]">Rule Preview</p>
+              <ul className="mt-2 space-y-1">
+                <li>
+                  Every sale:{" "}
+                  <span className={notifyEverySale ? "text-emerald-300" : "text-rose-300"}>
+                    {notifyEverySale ? "On" : "Off"}
+                  </span>{" "}
+                  - {notifyEverySale ? "matching sale events will send alerts." : "sale events are skipped."}
+                </li>
+                <li>
+                  Sold out:{" "}
+                  <span className={notifySoldOut ? "text-emerald-300" : "text-rose-300"}>
+                    {notifySoldOut ? "On" : "Off"}
+                  </span>{" "}
+                  - {notifySoldOut ? "stock transitions to zero will alert." : "sold out events are skipped."}
+                </li>
+                <li>
+                  Low stock:{" "}
+                  <span className={notifyLowStock ? "text-emerald-300" : "text-rose-300"}>
+                    {notifyLowStock ? "On" : "Off"}
+                  </span>{" "}
+                  -{" "}
+                  {notifyLowStock
+                    ? `alerts trigger when stock drops below ${Math.max(0, Math.floor(lowStockThreshold))}.`
+                    : "low stock events are skipped."}
+                </li>
+                <li>
+                  Channel:{" "}
+                  <span className={telegramConnected ? "text-emerald-300" : "text-rose-300"}>
+                    {telegramConnected ? "Connected" : "Not connected"}
+                  </span>
+                  {" - "}
+                  {telegramConnected ? "Telegram delivery is available." : "tests will fail."}
+                </li>
+                <li>Label alerts: Sent with a sample download label button to validate URL button rendering.</li>
+              </ul>
+            </div>
+
+            {testError ? <p className="mt-3 text-xs text-rose-300">Test error: {testError}</p> : null}
+            {testSuccess ? <p className="mt-3 text-xs text-emerald-300">{testSuccess}</p> : null}
+          </div>
         </div>
 
-        <div className="flex items-center justify-between px-3 py-3 text-sm">
-          <span className="text-[var(--text-1)]">Notify on sold out (stock = 0)</span>
-          <button
-            type="button"
-            role="switch"
-            aria-checked={notifySoldOut}
-            onClick={() => setNotifySoldOut((current) => !current)}
-            disabled={settingsLoading || settingsSaving}
-            className={`relative inline-flex h-6 w-11 cursor-pointer items-center border border-[var(--border-1)] transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
-              notifySoldOut ? "bg-emerald-500/30" : "bg-[var(--surface-1)]"
-            }`}
-          >
-            <span
-              className={`h-4 w-4 border border-[var(--border-1)] bg-[var(--text-1)] transition-transform ${
-                notifySoldOut ? "translate-x-[22px]" : "translate-x-[2px]"
-              }`}
-            />
-          </button>
-        </div>
-
-        <div className="flex items-center justify-between px-3 py-3 text-sm">
-          <span className="text-[var(--text-1)]">Notify on low stock</span>
-          <button
-            type="button"
-            role="switch"
-            aria-checked={notifyLowStock}
-            onClick={() => setNotifyLowStock((current) => !current)}
-            disabled={settingsLoading || settingsSaving}
-            className={`relative inline-flex h-6 w-11 cursor-pointer items-center border border-[var(--border-1)] transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
-              notifyLowStock ? "bg-emerald-500/30" : "bg-[var(--surface-1)]"
-            }`}
-          >
-            <span
-              className={`h-4 w-4 border border-[var(--border-1)] bg-[var(--text-1)] transition-transform ${
-                notifyLowStock ? "translate-x-[22px]" : "translate-x-[2px]"
-              }`}
-            />
-          </button>
-        </div>
-
-        <div className="flex items-center justify-between px-3 py-3 text-sm">
-          <span className="text-[var(--text-1)]">Low stock threshold</span>
-          <input
-            type="number"
-            min={0}
-            value={lowStockThreshold}
-            disabled={!notifyLowStock || settingsLoading || settingsSaving}
-            onChange={(event) => setLowStockThreshold(Number(event.target.value))}
-            className="h-9 w-24 border border-[var(--border-1)] bg-[var(--surface-1)] px-2 text-right text-[var(--text-1)] disabled:cursor-not-allowed disabled:opacity-60"
-          />
-        </div>
+        {!hasBillingAccess ? (
+          <div className="absolute inset-0 flex items-center justify-center bg-slate-950/45 p-4">
+            <div className="max-w-md border border-[var(--border-1)] bg-[var(--surface-1)] p-4 text-center shadow-lg">
+              <p className="text-sm font-semibold text-[var(--text-1)]">
+                Start your free trial to view and configure notification settings.
+              </p>
+              <Link
+                href="/billing?intent=trial"
+                className="mt-3 inline-flex h-10 items-center justify-center border border-[var(--accent)] bg-[var(--accent)] px-4 text-sm font-semibold text-[var(--accent-contrast)] hover:bg-[var(--bg-0)] hover:text-[var(--text-1)]"
+              >
+                Start Free Trial
+              </Link>
+            </div>
+          </div>
+        ) : null}
       </div>
-
-      <button
-        type="button"
-        onClick={handleSaveSettings}
-        disabled={settingsLoading || settingsSaving || !hasUnsavedChanges}
-        className="mt-4 inline-flex h-10 w-full cursor-pointer items-center justify-center border border-[var(--accent)] bg-[var(--accent)] px-3 text-sm font-semibold text-[var(--accent-contrast)] hover:bg-[var(--bg-0)] hover:text-[var(--text-1)] disabled:cursor-not-allowed disabled:border-[var(--border-1)] disabled:bg-[var(--surface-2)] disabled:text-[var(--text-3)] disabled:hover:bg-[var(--surface-2)] disabled:hover:text-[var(--text-3)]"
-      >
-        {settingsSaving ? "Saving..." : "Save Settings"}
-      </button>
 
       {settingsError ? <p className="mt-2 text-xs text-rose-300">Settings error: {settingsError}</p> : null}
       {settingsSuccess ? <p className="mt-2 text-xs text-emerald-300">{settingsSuccess}</p> : null}
-
-      <div className="mt-5 border border-[var(--border-1)] bg-[var(--bg-0)] p-3">
-        <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--text-3)]">Test Notifications</p>
-        <p className="mt-2 text-sm text-[var(--text-2)]">
-          Validate alert format, rule behavior, and delivery without waiting for real events.
-        </p>
-
-        <div className="mt-3 grid gap-2 md:grid-cols-[minmax(0,1fr)_180px]">
-          <select
-            value={selectedTestType}
-            onChange={(event) => setSelectedTestType(event.target.value as NotificationTestType)}
-            disabled={settingsLoading || settingsSaving || testRunningType !== null}
-            className="h-10 border border-[var(--border-1)] bg-[var(--surface-2)] px-3 text-sm text-[var(--text-1)] disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {notificationTestOptions.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-          <button
-            type="button"
-            disabled={settingsLoading || settingsSaving || testRunningType !== null}
-            onClick={() => runNotificationTest(selectedTestType)}
-            className="inline-flex h-10 cursor-pointer items-center justify-center border border-[var(--border-1)] bg-[var(--surface-2)] px-3 text-[11px] font-semibold uppercase tracking-wide text-[var(--text-1)] hover:bg-[var(--surface-1)] disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {testRunningType ? "Sending..." : "Run Test"}
-          </button>
-        </div>
-
-        <div className="mt-3 border border-[var(--border-1)] bg-[var(--surface-2)] px-3 py-2 text-xs text-[var(--text-2)]">
-          <p className="font-semibold uppercase tracking-wide text-[var(--text-3)]">Rule Preview</p>
-          <ul className="mt-2 space-y-1">
-            <li>
-              Every sale:{" "}
-              <span className={notifyEverySale ? "text-emerald-300" : "text-rose-300"}>
-                {notifyEverySale ? "On" : "Off"}
-              </span>{" "}
-              - {notifyEverySale ? "matching sale events will send alerts." : "sale events are skipped."}
-            </li>
-            <li>
-              Sold out:{" "}
-              <span className={notifySoldOut ? "text-emerald-300" : "text-rose-300"}>
-                {notifySoldOut ? "On" : "Off"}
-              </span>{" "}
-              - {notifySoldOut ? "stock transitions to zero will alert." : "sold out events are skipped."}
-            </li>
-            <li>
-              Low stock:{" "}
-              <span className={notifyLowStock ? "text-emerald-300" : "text-rose-300"}>{notifyLowStock ? "On" : "Off"}</span>{" "}
-              -{" "}
-              {notifyLowStock
-                ? `alerts trigger when stock drops below ${Math.max(0, Math.floor(lowStockThreshold))}.`
-                : "low stock events are skipped."}
-            </li>
-            <li>
-              Channel:{" "}
-              <span className={telegramConnected ? "text-emerald-300" : "text-rose-300"}>
-                {telegramConnected ? "Connected" : "Not connected"}
-              </span>
-              {" - "}
-              {telegramConnected ? "Telegram delivery is available." : "tests will fail."}
-            </li>
-            <li>Label alerts: Sent with a sample download label button to validate URL button rendering.</li>
-          </ul>
-        </div>
-
-        {testError ? <p className="mt-3 text-xs text-rose-300">Test error: {testError}</p> : null}
-        {testSuccess ? <p className="mt-3 text-xs text-emerald-300">{testSuccess}</p> : null}
-      </div>
     </section>
   );
 }

@@ -3,6 +3,7 @@ import { prisma } from "../../../../../lib/db/prisma";
 import { sendTelegramMessage } from "../../../../../lib/telegram/bot";
 import { buildTelegramTestPingMessage } from "../../../../../lib/telegram/messages";
 import { getSessionUserIdFromRequest } from "../../../../../lib/auth/session";
+import { getUserBillingEntitlement } from "../../../../../lib/billing/entitlements";
 import {
   buildRateLimitHeaders,
   buildRateLimitKey,
@@ -22,6 +23,19 @@ export async function POST(request: NextRequest) {
   const sessionUserId = getSessionUserIdFromRequest(request);
   if (!sessionUserId) {
     return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
+  }
+
+  const entitlement = await getUserBillingEntitlement(sessionUserId);
+  if (!entitlement.hasAccess) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: "subscription_required",
+        message: "Active subscription required. Start trial in Billing to send Telegram tests.",
+        subscriptionStatus: entitlement.status,
+      },
+      { status: 402 },
+    );
   }
 
   let rateLimitDecision: RateLimitDecision;
