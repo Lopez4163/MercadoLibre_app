@@ -62,6 +62,8 @@ Core flow is implemented:
    - `src/app/api/billing/checkout/route.ts`
    - `src/app/api/billing/webhook/route.ts`
    - `src/app/api/billing/status/route.ts`
+   - `src/app/api/billing/cancel/route.ts`
+   - `src/app/api/billing/resume/route.ts`
    - `lib/stripe/client.ts`
    - `lib/billing/entitlements.ts`
 10. Trial entry and post-login routing:
@@ -90,6 +92,10 @@ Core flow is implemented:
    - `src/app/(dashboard)/settings/billing/page.tsx`
    - `components/dashboard/NotificationRulesCard.tsx`
    - `components/dashboard/TelegramSettingsCard.tsx`
+   - `components/billing/ManageSubscriptionActions.tsx`
+13. Dashboard activity summary optimization:
+   - `src/app/api/orders/today-summary/route.ts`
+   - `components/dashboard/DashboardWorkspace.tsx` (`loadTodayActivity` now uses summary endpoint)
 
 ## Current Alert Behavior
 1. `orders_v2` events send order sold alerts (`notifyEverySale`).
@@ -104,6 +110,7 @@ Core flow is implemented:
      - else -> `Other`
    - duplicate shipment retries are deduped by `shipment_label:<mlUserId>:<shipmentId>`
 5. Sold-out alerts fire on transition `previousStock > 0 && currentStock === 0` (`notifySoldOut`).
+   - `orders_v2` flow now prefers live ML stock during transition checks to reduce false sold-out alerts from stale snapshots.
 6. Low-stock alerts fire on crossing `previousStock > threshold && currentStock <= threshold && currentStock > 0` (`notifyLowStock`).
 7. Duplicate low-stock notifications are prevented with `Item.lowStockAlertedAt`.
 8. Low-stock alert state resets when stock recovers above threshold.
@@ -141,7 +148,7 @@ Core flow is implemented:
    - `Inventory`
    - `Orders`
    - `Stats`
-   - `Alerts`
+   - `Notifications`
 6. Stats tab uses ML item fields only (`sold_quantity`, `available_quantity`, `price`, `status`) and currently includes:
    - Top Seller
    - Total Units Sold
@@ -165,9 +172,9 @@ Core flow is implemented:
    - Distinguish `not ready yet` vs `no printable label for this shipment mode` in UI/logging
    - Optionally store Telegram `message_id` and edit/reply to the original order message instead of sending a second label-ready message
    - Add focused integration coverage for shipment-ready timing and label dedupe
-6. Dashboard/orders UI is still partial:
-   - `Orders` tab is still a product placeholder, not a true order feed
-   - dashboard stats are ML-item-derived only, not time-windowed analytics
+6. Dashboard/orders UI status:
+   - `Orders` tab is now a real order feed backed by local order storage (`/api/orders/recent`)
+   - dashboard stats are still ML-item-derived only, not time-windowed analytics
 7. Consider extracting reusable stat/list card primitives if the dashboard keeps growing.
 
 ## Reconciler Hardening Status
@@ -204,10 +211,13 @@ Core flow is implemented:
    - Validate `status` filter values against an explicit allow-list.
    - Add per-user rate limiting.
    - Keep `pageSize` cap (`<= 100`) enforced.
-3. [ ] Improve label-link security model:
+3. [ ] Harden `GET /api/orders/today-summary`:
+   - Add per-user rate limiting.
+   - Add lightweight caching if dashboard traffic grows.
+4. [ ] Improve label-link security model:
    - Replace stored signed `labelButtonUrl` usage with on-demand signed URL generation.
    - Keep short-lived signed URLs, but support next-day printing via regenerated tokens.
-4. [ ] Add focused tests for new API paths:
+5. [ ] Add focused tests for new API paths:
    - Unauthorized/forbidden coverage for jobs + orders APIs.
    - Invalid query/date-range validation coverage.
    - Orders notification-log + label-link response coverage.
@@ -265,9 +275,13 @@ Core flow is implemented:
 7. [x] Add minimal UI wiring:
    - `Start Free Trial` button -> checkout endpoint
    - Billing status view from DB subscription state
-8. [ ] Add Billing Portal entrypoint (after core checkout/webhook is stable).
-9. [ ] Add webhook event integration tests for Stripe payload variants.
-10. [ ] Validate staging webhook delivery + entitlement transitions end-to-end.
+8. [x] Add billing actions in settings:
+   - Cancel subscription (confirmation modal) -> period-end cancellation
+   - Resume subscription before period end
+   - Hide trial CTA while subscription is entitled (`trialing`/`active`)
+9. [ ] Add Billing Portal entrypoint (after core checkout/webhook is stable).
+10. [ ] Add webhook event integration tests for Stripe payload variants.
+11. [ ] Validate staging webhook delivery + entitlement transitions end-to-end.
 
 ## Next Session TODO: Build Environment Stages
 Goal: establish clear `local` / `staging` / `production` workflow before broader production testing.
