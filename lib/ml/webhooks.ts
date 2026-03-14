@@ -397,26 +397,26 @@ async function handleOrderEvent(options: {
 
   for (const line of order.lines) {
     const snapshot = snapshotMap.get(line.itemId);
+    const liveItem = await getItemById({
+      accessToken,
+      itemId: line.itemId,
+    }).catch(() => null);
 
     let previousStock: number;
     let currentStock: number;
 
-    if (snapshot) {
+    if (snapshot && liveItem) {
+      // Use live stock for post-order state to avoid false sold-out flags from stale local snapshots.
+      currentStock = liveItem.available_quantity;
+      previousStock = Math.max(snapshot.stock, currentStock + line.quantity);
+    } else if (snapshot) {
       previousStock = snapshot.stock;
       currentStock = Math.max(previousStock - line.quantity, 0);
-    } else {
-      // No local snapshot yet. Pull one item once and infer pre-order stock.
-      const liveItem = await getItemById({
-        accessToken,
-        itemId: line.itemId,
-      }).catch(() => null);
-
-      if (!liveItem) {
-        continue;
-      }
-
+    } else if (liveItem) {
       currentStock = liveItem.available_quantity;
       previousStock = currentStock + line.quantity;
+    } else {
+      continue;
     }
 
     await prisma.item.upsert({
