@@ -198,29 +198,31 @@ Core flow is implemented:
    - low-stock/sold-out transitions
    - webhook dedupe
 
-## Optional Production Hardening
-1. [ ] Fail closed for ML webhook auth in production:
-   - If `NODE_ENV=production` and `ML_WEBHOOK_SECRET` is missing, return `500` from `/api/webhooks/mercadolibre` to prevent unauthenticated webhook processing.
-
-## API Hardening TODO
-1. [ ] Harden `POST /api/jobs/orders-cleanup`:
-   - Add rate limiting (very low request ceiling).
+## Production Security TODO (Current)
+1. [ ] Fail closed for Mercado Libre webhook auth in production:
+   - If `NODE_ENV=production` and `ML_WEBHOOK_SECRET` is missing/malformed, reject requests from `/api/webhooks/mercadolibre` (do not allow unauthenticated processing).
+2. [ ] Fail closed for Telegram webhook auth in production:
+   - If `NODE_ENV=production` and `TELEGRAM_WEBHOOK_SECRET` is missing, reject `/api/telegram/webhook` requests.
+3. [ ] Harden `POST /api/jobs/orders-cleanup`:
+   - Add very-low rate limiting.
    - Optionally enforce scheduler IP allow-list in production.
    - Keep generic error responses only.
-2. [ ] Harden `GET /api/orders/recent`:
-   - Validate `status` filter values against an explicit allow-list.
-   - Add per-user rate limiting.
+4. [ ] Harden `GET /api/orders/recent` filter validation:
+   - Validate `status` against an explicit allow-list (`all`, `paid`, `confirmed`, `cancelled`).
    - Keep `pageSize` cap (`<= 100`) enforced.
-3. [ ] Harden `GET /api/orders/today-summary`:
-   - Add per-user rate limiting.
-   - Add lightweight caching if dashboard traffic grows.
-4. [ ] Improve label-link security model:
-   - Replace stored signed `labelButtonUrl` usage with on-demand signed URL generation.
-   - Keep short-lived signed URLs, but support next-day printing via regenerated tokens.
-5. [ ] Add focused tests for new API paths:
-   - Unauthorized/forbidden coverage for jobs + orders APIs.
-   - Invalid query/date-range validation coverage.
-   - Orders notification-log + label-link response coverage.
+5. [ ] Add anti-abuse throttling for test notification endpoints:
+   - `POST /api/notifications/test`
+   - `POST /api/telegram/test`
+6. [ ] Remove or lock down placeholder API routes before production:
+   - `/api/auth/[...nextauth]`
+   - `/api/inventory`
+   - `/api/inventory/threshold`
+   - `/api/billing/subscribe`
+7. [x] Add per-user refresh rate limits:
+   - `GET /api/ml/items`
+   - `GET /api/orders/recent`
+   - `GET /api/orders/today-summary`
+   - production strict mode now requires Redis (`UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`) for distributed enforcement.
 
 ## Stripe Flows
 ### Recommended SaaS Billing Flow
