@@ -11,6 +11,11 @@ type InventoryItem = {
   sold_quantity?: number;
   price?: number;
   status?: string;
+  thumbnail?: string;
+  pictures?: Array<{
+    url?: string;
+    secure_url?: string;
+  }>;
 };
 
 type InventoryResponse = {
@@ -131,6 +136,14 @@ function formatDateTime(value: string | null) {
   }).format(date);
 }
 
+function normalizeImageUrl(value: string | null | undefined) {
+  if (!value) {
+    return null;
+  }
+
+  return value.startsWith("http://") ? `https://${value.slice(7)}` : value;
+}
+
 function orderStatusTone(status: string) {
   const normalized = status.toLowerCase();
   if (normalized.includes("paid") || normalized.includes("confirmed")) {
@@ -150,6 +163,25 @@ function telegramStatusTone(status: string | null) {
     return "text-emerald-300 border-emerald-500/40 bg-emerald-500/10";
   }
   return "text-red-300 border-red-500/40 bg-red-500/10";
+}
+
+function topSellerRankTone(rank: number) {
+  if (rank === 1) {
+    return "border-yellow-400/50 bg-yellow-400/15 text-yellow-200";
+  }
+  if (rank === 2) {
+    return "border-slate-300/50 bg-slate-300/10 text-slate-100";
+  }
+  if (rank === 3) {
+    return "border-amber-600/50 bg-amber-600/15 text-amber-200";
+  }
+  if (rank === 4) {
+    return "border-sky-400/45 bg-sky-400/10 text-sky-200";
+  }
+  if (rank === 5) {
+    return "border-zinc-400/45 bg-zinc-400/10 text-zinc-200";
+  }
+  return "border-[var(--border-1)] bg-[var(--surface-2)] text-[var(--text-2)]";
 }
 
 export default function DashboardWorkspace({
@@ -370,11 +402,28 @@ export default function DashboardWorkspace({
 
     return Math.round(((soldOutItems + criticalItems + lowItems) / items.length) * 100);
   }, [criticalItems, items.length, lowItems, soldOutItems]);
-  const topSeller = useMemo(() => {
+  const topSellers = useMemo(() => {
     return [...items]
       .filter((item) => typeof item.sold_quantity === "number")
-      .sort((left, right) => (right.sold_quantity ?? 0) - (left.sold_quantity ?? 0))[0] ?? null;
+      .sort((left, right) => (right.sold_quantity ?? 0) - (left.sold_quantity ?? 0))
+      .slice(0, 3);
   }, [items]);
+  function getItemImageUrl(item: InventoryItem) {
+    const thumb = normalizeImageUrl(item.thumbnail);
+    if (thumb) {
+      return thumb;
+    }
+
+    if (Array.isArray(item.pictures) && item.pictures.length > 0) {
+      const first = item.pictures[0];
+      return normalizeImageUrl(
+        (typeof first?.secure_url === "string" ? first.secure_url : null) ??
+          (typeof first?.url === "string" ? first.url : null),
+      );
+    }
+
+    return null;
+  }
   const totalUnitsSold = useMemo(
     () =>
       items.reduce((sum, item) => {
@@ -841,101 +890,29 @@ export default function DashboardWorkspace({
 
       {activeTab === "stats" ? (
         <section className="space-y-4">
-          <div className="grid gap-4 xl:grid-cols-[minmax(0,1.4fr)_minmax(320px,0.6fr)]">
-            <article className="overflow-hidden border border-[var(--border-1)] bg-[linear-gradient(135deg,color-mix(in_srgb,var(--accent)_18%,transparent),transparent_55%),var(--surface-1)] p-6">
-              <div className="flex flex-wrap items-start justify-between gap-4">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--text-3)]">
-                    Top Seller
-                  </p>
-                  <h3 className="mt-2 text-2xl font-semibold tracking-tight text-[var(--text-1)]">
-                    {topSeller ? topSeller.title ?? topSeller.id : "No sales data yet"}
-                  </h3>
-                  <p className="mt-2 max-w-xl text-sm text-[var(--text-2)]">
-                    Highest-selling listing across the current Mercado Libre catalog snapshot.
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => void loadInventory()}
-                  disabled={refreshing}
-                  className="inline-flex h-10 items-center border border-[var(--border-1)] bg-[var(--surface-2)] px-4 text-xs font-semibold uppercase tracking-wide text-[var(--text-1)] hover:bg-[var(--surface-1)] disabled:opacity-60"
-                >
-                  {refreshing ? "Refreshing..." : "Refresh Stats"}
-                </button>
+          <article className="border border-[var(--border-1)] bg-[var(--surface-1)] p-5">
+            <div className="flex flex-wrap items-end justify-between gap-3">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--text-3)]">
+                  Stats
+                </p>
+                <h3 className="mt-2 text-xl font-semibold tracking-tight text-[var(--text-1)]">
+                  Sales and inventory performance
+                </h3>
+                <p className="mt-1 text-sm text-[var(--text-2)]">
+                  Last sync: {loading ? "Loading..." : formatRelativeTime(lastUpdatedAt)}
+                </p>
               </div>
-
-              {topSeller ? (
-                <>
-                  <div className="mt-6 grid gap-3 sm:grid-cols-3">
-                    <div className="border border-[var(--border-1)] bg-[var(--bg-0)] p-4">
-                      <p className="text-xs uppercase tracking-wide text-[var(--text-3)]">Units Sold</p>
-                      <p className="mt-2 text-4xl font-semibold tracking-tight text-[var(--text-1)]">
-                        {topSeller.sold_quantity?.toLocaleString("en-US") ?? 0}
-                      </p>
-                    </div>
-                    <div className="border border-[var(--border-1)] bg-[var(--bg-0)] p-4">
-                      <p className="text-xs uppercase tracking-wide text-[var(--text-3)]">Units On Hand</p>
-                      <p className="mt-2 text-4xl font-semibold tracking-tight text-[var(--text-1)]">
-                        {typeof topSeller.available_quantity === "number"
-                          ? topSeller.available_quantity.toLocaleString("en-US")
-                          : "Unknown"}
-                      </p>
-                    </div>
-                    <div className="border border-[var(--border-1)] bg-[var(--bg-0)] p-4">
-                      <p className="text-xs uppercase tracking-wide text-[var(--text-3)]">Listing Value</p>
-                      <p className="mt-2 text-4xl font-semibold tracking-tight text-[var(--text-1)]">
-                        $
-                        {typeof topSeller.price === "number"
-                          ? topSeller.price.toLocaleString("en-US")
-                          : "Unknown"}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="mt-4 flex flex-wrap items-center gap-3 text-sm">
-                    <span className="border border-[var(--border-1)] bg-[var(--bg-0)] px-3 py-2 font-mono text-[var(--text-2)]">
-                      {topSeller.id}
-                    </span>
-                    <span className="border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-emerald-200">
-                      Leading by sold quantity
-                    </span>
-                  </div>
-                </>
-              ) : (
-                <div className="mt-6 border border-[var(--border-1)] bg-[var(--bg-0)] p-4">
-                  <p className="text-sm text-[var(--text-2)]">
-                    No `sold_quantity` data is available in the loaded catalog yet.
-                  </p>
-                </div>
-              )}
-            </article>
-
-            <div className="grid gap-4">
-              <article className="border border-[var(--border-1)] bg-[var(--surface-1)] p-5">
-                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--text-3)]">
-                  Total Units Sold
-                </p>
-                <p className="mt-3 text-4xl font-semibold tracking-tight text-[var(--text-1)]">
-                  {totalUnitsSold.toLocaleString("en-US")}
-                </p>
-                <p className="mt-2 text-sm text-[var(--text-2)]">
-                  Lifetime units sold across the current Mercado Libre catalog.
-                </p>
-              </article>
-
-              <article className="border border-[var(--border-1)] bg-[var(--surface-1)] p-5">
-                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--text-3)]">
-                  Risk Rate
-                </p>
-                <p className="mt-3 text-4xl font-semibold tracking-tight text-[var(--text-1)]">
-                  {riskRate}%
-                </p>
-                <p className="mt-2 text-sm text-[var(--text-2)]">
-                  Listings currently sold out, critical, or low on stock.
-                </p>
-              </article>
+              <button
+                type="button"
+                onClick={() => void loadInventory()}
+                disabled={refreshing}
+                className="inline-flex h-9 items-center border border-[var(--border-1)] bg-[var(--surface-2)] px-3 text-xs font-semibold uppercase tracking-wide text-[var(--text-1)] hover:bg-[var(--surface-1)] disabled:opacity-60"
+              >
+                {refreshing ? "Refreshing..." : "Refresh Stats"}
+              </button>
             </div>
-          </div>
+          </article>
 
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
             <article className="border border-[var(--border-1)] bg-[var(--surface-1)] p-5">
@@ -949,7 +926,6 @@ export default function DashboardWorkspace({
                 Estimated from current listing price x available units.
               </p>
             </article>
-
             <article className="border border-[var(--border-1)] bg-[var(--surface-1)] p-5">
               <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--text-3)]">
                 Units On Hand
@@ -961,217 +937,282 @@ export default function DashboardWorkspace({
                 Total available quantity across loaded listings.
               </p>
             </article>
-
             <article className="border border-[var(--border-1)] bg-[var(--surface-1)] p-5">
               <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--text-3)]">
-                Avg Units / Listing
+                Total Units Sold
               </p>
               <p className="mt-3 text-3xl font-semibold tracking-tight text-[var(--text-1)]">
-                {averageUnitsPerListing.toLocaleString("en-US")}
+                {totalUnitsSold.toLocaleString("en-US")}
               </p>
               <p className="mt-2 text-sm text-[var(--text-2)]">
-                Useful for spotting shallow catalog depth fast.
+                Lifetime units sold across the loaded catalog snapshot.
               </p>
+            </article>
+            <article className="border border-[var(--border-1)] bg-[var(--surface-1)] p-5">
+              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--text-3)]">
+                Risk Rate
+              </p>
+              <p className="mt-3 text-3xl font-semibold tracking-tight text-[var(--text-1)]">
+                {riskRate}%
+              </p>
+              <p className="mt-2 text-sm text-[var(--text-2)]">
+                Listings currently sold out, critical, or low on stock.
+              </p>
+            </article>
+          </div>
+
+          <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1.25fr)_minmax(320px,0.75fr)]">
+            <article className="h-fit self-start overflow-hidden border border-[var(--border-1)] bg-[linear-gradient(135deg,color-mix(in_srgb,var(--accent)_18%,transparent),transparent_55%),var(--surface-1)] p-6">
+              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--text-3)]">
+                Top 3 Best Sellers
+              </p>
+              <h3 className="mt-2 text-2xl font-semibold tracking-tight text-[var(--text-1)]">
+                Top performers by units sold
+              </h3>
+              <p className="mt-2 max-w-xl text-sm text-[var(--text-2)]">
+                Ranked from your current Mercado Libre catalog snapshot.
+              </p>
+
+              {topSellers.length > 0 ? (
+                <div className="mt-6 grid gap-3 xl:grid-cols-3">
+                  {topSellers.map((item, index) => {
+                    const imageUrl = getItemImageUrl(item);
+                    const rank = index + 1;
+
+                    return (
+                      <div key={item.id} className="border border-[var(--border-1)] bg-[var(--bg-0)] p-4">
+                        <div className="flex items-start gap-3">
+                          <span
+                            className={`inline-flex h-7 w-7 shrink-0 items-center justify-center border text-xs font-semibold ${topSellerRankTone(rank)}`}
+                          >
+                            #{rank}
+                          </span>
+                          <p className="line-clamp-2 text-sm font-semibold text-[var(--text-1)]">
+                            {item.title ?? item.id}
+                          </p>
+                        </div>
+                        {imageUrl ? (
+                          <div className="mx-auto mt-3 flex h-28 w-28 items-center justify-center overflow-hidden border border-[var(--border-1)] bg-[var(--surface-2)]">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={imageUrl}
+                              alt={item.title ?? item.id}
+                              className="h-full w-full object-contain"
+                              loading="lazy"
+                            />
+                          </div>
+                        ) : null}
+                        <div className="mt-3 space-y-2 text-xs text-[var(--text-2)]">
+                          <div className="flex items-center justify-between">
+                            <span>Units Sold</span>
+                            <span className="font-semibold text-[var(--text-1)]">
+                              {(item.sold_quantity ?? 0).toLocaleString("en-US")}
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span>Units On Hand</span>
+                            <span className="font-semibold text-[var(--text-1)]">
+                              {typeof item.available_quantity === "number"
+                                ? item.available_quantity.toLocaleString("en-US")
+                                : "Unknown"}
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span>Listing Value</span>
+                            <span className="font-semibold text-[var(--text-1)]">
+                              $
+                              {typeof item.price === "number"
+                                ? item.price.toLocaleString("en-US")
+                                : "Unknown"}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="mt-3 border border-[var(--border-1)] bg-[var(--surface-2)] px-2 py-1 font-mono text-[11px] text-[var(--text-3)]">
+                          {item.id}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="mt-6 border border-[var(--border-1)] bg-[var(--bg-0)] p-4">
+                  <p className="text-sm text-[var(--text-2)]">
+                    No `sold_quantity` data is available in the loaded catalog yet.
+                  </p>
+                </div>
+              )}
             </article>
 
             <article className="border border-[var(--border-1)] bg-[var(--surface-1)] p-5">
               <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--text-3)]">
-                Catalog Readout
+                Catalog Health
               </p>
+              <h3 className="mt-2 text-xl font-semibold tracking-tight text-[var(--text-1)]">
+                Snapshot of listing posture
+              </h3>
               <div className="mt-4 space-y-3">
                 <div className="flex items-center justify-between border border-[var(--border-1)] bg-[var(--bg-0)] px-3 py-3">
                   <span className="text-sm text-[var(--text-2)]">Catalog Size</span>
                   <span className="text-sm font-semibold text-[var(--text-1)]">{items.length}</span>
                 </div>
                 <div className="flex items-center justify-between border border-[var(--border-1)] bg-[var(--bg-0)] px-3 py-3">
+                  <span className="text-sm text-[var(--text-2)]">Active Listings</span>
+                  <span className="text-sm font-semibold text-emerald-300">{activeItems}</span>
+                </div>
+                <div className="flex items-center justify-between border border-[var(--border-1)] bg-[var(--bg-0)] px-3 py-3">
+                  <span className="text-sm text-[var(--text-2)]">Paused Listings</span>
+                  <span className="text-sm font-semibold text-[var(--text-1)]">{pausedItems}</span>
+                </div>
+                <div className="flex items-center justify-between border border-[var(--border-1)] bg-[var(--bg-0)] px-3 py-3">
                   <span className="text-sm text-[var(--text-2)]">Healthy Listings</span>
                   <span className="text-sm font-semibold text-emerald-300">{healthyItems}</span>
                 </div>
                 <div className="flex items-center justify-between border border-[var(--border-1)] bg-[var(--bg-0)] px-3 py-3">
-                  <span className="text-sm text-[var(--text-2)]">Last Sync</span>
+                  <span className="text-sm text-[var(--text-2)]">Sold Out Share</span>
+                  <span className="text-sm font-semibold text-red-300">
+                    {items.length === 0 ? "0%" : `${Math.round((soldOutItems / items.length) * 100)}%`}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between border border-[var(--border-1)] bg-[var(--bg-0)] px-3 py-3">
+                  <span className="text-sm text-[var(--text-2)]">Low Stock Share</span>
+                  <span className="text-sm font-semibold text-amber-300">
+                    {items.length === 0 ? "0%" : `${Math.round(((criticalItems + lowItems) / items.length) * 100)}%`}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between border border-[var(--border-1)] bg-[var(--bg-0)] px-3 py-3">
+                  <span className="text-sm text-[var(--text-2)]">Avg Units / Listing</span>
                   <span className="text-sm font-semibold text-[var(--text-1)]">
-                    {loading ? "Loading..." : formatRelativeTime(lastUpdatedAt)}
+                    {averageUnitsPerListing.toLocaleString("en-US")}
                   </span>
                 </div>
               </div>
             </article>
           </div>
 
-          <div className="grid gap-4 xl:grid-cols-[minmax(0,1.05fr)_minmax(0,1.05fr)_360px]">
+          <div className="grid gap-4 xl:grid-cols-3">
             <article className="border border-[var(--border-1)] bg-[var(--surface-1)] p-5">
-              <div className="flex items-end justify-between gap-3">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--text-3)]">
-                    Listing Breakdown
-                  </p>
-                  <h3 className="mt-2 text-xl font-semibold tracking-tight text-[var(--text-1)]">
-                    Catalog composition
-                  </h3>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => void loadInventory()}
-                  disabled={refreshing}
-                  className="inline-flex h-9 items-center border border-[var(--border-1)] bg-[var(--surface-2)] px-3 text-xs font-semibold uppercase tracking-wide text-[var(--text-1)] hover:bg-[var(--surface-1)] disabled:opacity-60"
-                >
-                  {refreshing ? "Refreshing..." : "Refresh"}
-                </button>
-              </div>
-
-              <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                <div className="border border-emerald-500/40 bg-emerald-500/10 p-4">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-emerald-300">Active Listings</p>
-                  <p className="mt-3 text-4xl font-semibold tracking-tight text-emerald-200">{activeItems}</p>
-                </div>
-                <div className="border border-slate-400/40 bg-slate-400/10 p-4">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-200">Paused Listings</p>
-                  <p className="mt-3 text-4xl font-semibold tracking-tight text-slate-100">{pausedItems}</p>
-                </div>
-                <div className="border border-red-500/40 bg-red-500/10 p-4">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-red-300">Sold Out Share</p>
-                  <p className="mt-3 text-4xl font-semibold tracking-tight text-red-200">
-                    {items.length === 0 ? "0%" : `${Math.round((soldOutItems / items.length) * 100)}%`}
-                  </p>
-                </div>
-                <div className="border border-amber-500/40 bg-amber-500/10 p-4">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-amber-300">Low Stock Share</p>
-                  <p className="mt-3 text-4xl font-semibold tracking-tight text-amber-200">
-                    {items.length === 0 ? "0%" : `${Math.round(((criticalItems + lowItems) / items.length) * 100)}%`}
-                  </p>
-                </div>
+              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--text-3)]">
+                Fast Movers At Risk
+              </p>
+              <h3 className="mt-2 text-lg font-semibold tracking-tight text-[var(--text-1)]">
+                Popular items running shallow
+              </h3>
+              <div className="mt-4 space-y-3">
+                {fastMoversAtRisk.length === 0 ? (
+                  <div className="border border-[var(--border-1)] bg-[var(--bg-0)] p-4">
+                    <p className="text-sm text-[var(--text-2)]">
+                      No high-selling low-stock listings are currently in the loaded catalog.
+                    </p>
+                  </div>
+                ) : (
+                  fastMoversAtRisk.map((item, index) => (
+                    <div key={item.id} className="border border-[var(--border-1)] bg-[var(--bg-0)] px-3 py-3">
+                      <div className="flex items-start gap-3">
+                        <span
+                          className={`inline-flex h-8 w-8 shrink-0 items-center justify-center border text-xs font-semibold ${topSellerRankTone(index + 1)}`}
+                        >
+                          {index + 1}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-semibold text-[var(--text-1)]">
+                            {item.title ?? item.id}
+                          </p>
+                          <div className="mt-2 flex items-center justify-between gap-3 text-xs text-[var(--text-3)]">
+                            <span>Sold: {(item.sold_quantity ?? 0).toLocaleString("en-US")}</span>
+                            <span>
+                              Stock:{" "}
+                              {typeof item.available_quantity === "number"
+                                ? item.available_quantity.toLocaleString("en-US")
+                                : "Unknown"}
+                            </span>
+                          </div>
+                          <div className="mt-3 h-2 overflow-hidden bg-[var(--surface-2)]">
+                            <div
+                              className="h-full bg-red-400"
+                              style={{
+                                width: `${Math.min(
+                                  100,
+                                  Math.round(
+                                    ((item.sold_quantity ?? 0) /
+                                      Math.max((item.sold_quantity ?? 0) + (item.available_quantity ?? 0), 1)) *
+                                      100,
+                                  ),
+                                )}%`,
+                              }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
             </article>
 
-            <div className="grid gap-4">
-              <article className="border border-[var(--border-1)] bg-[var(--surface-1)] p-5">
-                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--text-3)]">
-                  Fast Movers At Risk
-                </p>
-                <h3 className="mt-2 text-xl font-semibold tracking-tight text-[var(--text-1)]">
-                  Popular items running shallow
-                </h3>
-                <div className="mt-4 space-y-3">
-                  {fastMoversAtRisk.length === 0 ? (
-                    <div className="border border-[var(--border-1)] bg-[var(--bg-0)] p-4">
-                      <p className="text-sm text-[var(--text-2)]">
-                        No high-selling low-stock listings are currently in the loaded catalog.
-                      </p>
-                    </div>
-                  ) : (
-                    fastMoversAtRisk.map((item, index) => (
-                      <div
-                        key={item.id}
-                        className="border border-[var(--border-1)] bg-[var(--bg-0)] px-3 py-3"
-                      >
-                        <div className="flex items-start gap-3">
-                          <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center border border-red-500/40 bg-red-500/10 text-xs font-semibold text-red-200">
-                            {index + 1}
-                          </span>
-                          <div className="min-w-0 flex-1">
-                            <p className="truncate text-sm font-semibold text-[var(--text-1)]">
-                              {item.title ?? item.id}
-                            </p>
-                            <div className="mt-2 flex items-center justify-between gap-3 text-xs text-[var(--text-3)]">
-                              <span>Sold: {(item.sold_quantity ?? 0).toLocaleString("en-US")}</span>
-                              <span>
-                                Stock:{" "}
-                                {typeof item.available_quantity === "number"
-                                  ? item.available_quantity.toLocaleString("en-US")
-                                  : "Unknown"}
-                              </span>
-                            </div>
-                            <div className="mt-3 h-2 overflow-hidden bg-[var(--surface-2)]">
-                              <div
-                                className="h-full bg-red-400"
-                                style={{
-                                  width: `${Math.min(
-                                    100,
-                                    Math.round(
-                                      ((item.sold_quantity ?? 0) /
-                                        Math.max((item.sold_quantity ?? 0) + (item.available_quantity ?? 0), 1)) *
-                                        100,
-                                    ),
-                                  )}%`,
-                                }}
-                              />
-                            </div>
+            <article className="border border-[var(--border-1)] bg-[var(--surface-1)] p-5">
+              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--text-3)]">
+                Dormant Stock
+              </p>
+              <h3 className="mt-2 text-lg font-semibold tracking-tight text-[var(--text-1)]">
+                Inventory sitting without sales
+              </h3>
+              <div className="mt-4 space-y-3">
+                {dormantStock.length === 0 ? (
+                  <div className="border border-[var(--border-1)] bg-[var(--bg-0)] p-4">
+                    <p className="text-sm text-[var(--text-2)]">
+                      No inactive stock stands out from the current catalog snapshot.
+                    </p>
+                  </div>
+                ) : (
+                  dormantStock.map((item, index) => (
+                    <div key={item.id} className="border border-[var(--border-1)] bg-[var(--bg-0)] px-3 py-3">
+                      <div className="flex items-start gap-3">
+                        <span
+                          className={`inline-flex h-8 w-8 shrink-0 items-center justify-center border text-xs font-semibold ${topSellerRankTone(index + 1)}`}
+                        >
+                          {index + 1}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-semibold text-[var(--text-1)]">
+                            {item.title ?? item.id}
+                          </p>
+                          <div className="mt-2 flex items-center justify-between gap-3 text-xs text-[var(--text-3)]">
+                            <span>Sold: {(item.sold_quantity ?? 0).toLocaleString("en-US")}</span>
+                            <span>
+                              Stock:{" "}
+                              {typeof item.available_quantity === "number"
+                                ? item.available_quantity.toLocaleString("en-US")
+                                : "Unknown"}
+                            </span>
+                          </div>
+                          <div className="mt-3 h-2 overflow-hidden bg-[var(--surface-2)]">
+                            <div
+                              className="h-full bg-amber-400"
+                              style={{
+                                width: `${Math.min(
+                                  100,
+                                  Math.round(
+                                    ((item.available_quantity ?? 0) /
+                                      Math.max(dormantStock[0]?.available_quantity ?? item.available_quantity ?? 1, 1)) *
+                                      100,
+                                  ),
+                                )}%`,
+                              }}
+                            />
                           </div>
                         </div>
                       </div>
-                    ))
-                  )}
-                </div>
-              </article>
-
-              <article className="border border-[var(--border-1)] bg-[var(--surface-1)] p-5">
-                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--text-3)]">
-                  Dormant Stock
-                </p>
-                <h3 className="mt-2 text-xl font-semibold tracking-tight text-[var(--text-1)]">
-                  Inventory sitting without sales
-                </h3>
-                <div className="mt-4 space-y-3">
-                  {dormantStock.length === 0 ? (
-                    <div className="border border-[var(--border-1)] bg-[var(--bg-0)] p-4">
-                      <p className="text-sm text-[var(--text-2)]">
-                        No inactive stock stands out from the current catalog snapshot.
-                      </p>
                     </div>
-                  ) : (
-                    dormantStock.map((item, index) => (
-                      <div
-                        key={item.id}
-                        className="border border-[var(--border-1)] bg-[var(--bg-0)] px-3 py-3"
-                      >
-                        <div className="flex items-start gap-3">
-                          <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center border border-amber-500/40 bg-amber-500/10 text-xs font-semibold text-amber-200">
-                            {index + 1}
-                          </span>
-                          <div className="min-w-0 flex-1">
-                            <p className="truncate text-sm font-semibold text-[var(--text-1)]">
-                              {item.title ?? item.id}
-                            </p>
-                            <div className="mt-2 flex items-center justify-between gap-3 text-xs text-[var(--text-3)]">
-                              <span>Sold: {(item.sold_quantity ?? 0).toLocaleString("en-US")}</span>
-                              <span>
-                                Stock:{" "}
-                                {typeof item.available_quantity === "number"
-                                  ? item.available_quantity.toLocaleString("en-US")
-                                  : "Unknown"}
-                              </span>
-                            </div>
-                            <div className="mt-3 h-2 overflow-hidden bg-[var(--surface-2)]">
-                              <div
-                                className="h-full bg-amber-400"
-                                style={{
-                                  width: `${Math.min(
-                                    100,
-                                    Math.round(
-                                      ((item.available_quantity ?? 0) /
-                                        Math.max(
-                                          dormantStock[0]?.available_quantity ?? item.available_quantity ?? 1,
-                                          1,
-                                        )) *
-                                        100,
-                                    ),
-                                  )}%`,
-                                }}
-                              />
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </article>
-            </div>
+                  ))
+                )}
+              </div>
+            </article>
 
             <article className="border border-[var(--border-1)] bg-[var(--surface-1)] p-5">
               <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--text-3)]">
                 Sell-Through Leaders
               </p>
-              <h3 className="mt-2 text-xl font-semibold tracking-tight text-[var(--text-1)]">
+              <h3 className="mt-2 text-lg font-semibold tracking-tight text-[var(--text-1)]">
                 Listings moving the cleanest
               </h3>
               <div className="mt-4 space-y-3">
@@ -1183,12 +1224,11 @@ export default function DashboardWorkspace({
                   </div>
                 ) : (
                   sellThroughLeaders.map((item, index) => (
-                    <div
-                      key={item.id}
-                      className="border border-[var(--border-1)] bg-[var(--bg-0)] px-3 py-3"
-                    >
+                    <div key={item.id} className="border border-[var(--border-1)] bg-[var(--bg-0)] px-3 py-3">
                       <div className="flex items-start gap-3">
-                        <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center border border-emerald-500/40 bg-emerald-500/10 text-xs font-semibold text-emerald-200">
+                        <span
+                          className={`inline-flex h-8 w-8 shrink-0 items-center justify-center border text-xs font-semibold ${topSellerRankTone(index + 1)}`}
+                        >
                           {index + 1}
                         </span>
                         <div className="min-w-0 flex-1">
