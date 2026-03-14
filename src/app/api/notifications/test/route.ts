@@ -9,11 +9,25 @@ import {
   buildOutOfStockMessage,
   buildTelegramTestPingMessage,
 } from "../../../../../lib/telegram/messages";
+import {
+  buildRateLimitHeaders,
+  buildRateLimitKey,
+  consumeRateLimit,
+  getRequestIp,
+  RateLimitConfigurationError,
+  RateLimitUnavailableError,
+  type RateLimitDecision,
+} from "../../../../../lib/utils/rate-limit";
 
 type TestType = "sale" | "low_stock" | "sold_out" | "shipping_label" | "channel_health";
 
 type TestPayload = {
   type?: TestType;
+};
+
+const NOTIFICATION_TEST_RATE_LIMIT = {
+  limit: 10,
+  windowMs: 60_000,
 };
 
 function isSupportedTestType(value: string): value is TestType {
@@ -30,6 +44,37 @@ export async function POST(request: NextRequest) {
   const sessionUserId = getSessionUserIdFromRequest(request);
   if (!sessionUserId) {
     return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
+  }
+
+  let rateLimitDecision: RateLimitDecision;
+  try {
+    rateLimitDecision = await consumeRateLimit({
+      key: buildRateLimitKey("api_notifications_test_post", sessionUserId, getRequestIp(request)),
+      limit: NOTIFICATION_TEST_RATE_LIMIT.limit,
+      windowMs: NOTIFICATION_TEST_RATE_LIMIT.windowMs,
+    });
+  } catch (error) {
+    if (error instanceof RateLimitConfigurationError || error instanceof RateLimitUnavailableError) {
+      return NextResponse.json(
+        { ok: false, error: "rate_limit_unavailable", message: "Rate limiter is unavailable. Contact support." },
+        { status: 500 },
+      );
+    }
+    throw error;
+  }
+
+  if (!rateLimitDecision.allowed) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: "rate_limited",
+        message: "Too many test notification requests. Please wait and try again.",
+      },
+      {
+        status: 429,
+        headers: buildRateLimitHeaders(rateLimitDecision),
+      },
+    );
   }
 
   let payload: TestPayload;
@@ -122,9 +167,15 @@ export async function POST(request: NextRequest) {
 
   try {
     await sendTelegramMessage(account.chatId, text, { inlineButtons });
-    return NextResponse.json({ ok: true, type: payload.type }, { status: 200 });
+    return NextResponse.json(
+      { ok: true, type: payload.type },
+      { status: 200, headers: buildRateLimitHeaders(rateLimitDecision) },
+    );
   } catch (error) {
     console.error("notification test send failed", error);
-    return NextResponse.json({ ok: false, error: "telegram_send_failed" }, { status: 502 });
+    return NextResponse.json(
+      { ok: false, error: "telegram_send_failed" },
+      { status: 502, headers: buildRateLimitHeaders(rateLimitDecision) },
+    );
   }
 }

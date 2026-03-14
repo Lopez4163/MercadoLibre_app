@@ -26,6 +26,7 @@ export function getProvidedMlWebhookSecret(request: NextRequest) {
 type VerifyMlWebhookSecretInput = {
   expectedSecret?: string | null;
   providedSecret?: string | null;
+  strict?: boolean;
 };
 
 function normalizeSecret(value: string | null | undefined) {
@@ -48,27 +49,27 @@ function normalizeSecret(value: string | null | undefined) {
   return trimmed;
 }
 
+export function parseExpectedMlWebhookSecrets(expectedSecret?: string | null) {
+  return (expectedSecret ?? "")
+    .split(",")
+    .map((value) => normalizeSecret(value))
+    .filter((value): value is string => Boolean(value));
+}
+
 export function verifyMlWebhookSecret(input: VerifyMlWebhookSecretInput) {
   const expectedRaw = input.expectedSecret ?? null;
+  const strict = input.strict ?? false;
+  const expectedValues = parseExpectedMlWebhookSecrets(expectedRaw);
 
-  // Allow all requests when auth secret is not configured.
-  if (!expectedRaw) {
-    return true;
+  if (!expectedRaw || expectedValues.length === 0) {
+    // In non-production environments we allow missing/malformed config to
+    // preserve local webhook testing ergonomics.
+    return !strict;
   }
 
   const provided = normalizeSecret(input.providedSecret);
   if (!provided) {
     return false;
-  }
-
-  const expectedValues = expectedRaw
-    .split(",")
-    .map((value) => normalizeSecret(value))
-    .filter((value): value is string => Boolean(value));
-
-  // Treat malformed config like missing config to preserve current behavior.
-  if (expectedValues.length === 0) {
-    return true;
   }
 
   return expectedValues.includes(provided);
