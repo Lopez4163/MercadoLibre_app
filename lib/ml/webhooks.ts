@@ -2,6 +2,7 @@ import { getAppBaseUrl } from "../app/base-url";
 import { createHash } from "crypto";
 import { createOrderLabelToken } from "../labels/token";
 import { prisma } from "../db/prisma";
+import { isBillingStatusActive } from "../billing/entitlements";
 import {
   sendLowStockNotification,
   sendOrderLabelReadyNotification,
@@ -877,6 +878,11 @@ export async function processMercadoLibreWebhook(input: ProcessMlWebhookInput) {
       accessToken: true,
       refreshToken: true,
       tokenExpiresAt: true,
+      billingSubscription: {
+        select: {
+          status: true,
+        },
+      },
     },
   });
 
@@ -892,6 +898,23 @@ export async function processMercadoLibreWebhook(input: ProcessMlWebhookInput) {
     where: { id: createdEvent.id },
     data: { userId: user.id },
   });
+
+  if (!isBillingStatusActive(user.billingSubscription?.status)) {
+    console.log("[ML webhook] skipped for inactive billing", {
+      eventKey,
+      userId: user.id,
+      status: user.billingSubscription?.status ?? null,
+    });
+    return { processed: false as const, reason: "billing_inactive" as const };
+  }
+
+  if (!user.accessToken || !user.refreshToken) {
+    console.log("[ML webhook] skipped for disconnected ML credentials", {
+      eventKey,
+      userId: user.id,
+    });
+    return { processed: false as const, reason: "ml_disconnected" as const };
+  }
 
   return withUserMlAccessToken(user, async (accessToken) => {
     if (matchesOrder) {

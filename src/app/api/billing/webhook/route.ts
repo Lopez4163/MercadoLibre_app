@@ -3,6 +3,8 @@ import { Prisma } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "../../../../../lib/db/prisma";
 import { getStripe, getStripeWebhookSecret } from "../../../../../lib/stripe/client";
+import { isBillingStatusActive } from "../../../../../lib/billing/entitlements";
+import { disconnectUserIntegrationsForBillingEnd } from "../../../../../lib/account/disconnect";
 
 export const runtime = "nodejs";
 const DEFAULT_STRIPE_WEBHOOK_EVENT_RETENTION_DAYS = 30;
@@ -113,17 +115,20 @@ async function upsertSubscriptionState(subscription: Stripe.Subscription, fallba
       where: { userId },
       data: payload,
     });
-    return;
+  } else {
+    await prisma.billingSubscription.upsert({
+      where: { stripeSubscriptionId: subscription.id },
+      create: {
+        userId,
+        ...payload,
+      },
+      update: payload,
+    });
   }
 
-  await prisma.billingSubscription.upsert({
-    where: { stripeSubscriptionId: subscription.id },
-    create: {
-      userId,
-      ...payload,
-    },
-    update: payload,
-  });
+  if (!isBillingStatusActive(subscription.status)) {
+    await disconnectUserIntegrationsForBillingEnd(userId);
+  }
 }
 
 async function syncBySubscriptionId(subscriptionId: string, fallbackUserId?: string | null) {
