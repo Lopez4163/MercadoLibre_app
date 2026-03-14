@@ -357,13 +357,6 @@ export default function DashboardWorkspace({
     [items],
   );
 
-  const topRiskItems = useMemo(() => {
-    return [...items]
-      .filter((item) => typeof item.available_quantity === "number")
-      .sort((left, right) => (left.available_quantity ?? 0) - (right.available_quantity ?? 0))
-      .slice(0, 5);
-  }, [items]);
-
   const activeItems = useMemo(
     () => items.filter((item) => item.status === "active").length,
     [items],
@@ -1257,12 +1250,22 @@ export default function DashboardWorkspace({
       ) : null}
 
       {activeTab === "alerts" ? (
-        <section className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
+        <section className="space-y-4">
           <article className="border border-[var(--border-1)] bg-[var(--surface-1)] p-5">
-            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--text-3)]">Alerts</p>
-            <h3 className="mt-2 text-xl font-semibold tracking-tight text-[var(--text-1)]">
-              Current alert posture
-            </h3>
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--text-3)]">Alerts</p>
+                <h3 className="mt-2 text-xl font-semibold tracking-tight text-[var(--text-1)]">
+                  Current alert posture
+                </h3>
+              </div>
+              <Link
+                href="/settings/notifications"
+                className="inline-flex h-9 items-center border border-[var(--accent)] bg-[var(--accent)] px-3 text-xs font-semibold uppercase tracking-wide text-[var(--accent-contrast)] hover:bg-transparent hover:text-[var(--text-1)]"
+              >
+                Alert Settings
+              </Link>
+            </div>
 
             <div className="mt-5 grid gap-3 sm:grid-cols-2">
               <div className="border border-[var(--border-1)] bg-[var(--bg-0)] p-4">
@@ -1288,37 +1291,14 @@ export default function DashboardWorkspace({
                 <p className="mt-2 text-3xl font-semibold text-[var(--text-1)]">
                   {toggleLabel(notificationSettings?.notifyLowStock ?? null)}
                 </p>
+                <p className="mt-2 text-xs text-[var(--text-3)]">
+                  Threshold:{" "}
+                  {notificationSettings
+                    ? `${notificationSettings.lowStockThreshold.toLocaleString("en-US")} units`
+                    : "Checking"}
+                </p>
               </div>
             </div>
-          </article>
-
-          <article className="border border-[var(--border-1)] bg-[var(--surface-1)] p-5">
-            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--text-3)]">Priority Watchlist</p>
-            <div className="mt-4 space-y-3">
-              {topRiskItems.length === 0 ? (
-                <p className="text-sm text-[var(--text-2)]">
-                  No inventory data loaded yet. Refresh inventory to populate the risk watchlist.
-                </p>
-              ) : (
-                topRiskItems.map((item) => (
-                  <div
-                    key={item.id}
-                    className="border border-[var(--border-1)] bg-[var(--bg-0)] px-3 py-3"
-                  >
-                    <p className="text-sm font-semibold text-[var(--text-1)]">{item.title ?? item.id}</p>
-                    <p className="mt-1 text-xs text-[var(--text-3)]">
-                      Stock: {typeof item.available_quantity === "number" ? item.available_quantity : "Unknown"}
-                    </p>
-                  </div>
-                ))
-              )}
-            </div>
-            <Link
-              href="/settings/notifications"
-              className="mt-4 inline-flex h-10 w-full items-center justify-center border border-[var(--accent)] bg-[var(--accent)] px-4 text-sm font-semibold text-[var(--accent-contrast)] hover:bg-transparent hover:text-[var(--text-1)]"
-            >
-              Tune alert settings
-            </Link>
           </article>
         </section>
       ) : null}
