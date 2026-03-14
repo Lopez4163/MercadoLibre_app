@@ -1,11 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "../../../../../lib/db/prisma";
 import { getSessionUserIdFromRequest } from "../../../../../lib/auth/session";
+import {
+  buildRateLimitHeaders,
+  buildRateLimitKey,
+  consumeRateLimit,
+  getRequestIp,
+  RateLimitConfigurationError,
+  RateLimitUnavailableError,
+  type RateLimitDecision,
+} from "../../../../../lib/utils/rate-limit";
 
 const DEFAULT_PAGE = 1;
 const DEFAULT_PAGE_SIZE = 25;
 const MAX_PAGE_SIZE = 100;
 const MS_IN_30_DAYS = 30 * 24 * 60 * 60 * 1000;
+const ORDERS_RECENT_RATE_LIMIT = {
+  limit: 60,
+  windowMs: 60_000,
+};
 
 function parsePositiveInt(value: string | null, fallback: number) {
   if (!value) {
@@ -46,6 +59,40 @@ export async function GET(request: NextRequest) {
   const sessionUserId = getSessionUserIdFromRequest(request);
   if (!sessionUserId) {
     return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
+  }
+
+  let rateLimitDecision: RateLimitDecision;
+  try {
+    rateLimitDecision = await consumeRateLimit({
+      key: buildRateLimitKey("api_orders_recent_get", sessionUserId, getRequestIp(request)),
+      limit: ORDERS_RECENT_RATE_LIMIT.limit,
+      windowMs: ORDERS_RECENT_RATE_LIMIT.windowMs,
+    });
+  } catch (error) {
+    if (error instanceof RateLimitConfigurationError || error instanceof RateLimitUnavailableError) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: "rate_limit_unavailable",
+          message: "Rate limiter is unavailable. Contact support.",
+        },
+        { status: 500 },
+      );
+    }
+    throw error;
+  }
+  if (!rateLimitDecision.allowed) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: "rate_limited",
+        message: "Too many order refresh requests. Please wait and try again.",
+      },
+      {
+        status: 429,
+        headers: buildRateLimitHeaders(rateLimitDecision),
+      },
+    );
   }
 
   const query = request.nextUrl.searchParams;
@@ -169,6 +216,9 @@ export async function GET(request: NextRequest) {
         };
       }),
     },
-    { status: 200 },
+    {
+      status: 200,
+      headers: buildRateLimitHeaders(rateLimitDecision),
+    },
   );
 }
