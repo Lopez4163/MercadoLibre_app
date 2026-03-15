@@ -23,8 +23,18 @@ export type TelegramInlineButton = {
   url: string;
 };
 
+export type TelegramDocument = {
+  data: ArrayBuffer;
+  fileName: string;
+  contentType?: string;
+};
+
 type TelegramSendMessageOptions = {
   inlineButtons?: TelegramInlineButton[];
+};
+
+type TelegramSendDocumentOptions = {
+  caption?: string;
 };
 
 type WebhookInfoResult = {
@@ -82,6 +92,46 @@ async function telegramRequest<T>(method: string, body?: Record<string, unknown>
   );
 }
 
+async function telegramMultipartRequest<T>(
+  method: string,
+  buildForm: () => FormData,
+) {
+  const token = getTelegramBotToken();
+  const url = `${TELEGRAM_API_BASE}/bot${token}/${method}`;
+
+  return withRetry(
+    async () => {
+      const response = await fetch(url, {
+        method: "POST",
+        body: buildForm(),
+      });
+
+      if (!response.ok) {
+        const message = `Telegram API HTTP error (${response.status}) on ${method}`;
+        if (isRetryableHttpStatus(response.status)) {
+          throw new RetryableRequestError(message);
+        }
+        throw new Error(message);
+      }
+
+      const data = (await response.json()) as TelegramApiResponse<T>;
+      if (!data.ok || data.result === undefined) {
+        const message = `Telegram API failed on ${method}: ${data.description ?? "unknown error"}`;
+        if (data.error_code === 429) {
+          throw new RetryableRequestError(message);
+        }
+        throw new Error(message);
+      }
+
+      return data.result;
+    },
+    {
+      shouldRetry: (error) =>
+        error instanceof RetryableRequestError || isLikelyTransientNetworkError(error),
+    },
+  );
+}
+
 export async function sendTelegramMessage(
   chatId: string,
   text: string,
@@ -101,6 +151,24 @@ export async function sendTelegramMessage(
             inline_keyboard: [inlineButtons.map((button) => ({ text: button.text, url: button.url }))],
           }
         : undefined,
+  });
+}
+
+export async function sendTelegramDocument(
+  chatId: string,
+  document: TelegramDocument,
+  options?: TelegramSendDocumentOptions,
+) {
+  return telegramMultipartRequest<SendMessageResult>("sendDocument", () => {
+    const form = new FormData();
+    form.append("chat_id", chatId);
+    form.append("caption", options?.caption ?? "");
+    form.append(
+      "document",
+      new Blob([document.data], { type: document.contentType ?? "application/pdf" }),
+      document.fileName,
+    );
+    return form;
   });
 }
 

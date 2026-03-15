@@ -1,7 +1,7 @@
 import { prisma } from "../db/prisma";
-import type { MlOrderSaleType } from "../ml/api";
+import type { MlOrderSaleType, MlShipmentLabelDocument } from "../ml/api";
 import type { TelegramInlineButton } from "../telegram/bot";
-import { sendTelegramMessage } from "../telegram/bot";
+import { sendTelegramDocument, sendTelegramMessage } from "../telegram/bot";
 import {
   buildLowStockMessage,
   buildOrderLabelReadyMessage,
@@ -14,6 +14,7 @@ type OrderSoldNotificationInput = {
   orderId: string;
   status?: string;
   totalAmount?: number;
+  labelDocument?: MlShipmentLabelDocument | null;
   inlineButtons?: TelegramInlineButton[];
   lines: Array<{
     itemId: string;
@@ -60,6 +61,27 @@ export async function sendOrderSoldNotification(input: OrderSoldNotificationInpu
     lines: input.lines,
   });
 
+  if (input.labelDocument) {
+    try {
+      await sendTelegramDocument(
+        account.chatId,
+        {
+          data: input.labelDocument.data,
+          fileName: input.labelDocument.fileName,
+          contentType: input.labelDocument.contentType,
+        },
+        { caption: message },
+      );
+      return { sent: true as const };
+    } catch (error) {
+      console.error("telegram label document send failed for order notification", {
+        userId: input.userId,
+        orderId: input.orderId,
+        error,
+      });
+    }
+  }
+
   await sendTelegramMessage(account.chatId, message, {
     inlineButtons: input.inlineButtons,
   });
@@ -80,7 +102,8 @@ type OrderLabelReadyNotificationInput = {
   orderId: string;
   shipmentId: string;
   saleType?: MlOrderSaleType | null;
-  inlineButtons: TelegramInlineButton[];
+  labelDocument?: MlShipmentLabelDocument | null;
+  inlineButtons?: TelegramInlineButton[];
 };
 
 export async function sendOutOfStockNotification(input: OutOfStockNotificationInput) {
@@ -130,6 +153,28 @@ export async function sendOrderLabelReadyNotification(input: OrderLabelReadyNoti
     shipmentId: input.shipmentId,
     saleType: input.saleType,
   });
+
+  if (input.labelDocument) {
+    try {
+      await sendTelegramDocument(
+        account.chatId,
+        {
+          data: input.labelDocument.data,
+          fileName: input.labelDocument.fileName,
+          contentType: input.labelDocument.contentType,
+        },
+        { caption: message },
+      );
+      return { sent: true as const };
+    } catch (error) {
+      console.error("telegram label document send failed for label-ready notification", {
+        userId: input.userId,
+        orderId: input.orderId,
+        shipmentId: input.shipmentId,
+        error,
+      });
+    }
+  }
 
   await sendTelegramMessage(account.chatId, message, {
     inlineButtons: input.inlineButtons,
