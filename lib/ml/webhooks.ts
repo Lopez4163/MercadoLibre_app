@@ -608,12 +608,35 @@ async function handleShipmentEvent(options: {
       orderId,
       shipmentId,
     });
+    const orderLineItems =
+      (
+        await prisma.order.findUnique({
+          where: {
+            userId_mlOrderId: {
+              userId,
+              mlOrderId: orderId,
+            },
+          },
+          select: {
+            lines: {
+              select: {
+                title: true,
+                quantity: true,
+              },
+              orderBy: {
+                createdAt: "asc",
+              },
+            },
+          },
+        })
+      )?.lines ?? [];
 
     const notifyResult = await sendOrderLabelReadyNotification({
       userId,
       orderId,
       shipmentId,
       saleType,
+      lines: orderLineItems,
       labelDocument,
       inlineButtons: [
         {
