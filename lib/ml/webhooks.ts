@@ -635,6 +635,7 @@ async function handleShipmentEvent(options: {
       userId,
       orderId,
       shipmentId,
+      destinationCity: shipment?.destinationCity ?? null,
       saleType,
       lines: orderLineItems,
       labelDocument,
@@ -655,6 +656,7 @@ async function handleShipmentEvent(options: {
       payload: {
         eventKey,
         shipmentId,
+        destinationCity: shipment?.destinationCity ?? null,
         saleType,
         labelButtonUrl,
       },
