@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 type TelegramSettingsCardProps = {
   initialHasBillingAccess?: boolean | null;
@@ -16,26 +16,13 @@ export default function TelegramSettingsCard({ initialHasBillingAccess = null }:
   const [hasBillingAccess, setHasBillingAccess] = useState<boolean | null>(initialHasBillingAccess);
   const [connectStartToken, setConnectStartToken] = useState<string | null>(null);
 
-  useEffect(() => {
-    void loadTelegramStatus();
-  }, []);
-
-  useEffect(() => {
-    if (!telegramSuccess) {
-      return;
-    }
-
-    const timer = window.setTimeout(() => {
+  const loadTelegramStatus = useCallback(async (options?: { quiet?: boolean }) => {
+    const quiet = options?.quiet ?? false;
+    if (!quiet) {
+      setTelegramLoading(true);
+      setTelegramError(null);
       setTelegramSuccess(null);
-    }, 3000);
-
-    return () => window.clearTimeout(timer);
-  }, [telegramSuccess]);
-
-  async function loadTelegramStatus() {
-    setTelegramLoading(true);
-    setTelegramError(null);
-    setTelegramSuccess(null);
+    }
 
     try {
       const [response, billingResponse] = await Promise.all([
@@ -61,11 +48,49 @@ export default function TelegramSettingsCard({ initialHasBillingAccess = null }:
       setHasBillingAccess(Boolean(billingData.ok && billingData.hasAccess));
     } catch (error) {
       setHasBillingAccess(false);
-      setTelegramError(error instanceof Error ? error.message : "failed_to_load_status");
+      if (!quiet) {
+        setTelegramError(error instanceof Error ? error.message : "failed_to_load_status");
+      }
     } finally {
-      setTelegramLoading(false);
+      if (!quiet) {
+        setTelegramLoading(false);
+      }
     }
-  }
+  }, []);
+
+  useEffect(() => {
+    void loadTelegramStatus();
+  }, [loadTelegramStatus]);
+
+  useEffect(() => {
+    if (!telegramSuccess) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      setTelegramSuccess(null);
+    }, 3000);
+
+    return () => window.clearTimeout(timer);
+  }, [telegramSuccess]);
+
+  useEffect(() => {
+    const onFocus = () => {
+      void loadTelegramStatus({ quiet: true });
+    };
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        void loadTelegramStatus({ quiet: true });
+      }
+    };
+
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    return () => {
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
+  }, [loadTelegramStatus]);
 
   async function handleTelegramConnect() {
     setTelegramActionLoading(true);
@@ -195,7 +220,7 @@ export default function TelegramSettingsCard({ initialHasBillingAccess = null }:
 
       <div className="relative mt-5">
         <div
-          className={`transition-opacity ${hasBillingAccess === true ? "opacity-100" : "pointer-events-none opacity-45"}`}
+          className={`transition-opacity ${hasBillingAccess === true ? "opacity-100" : "pointer-events-none opacity-80"}`}
           aria-hidden={hasBillingAccess !== true}
         >
           <div className="border border-[var(--border-1)] bg-[var(--bg-0)] px-3 py-3 text-sm">
@@ -254,7 +279,7 @@ export default function TelegramSettingsCard({ initialHasBillingAccess = null }:
 
         {hasBillingAccess === false ? (
           <div className="absolute inset-0 flex items-center justify-center bg-slate-950/45 p-4">
-            <div className="max-w-md border border-cyan-500/55 bg-cyan-500/10 p-4 text-center shadow-lg">
+            <div className="max-w-md border border-yellow-300/80 bg-yellow-300/20 p-4 text-center shadow-lg">
               <p className="text-sm font-semibold text-[var(--text-1)]">
                 Start your free trial to view and manage Telegram delivery settings.
               </p>

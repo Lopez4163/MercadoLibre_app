@@ -54,7 +54,6 @@ export default async function BillingSettingsPage({ searchParams }: BillingSetti
       where: { userId },
       select: {
         status: true,
-        priceId: true,
         trialEnd: true,
         currentPeriodEnd: true,
         cancelAtPeriodEnd: true,
@@ -108,10 +107,6 @@ export default async function BillingSettingsPage({ searchParams }: BillingSetti
         </div>
 
         <dl className="mt-5 grid gap-3 text-sm text-[var(--text-2)] md:grid-cols-2">
-          <div>
-            <dt className="text-[var(--text-3)]">Price ID</dt>
-            <dd className="mt-1 font-medium text-[var(--text-1)]">{subscription?.priceId ?? "N/A"}</dd>
-          </div>
           <div>
             <dt className="text-[var(--text-3)]">Cancel At Period End</dt>
             <dd className="mt-1 font-medium text-[var(--text-1)]">{subscription?.cancelAtPeriodEnd ? "Yes" : "No"}</dd>
