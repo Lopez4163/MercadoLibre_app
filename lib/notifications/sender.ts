@@ -101,6 +101,7 @@ type OrderLabelReadyNotificationInput = {
   userId: string;
   orderId: string;
   shipmentId: string;
+  destinationCity?: string | null;
   saleType?: MlOrderSaleType | null;
   lines?: Array<{
     title: string;
@@ -155,6 +156,7 @@ export async function sendOrderLabelReadyNotification(input: OrderLabelReadyNoti
   const message = buildOrderLabelReadyMessage({
     orderId: input.orderId,
     shipmentId: input.shipmentId,
+    destinationCity: input.destinationCity,
     saleType: input.saleType,
     lines: input.lines,
   });

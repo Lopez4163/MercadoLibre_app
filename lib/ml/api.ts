@@ -46,6 +46,7 @@ export type MlOrderShipment = {
   id: string;
   logisticType: string | null;
   orderId?: string | null;
+  destinationCity?: string | null;
 };
 
 export type MlShipmentLabelDocument = {
@@ -356,7 +357,14 @@ export async function getShipmentById(options: { accessToken: string; shipmentId
   );
 
   const shipmentPayload = (await shipmentResponse.json()) as
-    | { id?: unknown; logistic_type?: unknown; order_id?: unknown; order?: { id?: unknown } | null }
+    | {
+        id?: unknown;
+        logistic_type?: unknown;
+        order_id?: unknown;
+        order?: { id?: unknown } | null;
+        receiver_address?: unknown;
+        destination?: unknown;
+      }
     | null;
   if (!shipmentPayload) {
     return null;
@@ -381,10 +389,45 @@ export async function getShipmentById(options: { accessToken: string; shipmentId
       ? String(orderIdRaw)
       : null;
 
+  function extractCityName(value: unknown): string | null {
+    if (typeof value === "string" && value.trim().length > 0) {
+      return value.trim();
+    }
+
+    if (typeof value === "object" && value !== null) {
+      const fromName =
+        "name" in value && typeof (value as { name?: unknown }).name === "string"
+          ? (value as { name: string }).name.trim()
+          : "";
+      if (fromName.length > 0) {
+        return fromName;
+      }
+
+      const fromCityName =
+        "city_name" in value && typeof (value as { city_name?: unknown }).city_name === "string"
+          ? (value as { city_name: string }).city_name.trim()
+          : "";
+      if (fromCityName.length > 0) {
+        return fromCityName;
+      }
+
+      const nestedCity = "city" in value ? (value as { city?: unknown }).city : null;
+      return extractCityName(nestedCity);
+    }
+
+    return null;
+  }
+
+  const destinationCity =
+    extractCityName(shipmentPayload.receiver_address) ??
+    extractCityName(shipmentPayload.destination) ??
+    null;
+
   return {
     id: shipmentId,
     logisticType,
     orderId,
+    destinationCity,
   } satisfies MlOrderShipment;
 }
 

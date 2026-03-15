@@ -65,7 +65,7 @@ function appendLineItemsSection(
     ...visible.map((line) => `- ${line.quantity} x ${line.title}`),
     hiddenCount > 0 ? `- +${hiddenCount} more` : null,
   ]
-    .filter(Boolean)
+    .filter((line): line is string => line !== null)
     .join("\n");
 
   // Keep Telegram document caption safely under the practical limit.
@@ -160,6 +160,7 @@ export function buildOrderSoldMessage(input: {
 export function buildOrderLabelReadyMessage(input: {
   orderId: string;
   shipmentId: string;
+  destinationCity?: string | null;
   saleType?: "flex" | "full" | "other" | null;
   lines?: Array<{
     title: string;
@@ -175,13 +176,13 @@ export function buildOrderLabelReadyMessage(input: {
           ? "Other"
           : "Unknown";
 
-  const base = buildCompactAlertMessage({
-    tag: "🚚 LABEL READY",
-    order: input.orderId,
-    items: `Shipment ${input.shipmentId}`,
-    total: "-",
-    status: saleTypeLabel,
-  });
+  const base = [
+    "🚚 LABEL READY",
+    `Order: ${input.orderId}`,
+    `Shipment: ${input.shipmentId}`,
+    `City: ${input.destinationCity?.trim() ? input.destinationCity.trim() : "-"}`,
+    `Status: ${saleTypeLabel}`,
+  ].join("\n");
 
   return appendLineItemsSection(base, input.lines);
 }
@@ -193,13 +194,11 @@ export function buildOutOfStockMessage(input: {
   currentStock: number;
   source: "orders_v2" | "items";
 }) {
-  return buildCompactAlertMessage({
-    tag: "🚨 OUT OF STOCK 🚨",
-    order: "-",
-    items: `${input.itemTitle} (${input.itemId})`,
-    total: "-",
-    status: `${input.previousStock} -> ${input.currentStock} (${input.source})`,
-  });
+  return [
+    "🚨 OUT OF STOCK 🚨",
+    `Item #: ${input.itemId}`,
+    `Item: ${input.itemTitle}`,
+  ].join("\n");
 }
 
 export function buildLowStockMessage(input: {
@@ -210,11 +209,11 @@ export function buildLowStockMessage(input: {
   threshold: number;
   source: "orders_v2" | "items";
 }) {
-  return buildCompactAlertMessage({
-    tag: "⚠️ LOW STOCK ⚠️ ",
-    order: "-",
-    items: `${input.itemTitle} (${input.itemId})`,
-    total: "-",
-    status: `${input.currentStock} left (thr ${input.threshold}, ${input.source})`,
-  });
+  return [
+    "⚠️ LOW STOCK ⚠️",
+    `Item #: ${input.itemId}`,
+    `Item: ${input.itemTitle}`,
+    `Change: ${input.previousStock} -> ${input.currentStock}`,
+    `Now: ${input.currentStock}`,
+  ].join("\n");
 }

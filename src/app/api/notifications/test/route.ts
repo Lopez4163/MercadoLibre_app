@@ -2,15 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "../../../../../lib/db/prisma";
 import { getSessionUserIdFromRequest } from "../../../../../lib/auth/session";
 import { getUserBillingEntitlement } from "../../../../../lib/billing/entitlements";
-import { sendOrderLabelReadyNotification } from "../../../../../lib/notifications/sender";
-import { sendTelegramMessage } from "../../../../../lib/telegram/bot";
 import {
-  buildLowStockMessage,
-  buildOrderLabelReadyMessage,
-  buildOrderSoldMessage,
-  buildOutOfStockMessage,
-  buildTelegramTestPingMessage,
-} from "../../../../../lib/telegram/messages";
+  sendLowStockNotification,
+  sendOrderLabelReadyNotification,
+  sendOrderSoldNotification,
+  sendOutOfStockNotification,
+} from "../../../../../lib/notifications/sender";
+import { sendTelegramMessage } from "../../../../../lib/telegram/bot";
+import { buildTelegramTestPingMessage } from "../../../../../lib/telegram/messages";
 import {
   buildRateLimitHeaders,
   buildRateLimitKey,
@@ -165,11 +164,42 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: false, error: "telegram_not_connected" }, { status: 400 });
   }
 
-  let text: string;
+  let text = "";
   let inlineButtons: Array<{ text: string; url: string }> | undefined;
+  let saleSample:
+    | {
+        orderId: string;
+        status: string;
+        totalAmount: number;
+        lines: Array<{
+          itemId: string;
+          title: string;
+          quantity: number;
+        }>;
+      }
+    | null = null;
+  let lowStockSample:
+    | {
+        itemId: string;
+        itemTitle: string;
+        previousStock: number;
+        currentStock: number;
+        threshold: number;
+        source: "items";
+      }
+    | null = null;
+  let soldOutSample:
+    | {
+        itemId: string;
+        itemTitle: string;
+        previousStock: number;
+        currentStock: number;
+        source: "items";
+      }
+    | null = null;
 
   if (payload.type === "sale") {
-    text = buildOrderSoldMessage({
+    saleSample = {
       orderId: `TEST-${Date.now().toString().slice(-6)}`,
       status: "paid",
       totalAmount: 139900,
@@ -185,46 +215,94 @@ export async function POST(request: NextRequest) {
           quantity: 1,
         },
       ],
-    });
+    };
+    text = buildTelegramTestPingMessage();
   } else if (payload.type === "low_stock") {
-    const threshold = Math.max(0, settings.lowStockThreshold);
-    const previousStock = Math.max(threshold + 2, 3);
-    const currentStock = Math.max(0, threshold - 1);
-
-    text = buildLowStockMessage({
+    const threshold = Math.max(1, settings.lowStockThreshold);
+    lowStockSample = {
       itemId: "MLTEST789",
       itemTitle: "Sample low stock listing",
-      previousStock,
-      currentStock,
+      previousStock: threshold + 3,
+      currentStock: Math.max(0, threshold - 1),
       threshold,
       source: "items",
-    });
+    };
+    text = buildTelegramTestPingMessage();
   } else if (payload.type === "sold_out") {
-    text = buildOutOfStockMessage({
+    soldOutSample = {
       itemId: "MLTEST000",
       itemTitle: "Sample sold out listing",
       previousStock: 1,
       currentStock: 0,
       source: "items",
-    });
+    };
+    text = buildTelegramTestPingMessage();
   } else if (payload.type === "shipping_label") {
-    text = buildOrderLabelReadyMessage({
-      orderId: "-",
-      shipmentId: "-",
-      saleType: "other",
-    });
+    text = buildTelegramTestPingMessage();
   } else {
     text = buildTelegramTestPingMessage();
   }
 
   try {
-    if (payload.type === "shipping_label") {
+    if (payload.type === "sale") {
+      if (!saleSample) {
+        return NextResponse.json({ ok: false, error: "sale_test_setup_failed" }, { status: 500 });
+      }
+
+      const result = await sendOrderSoldNotification({
+        userId: sessionUserId,
+        orderId: saleSample.orderId,
+        status: saleSample.status,
+        totalAmount: saleSample.totalAmount,
+        lines: saleSample.lines,
+      });
+
+      if (!result.sent) {
+        return NextResponse.json(
+          { ok: false, error: result.reason },
+          { status: 400, headers: buildRateLimitHeaders(rateLimitDecision) },
+        );
+      }
+    } else if (payload.type === "low_stock") {
+      if (!lowStockSample) {
+        return NextResponse.json({ ok: false, error: "low_stock_test_setup_failed" }, { status: 500 });
+      }
+
+      const result = await sendLowStockNotification({
+        userId: sessionUserId,
+        ...lowStockSample,
+      });
+
+      if (!result.sent) {
+        return NextResponse.json(
+          { ok: false, error: result.reason },
+          { status: 400, headers: buildRateLimitHeaders(rateLimitDecision) },
+        );
+      }
+    } else if (payload.type === "sold_out") {
+      if (!soldOutSample) {
+        return NextResponse.json({ ok: false, error: "sold_out_test_setup_failed" }, { status: 500 });
+      }
+
+      const result = await sendOutOfStockNotification({
+        userId: sessionUserId,
+        ...soldOutSample,
+      });
+
+      if (!result.sent) {
+        return NextResponse.json(
+          { ok: false, error: result.reason },
+          { status: 400, headers: buildRateLimitHeaders(rateLimitDecision) },
+        );
+      }
+    } else if (payload.type === "shipping_label") {
       const orderId = `TEST-${Date.now().toString().slice(-6)}`;
       const shipmentId = `SHP-${Date.now().toString().slice(-6)}`;
       const result = await sendOrderLabelReadyNotification({
         userId: sessionUserId,
         orderId,
         shipmentId,
+        destinationCity: "Bogota",
         saleType: "other",
         lines: [
           { title: "Sample listing A", quantity: 2 },
