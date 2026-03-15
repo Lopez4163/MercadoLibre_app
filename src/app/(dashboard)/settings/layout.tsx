@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import SettingsSidebarNav from "../../../../components/layout/SettingsSidebarNav";
+import SettingsContentTransition from "../../../../components/layout/SettingsContentTransition";
 
 export default function SettingsLayout({ children }: { children: ReactNode }) {
   return (
@@ -18,7 +19,9 @@ export default function SettingsLayout({ children }: { children: ReactNode }) {
         <aside className="lg:sticky lg:top-24 lg:self-start">
           <SettingsSidebarNav />
         </aside>
-        <div>{children}</div>
+        <div className="self-start">
+          <SettingsContentTransition>{children}</SettingsContentTransition>
+        </div>
       </section>
     </main>
   );

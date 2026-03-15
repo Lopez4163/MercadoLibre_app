@@ -48,7 +48,7 @@ export default function SettingsSidebarNav() {
               className={`block border px-3 py-3 transition-colors ${
                 active
                   ? "border-[var(--accent)] bg-[var(--accent)]/10"
-                  : "border-transparent bg-transparent hover:border-[var(--border-1)] hover:bg-[var(--surface-2)]"
+                  : "border-transparent bg-transparent hover:border-[var(--text-2)] hover:bg-[var(--surface-2)] active:translate-y-px active:bg-[var(--bg-0)]"
               }`}
             >
               <p className="text-sm font-semibold text-[var(--text-1)]">{item.label}</p>

@@ -11,7 +11,7 @@ type HeaderLink = {
 
 const HEADER_LINKS: HeaderLink[] = [
   { href: "/dashboard", label: "Dashboard" },
-  { href: "/settings", label: "Settings" },
+  { href: "/settings/notifications", label: "Settings" },
   { href: "/settings/profile", label: "Profile" },
 ];
 
@@ -28,7 +28,7 @@ export default function DashboardHeaderNav() {
         <Link
           key={link.href}
           href={link.href}
-          className="inline-flex h-9 items-center border border-[var(--border-1)] bg-[var(--surface-2)] px-3 text-sm font-semibold text-[var(--text-1)] hover:bg-[var(--surface-1)]"
+          className="inline-flex h-9 items-center border border-[var(--border-1)] bg-[var(--surface-2)] px-3 text-sm font-semibold text-[var(--text-1)] transition-all duration-150 hover:border-[var(--text-2)] hover:bg-[var(--surface-1)] active:translate-y-px active:scale-[0.99] active:bg-[var(--bg-0)]"
         >
           {link.label}
         </Link>
@@ -37,7 +37,7 @@ export default function DashboardHeaderNav() {
       <form action="/api/auth/logout" method="post">
         <button
           type="submit"
-          className="inline-flex h-9 items-center border border-[var(--border-1)] bg-[var(--surface-2)] px-3 text-sm font-semibold text-[var(--text-1)] hover:bg-[var(--surface-1)]"
+          className="inline-flex h-9 items-center border border-[var(--border-1)] bg-[var(--surface-2)] px-3 text-sm font-semibold text-[var(--text-1)] transition-all duration-150 hover:border-[var(--text-2)] hover:bg-[var(--surface-1)] active:translate-y-px active:scale-[0.99] active:bg-[var(--bg-0)]"
         >
           Logout
         </button>

@@ -278,6 +278,7 @@ export default function DashboardWorkspace({
   const [telegramConnectBusy, setTelegramConnectBusy] = useState(false);
   const [telegramConnectPending, setTelegramConnectPending] = useState(false);
   const [telegramConnectedBanner, setTelegramConnectedBanner] = useState<string | null>(null);
+  const [telegramNoticeDismissed, setTelegramNoticeDismissed] = useState(false);
   const inventoryBusy = loading || refreshing;
   const inventorySubscriptionLocked =
     Boolean(inventoryError) &&
@@ -285,6 +286,13 @@ export default function DashboardWorkspace({
       inventoryError?.toLowerCase().includes("subscription_required"));
   const showInventorySubscriptionCta = inventorySubscriptionLocked && !billingHasAccess;
   const telegramConnectionRequired = billingHasAccess && telegramConnected === false;
+  const showTelegramConnectionNotice = telegramConnectionRequired && !telegramNoticeDismissed;
+
+  useEffect(() => {
+    if (!telegramConnectionRequired) {
+      setTelegramNoticeDismissed(false);
+    }
+  }, [telegramConnectionRequired]);
 
   const handleQuickTelegramConnect = useCallback(async () => {
     if (telegramConnectBusy) {
@@ -679,10 +687,10 @@ export default function DashboardWorkspace({
   }, [items]);
 
   const tabClass = (tab: DashboardTab) =>
-    `inline-flex h-11 items-center border px-4 text-sm font-semibold transition-colors ${
+    `inline-flex h-11 cursor-pointer items-center border px-4 text-sm font-semibold transition-all duration-150 active:translate-y-px active:scale-[0.99] ${
       activeTab === tab
-        ? "border-[var(--accent)] bg-[var(--accent)] text-[var(--accent-contrast)]"
-        : "border-[var(--border-1)] bg-[var(--surface-1)] text-[var(--text-1)] hover:bg-[var(--surface-2)]"
+        ? "border-[var(--accent)] bg-[var(--accent)] text-[var(--accent-contrast)] hover:brightness-110 active:brightness-95"
+        : "border-[var(--border-1)] bg-[var(--surface-1)] text-[var(--text-1)] hover:border-[var(--text-2)] hover:bg-[var(--surface-2)] active:bg-[var(--bg-0)]"
     }`;
 
   return (
@@ -748,13 +756,13 @@ export default function DashboardWorkspace({
               <div className="mt-4 flex flex-wrap gap-3">
                 <Link
                   href="/billing?intent=trial"
-                  className="inline-flex h-10 items-center border border-[var(--accent)] bg-[var(--accent)] px-4 text-sm font-semibold text-[var(--accent-contrast)] hover:bg-transparent hover:text-[var(--text-1)]"
+                  className="inline-flex h-10 min-w-[160px] items-center justify-center border border-[var(--accent)] bg-[var(--accent)] px-4 text-sm font-semibold text-[var(--accent-contrast)] transition-all duration-150 hover:bg-transparent hover:text-[var(--text-1)] active:translate-y-px active:scale-[0.99] active:bg-[var(--bg-0)]"
                 >
                   Start Free Trial
                 </Link>
                 <Link
                   href="/settings/billing"
-                  className="inline-flex h-10 items-center border border-[var(--border-1)] bg-[var(--surface-2)] px-4 text-sm font-semibold text-[var(--text-1)] hover:bg-[var(--surface-1)]"
+                  className="inline-flex h-10 min-w-[160px] items-center justify-center border border-[var(--border-1)] bg-[var(--surface-2)] px-4 text-sm font-semibold text-[var(--text-1)] transition-all duration-150 hover:border-[var(--text-2)] hover:bg-[var(--surface-1)] active:translate-y-px active:scale-[0.99] active:bg-[var(--bg-0)]"
                 >
                   Go to Billing
                 </Link>
@@ -799,12 +807,32 @@ export default function DashboardWorkspace({
       {activeTab === "overview" ? (
         <motion.section
           className="grid gap-4 xl:grid-cols-[minmax(0,1.3fr)_minmax(320px,0.7fr)]"
+          layout
+          transition={{ layout: { duration: 0.28, ease: motionEase } }}
         >
-          {telegramConnectionRequired ? (
-            <div className="xl:col-span-2 border border-yellow-300/80 bg-yellow-300/20 p-5">
-              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--text-3)]">
-                Telegram Required
-              </p>
+          <AnimatePresence initial={false}>
+            {showTelegramConnectionNotice ? (
+            <motion.div
+              key="overview-telegram-required"
+              className="xl:col-span-2 border border-yellow-300/80 bg-yellow-300/20 p-5"
+              layout
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.24, ease: motionEase }}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--text-3)]">
+                  Telegram Required
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setTelegramNoticeDismissed(true)}
+                  className="inline-flex h-7 items-center border border-[var(--border-1)] bg-[var(--surface-2)] px-2 text-[10px] font-semibold uppercase tracking-wide text-[var(--text-2)] transition-colors hover:border-[var(--text-2)] hover:bg-[var(--surface-1)]"
+                >
+                  Dismiss
+                </button>
+              </div>
               <h3 className="mt-2 text-xl font-semibold tracking-tight text-[var(--text-1)]">
                 Connect Telegram to start receiving alerts
               </h3>
@@ -821,10 +849,11 @@ export default function DashboardWorkspace({
                   {telegramConnectBusy ? "Opening..." : "Connect Telegram"}
                 </button>
               </div>
-            </div>
+            </motion.div>
           ) : null}
+          </AnimatePresence>
 
-          <div className="space-y-4">
+          <motion.div className="space-y-4" layout transition={{ layout: { duration: 0.28, ease: motionEase } }}>
             <article className="border border-[var(--border-1)] bg-[var(--surface-1)] p-5">
               <div className="flex items-end justify-between gap-3">
                 <div>
@@ -982,7 +1011,7 @@ export default function DashboardWorkspace({
                 </div>
               </div>
             </article>
-          </div>
+          </motion.div>
 
           <div className="grid gap-4">
             <article className="border border-[var(--border-1)] bg-[var(--surface-1)] p-5">
@@ -1785,12 +1814,32 @@ export default function DashboardWorkspace({
       {activeTab === "notifications" ? (
         <motion.section
           className="space-y-4"
+          layout
+          transition={{ layout: { duration: 0.28, ease: motionEase } }}
         >
-          {telegramConnectionRequired ? (
-            <section className="border border-yellow-300/80 bg-yellow-300/20 p-5">
-              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--text-3)]">
-                Telegram Required
-              </p>
+          <AnimatePresence initial={false}>
+            {showTelegramConnectionNotice ? (
+            <motion.section
+              key="notifications-telegram-required"
+              className="border border-yellow-300/80 bg-yellow-300/20 p-5"
+              layout
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.24, ease: motionEase }}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--text-3)]">
+                  Telegram Required
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setTelegramNoticeDismissed(true)}
+                  className="inline-flex h-7 items-center border border-[var(--border-1)] bg-[var(--surface-2)] px-2 text-[10px] font-semibold uppercase tracking-wide text-[var(--text-2)] transition-colors hover:border-[var(--text-2)] hover:bg-[var(--surface-1)]"
+                >
+                  Dismiss
+                </button>
+              </div>
               <h3 className="mt-2 text-xl font-semibold tracking-tight text-[var(--text-1)]">
                 Connect Telegram to start receiving alerts
               </h3>
@@ -1807,10 +1856,15 @@ export default function DashboardWorkspace({
                   {telegramConnectBusy ? "Opening..." : "Connect Telegram"}
                 </button>
               </div>
-            </section>
+            </motion.section>
           ) : null}
+          </AnimatePresence>
 
-          <article className="border border-[var(--border-1)] bg-[var(--surface-1)] p-5">
+          <motion.article
+            className="border border-[var(--border-1)] bg-[var(--surface-1)] p-5"
+            layout
+            transition={{ layout: { duration: 0.28, ease: motionEase } }}
+          >
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--text-3)]">Notifications</p>
@@ -1875,7 +1929,7 @@ export default function DashboardWorkspace({
                 </p>
               </div>
             </div>
-          </article>
+          </motion.article>
         </motion.section>
       ) : null}
       </motion.div>
