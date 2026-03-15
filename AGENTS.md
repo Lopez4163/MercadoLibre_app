@@ -3,7 +3,7 @@
 ## Product Mission
 Build a SaaS for Mercado Libre sellers that delivers inventory-risk notifications to Telegram and provides a clean operations dashboard.
 
-## Current Repo Assessment (March 12, 2026)
+## Current Repo Assessment (March 15, 2026)
 Status: **MVP+ operational with upgraded logged-in dashboard flow**.
 
 Core flow is implemented:
@@ -96,6 +96,12 @@ Core flow is implemented:
 13. Dashboard activity summary optimization:
    - `src/app/api/orders/today-summary/route.ts`
    - `components/dashboard/DashboardWorkspace.tsx` (`loadTodayActivity` now uses summary endpoint)
+14. Billing gate UX hardening + Telegram connect reliability:
+   - `components/dashboard/DashboardWorkspace.tsx` (trial/telegram CTA states, no paid-user trial CTA flicker)
+   - `components/dashboard/NotificationRulesCard.tsx` (initial server entitlement passed to avoid trial overlay flash)
+   - `components/dashboard/TelegramSettingsCard.tsx` (initial server entitlement, connect polling, manual refresh)
+   - `src/app/(dashboard)/settings/notifications/page.tsx` (server entitlement passthrough)
+   - `src/app/(dashboard)/settings/telegram/page.tsx` (server entitlement passthrough)
 
 ## Current Alert Behavior
 1. `orders_v2` events send order sold alerts (`notifyEverySale`).
@@ -139,6 +145,8 @@ Core flow is implemented:
 6. Run staging smoke baseline:
    - `npm run security:smoke-staging -- --env-file=.env.local`
    - runs env + webhook + scheduler checks and core auth-gate route probes (OAuth start/callback redirects, billing/alerts/telegram protected routes).
+7. Telegram webhook secret sync rule:
+   - if `TELEGRAM_WEBHOOK_SECRET` changes, re-run Telegram `setWebhook` with the same secret immediately, or Telegram connect will fail with webhook `403`.
 
 ## Known Notes
 1. Dashboard inventory source is still live ML API (not DB-cached UI read).
@@ -171,6 +179,9 @@ Core flow is implemented:
 9. Duplicate shipment-label follow-up attempts are expected and handled via `shipment_label:<mlUserId>:<shipmentId>` dedupe.
 10. `Label not ready` from the signed label route means shipment exists but ML has not exposed a printable label at that moment, or that shipment mode does not provide one.
 11. `npm run dev:ngrok` interleaves Next and ngrok logs heavily; prefer separate terminals for webhook debugging.
+12. If Telegram connect stays `Not connected` after `/start`, check provider webhook health first:
+   - run `npm run security:check-webhooks -- --env-file=.env.local`
+   - a Telegram webhook `403 Forbidden` usually means secret mismatch between app env and provider webhook registration.
 
 ## Remaining Gaps (Post-MVP Hardening)
 1. Ensure reconciler scheduler is active in hosted environment.
@@ -208,21 +219,21 @@ Core flow is implemented:
    - webhook dedupe
 
 ## Production Security TODO (Current)
-1. [ ] Fail closed for Mercado Libre webhook auth in production:
+1. [x] Fail closed for Mercado Libre webhook auth in production:
    - If `NODE_ENV=production` and `ML_WEBHOOK_SECRET` is missing/malformed, reject requests from `/api/webhooks/mercadolibre` (do not allow unauthenticated processing).
-2. [ ] Fail closed for Telegram webhook auth in production:
+2. [x] Fail closed for Telegram webhook auth in production:
    - If `NODE_ENV=production` and `TELEGRAM_WEBHOOK_SECRET` is missing, reject `/api/telegram/webhook` requests.
-3. [ ] Harden `POST /api/jobs/orders-cleanup`:
+3. [x] Harden `POST /api/jobs/orders-cleanup`:
    - Add very-low rate limiting.
    - Optionally enforce scheduler IP allow-list in production.
    - Keep generic error responses only.
-4. [ ] Harden `GET /api/orders/recent` filter validation:
+4. [x] Harden `GET /api/orders/recent` filter validation:
    - Validate `status` against an explicit allow-list (`all`, `paid`, `confirmed`, `cancelled`).
    - Keep `pageSize` cap (`<= 100`) enforced.
-5. [ ] Add anti-abuse throttling for test notification endpoints:
+5. [x] Add anti-abuse throttling for test notification endpoints:
    - `POST /api/notifications/test`
    - `POST /api/telegram/test`
-6. [ ] Remove or lock down placeholder API routes before production:
+6. [x] Remove or lock down placeholder API routes before production:
    - `/api/auth/[...nextauth]`
    - `/api/inventory`
    - `/api/inventory/threshold`
