@@ -244,6 +244,7 @@ export default function DashboardWorkspace({
     Boolean(inventoryError) &&
     (inventoryError?.toLowerCase().includes("active subscription required") ||
       inventoryError?.toLowerCase().includes("subscription_required"));
+  const showInventorySubscriptionCta = inventorySubscriptionLocked && !billingHasAccess;
   const telegramConnectionRequired = billingHasAccess && telegramConnected === false;
 
   async function loadInventory(options?: { initial?: boolean }) {
@@ -587,7 +588,7 @@ export default function DashboardWorkspace({
       </section>
 
       {inventoryError ? (
-        inventorySubscriptionLocked ? (
+        showInventorySubscriptionCta ? (
           <section className="border border-cyan-500/55 bg-cyan-500/10 p-5">
             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--text-3)]">Billing Required</p>
             <h3 className="mt-2 text-xl font-semibold tracking-tight text-[var(--text-1)]">

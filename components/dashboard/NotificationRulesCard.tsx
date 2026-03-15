@@ -19,7 +19,11 @@ const notificationTestOptions: Array<{ value: NotificationTestType; label: strin
   { value: "channel_health", label: "Channel Health Check" },
 ];
 
-export default function NotificationRulesCard() {
+type NotificationRulesCardProps = {
+  initialHasBillingAccess?: boolean | null;
+};
+
+export default function NotificationRulesCard({ initialHasBillingAccess = null }: NotificationRulesCardProps) {
   const [notifyEverySale, setNotifyEverySale] = useState(false);
   const [notifyLowStock, setNotifyLowStock] = useState(true);
   const [lowStockThreshold, setLowStockThreshold] = useState(5);
@@ -34,7 +38,7 @@ export default function NotificationRulesCard() {
   const [testError, setTestError] = useState<string | null>(null);
   const [testSuccess, setTestSuccess] = useState<string | null>(null);
   const [savedSettings, setSavedSettings] = useState<NotificationSettingsPayload | null>(null);
-  const [hasBillingAccess, setHasBillingAccess] = useState(false);
+  const [hasBillingAccess, setHasBillingAccess] = useState<boolean | null>(initialHasBillingAccess);
 
   useEffect(() => {
     if (!settingsSuccess) {
@@ -193,7 +197,7 @@ export default function NotificationRulesCard() {
       savedSettings.notifyLowStock !== notifyLowStock ||
       savedSettings.lowStockThreshold !== lowStockThreshold
     : false;
-  const controlsDisabled = settingsLoading || settingsSaving || !hasBillingAccess;
+  const controlsDisabled = settingsLoading || settingsSaving || hasBillingAccess !== true;
 
   return (
     <section className="border border-[var(--border-1)] bg-[var(--surface-1)] p-5">
@@ -205,8 +209,8 @@ export default function NotificationRulesCard() {
 
       <div className="relative mt-5">
         <div
-          className={`transition-opacity ${!hasBillingAccess ? "pointer-events-none opacity-45" : "opacity-100"}`}
-          aria-hidden={!hasBillingAccess}
+          className={`transition-opacity ${hasBillingAccess === true ? "opacity-100" : "pointer-events-none opacity-45"}`}
+          aria-hidden={hasBillingAccess !== true}
         >
           <div className="divide-y divide-[var(--border-1)] border border-[var(--border-1)] bg-[var(--bg-0)]">
             <div className="flex items-center justify-between px-3 py-3 text-sm">
@@ -366,7 +370,7 @@ export default function NotificationRulesCard() {
           </div>
         </div>
 
-        {!hasBillingAccess ? (
+        {hasBillingAccess === false ? (
           <div className="absolute inset-0 flex items-center justify-center bg-slate-950/45 p-4">
             <div className="max-w-md border border-cyan-500/55 bg-cyan-500/10 p-4 text-center shadow-lg">
               <p className="text-sm font-semibold text-[var(--text-1)]">

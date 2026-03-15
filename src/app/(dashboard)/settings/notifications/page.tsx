@@ -1,6 +1,19 @@
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 import NotificationRulesCard from "../../../../../components/dashboard/NotificationRulesCard";
+import { getSessionUserIdFromCookieStore } from "../../../../../lib/auth/session";
+import { getUserBillingEntitlement } from "../../../../../lib/billing/entitlements";
 
-export default function SettingsNotificationsPage() {
+export default async function SettingsNotificationsPage() {
+  const cookieStore = await cookies();
+  const userId = getSessionUserIdFromCookieStore(cookieStore);
+
+  if (!userId) {
+    redirect("/login");
+  }
+
+  const entitlement = await getUserBillingEntitlement(userId);
+
   return (
     <div className="space-y-4">
       <section className="border border-[var(--border-1)] bg-[var(--surface-1)] p-5">
@@ -21,7 +34,7 @@ export default function SettingsNotificationsPage() {
           </ul>
         </details>
       </section>
-      <NotificationRulesCard />
+      <NotificationRulesCard initialHasBillingAccess={entitlement.hasAccess} />
     </div>
   );
 }

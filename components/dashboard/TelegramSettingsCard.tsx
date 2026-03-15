@@ -3,13 +3,18 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
-export default function TelegramSettingsCard() {
+type TelegramSettingsCardProps = {
+  initialHasBillingAccess?: boolean | null;
+};
+
+export default function TelegramSettingsCard({ initialHasBillingAccess = null }: TelegramSettingsCardProps) {
   const [telegramConnected, setTelegramConnected] = useState(false);
   const [telegramLoading, setTelegramLoading] = useState(true);
   const [telegramActionLoading, setTelegramActionLoading] = useState(false);
   const [telegramError, setTelegramError] = useState<string | null>(null);
   const [telegramSuccess, setTelegramSuccess] = useState<string | null>(null);
-  const [hasBillingAccess, setHasBillingAccess] = useState(false);
+  const [hasBillingAccess, setHasBillingAccess] = useState<boolean | null>(initialHasBillingAccess);
+  const [connectStartToken, setConnectStartToken] = useState<string | null>(null);
 
   useEffect(() => {
     void loadTelegramStatus();
@@ -66,12 +71,14 @@ export default function TelegramSettingsCard() {
     setTelegramActionLoading(true);
     setTelegramError(null);
     setTelegramSuccess(null);
+    setConnectStartToken(null);
 
     try {
       const response = await fetch("/api/telegram/connect", { cache: "no-store" });
       const data = (await response.json()) as {
         ok?: boolean;
         connectUrl?: string | null;
+        startToken?: string;
         error?: string;
         message?: string;
         requiresBotUsername?: boolean;
@@ -91,7 +98,35 @@ export default function TelegramSettingsCard() {
         throw new Error("missing_connect_url");
       }
 
+      setConnectStartToken(data.startToken ?? null);
       window.open(data.connectUrl, "_blank", "noopener,noreferrer");
+      setTelegramSuccess("Waiting for Telegram confirmation...");
+
+      for (let attempt = 0; attempt < 20; attempt += 1) {
+        await new Promise((resolve) => {
+          window.setTimeout(resolve, 1500);
+        });
+
+        const statusResponse = await fetch("/api/telegram/status", { cache: "no-store" });
+        const statusData = (await statusResponse.json()) as {
+          ok?: boolean;
+          connected?: boolean;
+          error?: string;
+        };
+
+        if (!statusResponse.ok || !statusData.ok) {
+          continue;
+        }
+
+        if (statusData.connected) {
+          setTelegramConnected(true);
+          setTelegramSuccess("Telegram connected.");
+          setConnectStartToken(null);
+          return;
+        }
+      }
+
+      setTelegramSuccess("Still waiting for Telegram. Click Refresh after pressing Start in the bot chat.");
     } catch (error) {
       setTelegramError(error instanceof Error ? error.message : "failed_to_connect");
     } finally {
@@ -148,7 +183,7 @@ export default function TelegramSettingsCard() {
       setTelegramActionLoading(false);
     }
   }
-  const controlsDisabled = telegramLoading || telegramActionLoading || !hasBillingAccess;
+  const controlsDisabled = telegramLoading || telegramActionLoading || hasBillingAccess !== true;
 
   return (
     <section className="border border-[var(--border-1)] bg-[var(--surface-1)] p-5">
@@ -160,8 +195,8 @@ export default function TelegramSettingsCard() {
 
       <div className="relative mt-5">
         <div
-          className={`transition-opacity ${!hasBillingAccess ? "pointer-events-none opacity-45" : "opacity-100"}`}
-          aria-hidden={!hasBillingAccess}
+          className={`transition-opacity ${hasBillingAccess === true ? "opacity-100" : "pointer-events-none opacity-45"}`}
+          aria-hidden={hasBillingAccess !== true}
         >
           <div className="border border-[var(--border-1)] bg-[var(--bg-0)] px-3 py-3 text-sm">
             <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-3)]">Connection status</p>
@@ -172,7 +207,7 @@ export default function TelegramSettingsCard() {
               </p>
             </div>
 
-            <div className="mt-3 grid grid-cols-3 overflow-hidden border border-[var(--border-1)]">
+            <div className="mt-3 grid grid-cols-4 overflow-hidden border border-[var(--border-1)]">
               <button
                 type="button"
                 disabled={telegramConnected || controlsDisabled}
@@ -193,18 +228,31 @@ export default function TelegramSettingsCard() {
                 type="button"
                 disabled={!telegramConnected || controlsDisabled}
                 onClick={handleTelegramDisconnect}
-                className="inline-flex h-10 cursor-pointer items-center justify-center bg-[var(--surface-2)] px-3 text-[11px] font-semibold uppercase tracking-wide text-[var(--text-2)] hover:bg-[var(--surface-1)] disabled:cursor-not-allowed disabled:text-[var(--text-3)] disabled:hover:bg-[var(--surface-2)]"
+                className="inline-flex h-10 cursor-pointer items-center justify-center border-r border-[var(--border-1)] bg-[var(--surface-2)] px-3 text-[11px] font-semibold uppercase tracking-wide text-[var(--text-2)] hover:bg-[var(--surface-1)] disabled:cursor-not-allowed disabled:text-[var(--text-3)] disabled:hover:bg-[var(--surface-2)]"
               >
                 Disconnect
+              </button>
+              <button
+                type="button"
+                disabled={controlsDisabled}
+                onClick={() => void loadTelegramStatus()}
+                className="inline-flex h-10 cursor-pointer items-center justify-center bg-[var(--surface-2)] px-3 text-[11px] font-semibold uppercase tracking-wide text-[var(--text-2)] hover:bg-[var(--surface-1)] disabled:cursor-not-allowed disabled:text-[var(--text-3)] disabled:hover:bg-[var(--surface-2)]"
+              >
+                Refresh
               </button>
             </div>
 
             {telegramError ? <p className="mt-3 text-xs text-rose-300">Telegram error: {telegramError}</p> : null}
             {telegramSuccess ? <p className="mt-3 text-xs text-emerald-300">{telegramSuccess}</p> : null}
+            {!telegramConnected && connectStartToken ? (
+              <p className="mt-2 text-xs text-[var(--text-3)]">
+                If needed, send this in Telegram: <span className="font-mono text-[var(--text-2)]">/start {connectStartToken}</span>
+              </p>
+            ) : null}
           </div>
         </div>
 
-        {!hasBillingAccess ? (
+        {hasBillingAccess === false ? (
           <div className="absolute inset-0 flex items-center justify-center bg-slate-950/45 p-4">
             <div className="max-w-md border border-cyan-500/55 bg-cyan-500/10 p-4 text-center shadow-lg">
               <p className="text-sm font-semibold text-[var(--text-1)]">
