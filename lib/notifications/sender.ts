@@ -102,6 +102,10 @@ type OrderLabelReadyNotificationInput = {
   orderId: string;
   shipmentId: string;
   saleType?: MlOrderSaleType | null;
+  lines?: Array<{
+    title: string;
+    quantity: number;
+  }>;
   labelDocument?: MlShipmentLabelDocument | null;
   inlineButtons?: TelegramInlineButton[];
 };
@@ -152,6 +156,7 @@ export async function sendOrderLabelReadyNotification(input: OrderLabelReadyNoti
     orderId: input.orderId,
     shipmentId: input.shipmentId,
     saleType: input.saleType,
+    lines: input.lines,
   });
 
   if (input.labelDocument) {

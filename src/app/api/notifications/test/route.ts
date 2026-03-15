@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "../../../../../lib/db/prisma";
 import { getSessionUserIdFromRequest } from "../../../../../lib/auth/session";
 import { getUserBillingEntitlement } from "../../../../../lib/billing/entitlements";
+import { sendOrderLabelReadyNotification } from "../../../../../lib/notifications/sender";
 import { sendTelegramMessage } from "../../../../../lib/telegram/bot";
 import {
   buildLowStockMessage,
@@ -30,6 +31,51 @@ const NOTIFICATION_TEST_RATE_LIMIT = {
   limit: 10,
   windowMs: 60_000,
 };
+
+function buildSampleLabelPdf() {
+  const samplePdf = `%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Count 1 /Kids [3 0 R] >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 300 200] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>
+endobj
+4 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+5 0 obj
+<< /Length 53 >>
+stream
+BT
+/F1 16 Tf
+24 120 Td
+(MercadoLibs Sample Shipping Label) Tj
+ET
+endstream
+endobj
+xref
+0 6
+0000000000 65535 f
+0000000009 00000 n
+0000000058 00000 n
+0000000115 00000 n
+0000000241 00000 n
+0000000311 00000 n
+trailer
+<< /Root 1 0 R /Size 6 >>
+startxref
+413
+%%EOF`;
+
+  return {
+    data: new TextEncoder().encode(samplePdf).buffer,
+    fileName: "sample-shipping-label.pdf",
+    contentType: "application/pdf",
+  };
+}
 
 function isSupportedTestType(value: string): value is TestType {
   return (
@@ -162,25 +208,46 @@ export async function POST(request: NextRequest) {
       source: "items",
     });
   } else if (payload.type === "shipping_label") {
-    const orderId = `TEST-${Date.now().toString().slice(-6)}`;
-    const shipmentId = `SHP-${Date.now().toString().slice(-6)}`;
     text = buildOrderLabelReadyMessage({
-      orderId,
-      shipmentId,
+      orderId: "-",
+      shipmentId: "-",
       saleType: "other",
     });
-    inlineButtons = [
-      {
-        text: "Download label",
-        url: `https://www.mercadolibre.com.co/`,
-      },
-    ];
   } else {
     text = buildTelegramTestPingMessage();
   }
 
   try {
-    await sendTelegramMessage(account.chatId, text, { inlineButtons });
+    if (payload.type === "shipping_label") {
+      const orderId = `TEST-${Date.now().toString().slice(-6)}`;
+      const shipmentId = `SHP-${Date.now().toString().slice(-6)}`;
+      const result = await sendOrderLabelReadyNotification({
+        userId: sessionUserId,
+        orderId,
+        shipmentId,
+        saleType: "other",
+        lines: [
+          { title: "Sample listing A", quantity: 2 },
+          { title: "Sample listing B", quantity: 1 },
+        ],
+        labelDocument: buildSampleLabelPdf(),
+        inlineButtons: [
+          {
+            text: "Download Label",
+            url: "https://www.mercadolibre.com.co/",
+          },
+        ],
+      });
+
+      if (!result.sent) {
+        return NextResponse.json(
+          { ok: false, error: result.reason },
+          { status: 400, headers: buildRateLimitHeaders(rateLimitDecision) },
+        );
+      }
+    } else {
+      await sendTelegramMessage(account.chatId, text, { inlineButtons });
+    }
     return NextResponse.json(
       { ok: true, type: payload.type },
       { status: 200, headers: buildRateLimitHeaders(rateLimitDecision) },
