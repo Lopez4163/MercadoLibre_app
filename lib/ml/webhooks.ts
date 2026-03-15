@@ -1,5 +1,6 @@
 import { getAppBaseUrl } from "../app/base-url";
 import { createHash } from "crypto";
+import { Prisma } from "@prisma/client";
 import { createOrderLabelToken } from "../labels/token";
 import { prisma } from "../db/prisma";
 import { isBillingStatusActive } from "../billing/entitlements";
@@ -260,6 +261,10 @@ async function logOrderNotification(options: {
     mlOrderId: options.mlOrderId,
   });
 
+  const payloadValue = options.payload
+    ? (JSON.parse(JSON.stringify(options.payload)) as Prisma.InputJsonValue)
+    : Prisma.JsonNull;
+
   await prisma.orderNotificationLog.create({
     data: {
       orderId: orderRecord.id,
@@ -267,7 +272,7 @@ async function logOrderNotification(options: {
       eventType: options.eventType,
       status: options.status,
       reason: options.reason ?? null,
-      payload: options.payload ?? null,
+      payload: payloadValue,
     },
   });
 }
@@ -295,6 +300,7 @@ async function handleOrderEvent(options: {
 
   let shipmentId: string | null = null;
   let saleType: MlOrderSaleType | null = null;
+  let labelDocument: Awaited<ReturnType<typeof getShipmentLabelDocument>> | null = null;
   let labelButtonUrl: string | null = null;
   let labelButtonSkippedReason = "not_attempted";
 
@@ -315,7 +321,20 @@ async function handleOrderEvent(options: {
         orderId: order.id,
         shipmentId,
       });
-      labelButtonSkippedReason = "attached";
+      labelButtonSkippedReason = "fallback_attached";
+
+      try {
+        labelDocument = await getShipmentLabelDocument({
+          accessToken,
+          shipmentId,
+        });
+      } catch (error) {
+        if (isLabelNotReadyMlError(error)) {
+          labelButtonSkippedReason = "label_not_ready_document_unavailable";
+        } else {
+          labelButtonSkippedReason = "document_fetch_failed_fallback_to_link";
+        }
+      }
     }
   } catch (error) {
     if (error instanceof Error && error.message.includes("APP_BASE_URL")) {
@@ -342,6 +361,7 @@ async function handleOrderEvent(options: {
     eventKey,
     orderId: order.id,
     shipmentId,
+    hasLabelDocument: Boolean(labelDocument),
     hasLabelButton: Boolean(labelButtonUrl),
     labelButtonSkippedReason,
   });
@@ -351,6 +371,7 @@ async function handleOrderEvent(options: {
     orderId: order.id,
     status: order.status,
     totalAmount: order.totalAmount,
+    labelDocument,
     inlineButtons: labelButtonUrl
       ? [
           {
@@ -371,6 +392,7 @@ async function handleOrderEvent(options: {
     payload: {
       eventKey,
       shipmentId,
+      hasLabelDocument: Boolean(labelDocument),
       labelButtonUrl,
       hasLabelButton: Boolean(labelButtonUrl),
       labelButtonSkippedReason,
@@ -551,7 +573,7 @@ async function handleShipmentEvent(options: {
   }
 
   try {
-    await getShipmentLabelDocument({
+    const labelDocument = await getShipmentLabelDocument({
       accessToken,
       shipmentId,
     });
@@ -592,6 +614,7 @@ async function handleShipmentEvent(options: {
       orderId,
       shipmentId,
       saleType,
+      labelDocument,
       inlineButtons: [
         {
           text: "Download Label",
