@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "../../../../../../lib/db/prisma";
-import { getSessionUserIdFromRequest } from "../../../../../../lib/auth/session";
-import { getStripe } from "../../../../../../lib/stripe/client";
+import { prisma } from "../../../../../lib/db/prisma";
+import { getSessionUserIdFromRequest } from "../../../../../lib/auth/session";
+import { getStripe } from "../../../../../lib/stripe/client";
 import {
   buildRateLimitHeaders,
   buildRateLimitKey,
@@ -10,7 +10,7 @@ import {
   RateLimitConfigurationError,
   RateLimitUnavailableError,
   type RateLimitDecision,
-} from "../../../../../../lib/utils/rate-limit";
+} from "../../../../../lib/utils/rate-limit";
 
 const BILLING_CANCEL_RATE_LIMIT = {
   limit: 10,

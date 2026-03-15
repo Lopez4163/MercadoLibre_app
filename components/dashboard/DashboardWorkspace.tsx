@@ -76,6 +76,14 @@ type OrdersRecentResponse = {
   };
 };
 
+type OrderRetryTelegramResponse = {
+  ok?: boolean;
+  sent?: boolean;
+  reason?: string | null;
+  error?: string;
+  message?: string;
+};
+
 type TodayActivity = {
   orders: number;
   unitsSold: number;
@@ -255,6 +263,8 @@ export default function DashboardWorkspace({
   const [ordersPage, setOrdersPage] = useState(1);
   const [ordersTotalPages, setOrdersTotalPages] = useState(1);
   const [ordersTotal, setOrdersTotal] = useState(0);
+  const [retryingOrderId, setRetryingOrderId] = useState<string | null>(null);
+  const [ordersRetryMessage, setOrdersRetryMessage] = useState<string | null>(null);
   const [orderStatusFilter, setOrderStatusFilter] = useState("all");
   const [ordersLoadedOnce, setOrdersLoadedOnce] = useState(false);
   const [todayActivity, setTodayActivity] = useState<TodayActivity>({
@@ -265,6 +275,9 @@ export default function DashboardWorkspace({
   });
   const [todayActivityLoading, setTodayActivityLoading] = useState(true);
   const [todayActivityError, setTodayActivityError] = useState<string | null>(null);
+  const [telegramConnectBusy, setTelegramConnectBusy] = useState(false);
+  const [telegramConnectPending, setTelegramConnectPending] = useState(false);
+  const [telegramConnectedBanner, setTelegramConnectedBanner] = useState<string | null>(null);
   const inventoryBusy = loading || refreshing;
   const inventorySubscriptionLocked =
     Boolean(inventoryError) &&
@@ -272,6 +285,35 @@ export default function DashboardWorkspace({
       inventoryError?.toLowerCase().includes("subscription_required"));
   const showInventorySubscriptionCta = inventorySubscriptionLocked && !billingHasAccess;
   const telegramConnectionRequired = billingHasAccess && telegramConnected === false;
+
+  const handleQuickTelegramConnect = useCallback(async () => {
+    if (telegramConnectBusy) {
+      return;
+    }
+
+    setTelegramConnectBusy(true);
+    setTelegramConnectPending(true);
+    try {
+      const response = await fetch("/api/telegram/connect", { cache: "no-store" });
+      const data = (await response.json()) as {
+        ok?: boolean;
+        connectUrl?: string | null;
+        error?: string;
+        requiresBotUsername?: boolean;
+      };
+
+      if (!response.ok || !data.ok || !data.connectUrl) {
+        throw new Error(data.error ?? "failed_to_create_connect_link");
+      }
+
+      window.open(data.connectUrl, "_blank", "noopener,noreferrer");
+    } catch {
+      setTelegramConnectPending(false);
+      window.location.assign("/settings/telegram");
+    } finally {
+      setTelegramConnectBusy(false);
+    }
+  }, [telegramConnectBusy]);
 
   async function loadInventory(options?: { initial?: boolean }) {
     const initial = options?.initial ?? false;
@@ -305,7 +347,7 @@ export default function DashboardWorkspace({
     }
   }
 
-  async function loadTelegramStatus() {
+  const loadTelegramStatus = useCallback(async () => {
     try {
       const response = await fetch("/api/telegram/status", { cache: "no-store" });
       const data = (await response.json()) as { ok?: boolean; connected?: boolean };
@@ -314,11 +356,30 @@ export default function DashboardWorkspace({
         throw new Error("failed_to_load_telegram_status");
       }
 
-      setTelegramConnected(Boolean(data.connected));
+      const connected = Boolean(data.connected);
+      setTelegramConnected((previous) => {
+        if (connected && previous !== true && telegramConnectPending) {
+          setTelegramConnectedBanner("Telegram connected.");
+          setTelegramConnectPending(false);
+        }
+        return connected;
+      });
     } catch {
       setTelegramConnected(false);
     }
-  }
+  }, [telegramConnectPending]);
+
+  useEffect(() => {
+    if (!telegramConnectedBanner) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      setTelegramConnectedBanner(null);
+    }, 2500);
+
+    return () => window.clearTimeout(timer);
+  }, [telegramConnectedBanner]);
 
   async function loadNotificationSettings() {
     try {
@@ -397,6 +458,41 @@ export default function DashboardWorkspace({
     }
   }, []);
 
+  const retryOrderTelegramNotification = useCallback(async (orderId: string) => {
+    if (retryingOrderId) {
+      return;
+    }
+
+    try {
+      setRetryingOrderId(orderId);
+      setOrdersRetryMessage(null);
+
+      const response = await fetch(`/api/orders/${orderId}/retry-telegram`, {
+        method: "POST",
+      });
+      const data = (await response.json()) as OrderRetryTelegramResponse;
+
+      if (!response.ok || !data.ok) {
+        throw new Error(data.message ?? data.error ?? "Failed to retry Telegram alert");
+      }
+
+      if (!data.sent) {
+        const reason = data.reason ?? "retry_failed";
+        throw new Error(`Retry failed: ${reason}`);
+      }
+
+      setOrdersRetryMessage("Telegram alert resent.");
+      await Promise.all([
+        loadOrders({ page: ordersPage, status: orderStatusFilter }),
+        loadTodayActivity(),
+      ]);
+    } catch (error) {
+      setOrdersRetryMessage(error instanceof Error ? error.message : "Failed to retry Telegram alert");
+    } finally {
+      setRetryingOrderId(null);
+    }
+  }, [loadOrders, loadTodayActivity, orderStatusFilter, ordersPage, retryingOrderId]);
+
   useEffect(() => {
     void Promise.all([
       loadInventory({ initial: true }),
@@ -404,7 +500,25 @@ export default function DashboardWorkspace({
       loadNotificationSettings(),
       loadTodayActivity(),
     ]);
-  }, [loadTodayActivity]);
+  }, [loadTelegramStatus, loadTodayActivity]);
+
+  useEffect(() => {
+    const onFocus = () => {
+      void loadTelegramStatus();
+    };
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        void loadTelegramStatus();
+      }
+    };
+
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    return () => {
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
+  }, [loadTelegramStatus]);
 
   useEffect(() => {
     if (activeTab === "orders" && !ordersLoadedOnce) {
@@ -661,6 +775,21 @@ export default function DashboardWorkspace({
         ) : null}
       </AnimatePresence>
 
+      <AnimatePresence initial={false}>
+        {telegramConnectedBanner ? (
+          <motion.div
+            key="telegram-connected-banner"
+            className="border border-emerald-400/50 bg-emerald-500/10 px-3 py-2 text-sm font-medium text-emerald-200"
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
+          >
+            {telegramConnectedBanner}
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
+
       <motion.div
         key={activeTab}
         initial={{ opacity: 0, y: 10 }}
@@ -683,12 +812,14 @@ export default function DashboardWorkspace({
                 Your notification rules are ready. Link Telegram to enable delivery for sale, sold-out, and low-stock alerts.
               </p>
               <div className="mt-4 flex flex-wrap gap-3">
-                <Link
-                  href="/settings/telegram?intent=connect"
+                <button
+                  type="button"
+                  onClick={() => void handleQuickTelegramConnect()}
+                  disabled={telegramConnectBusy}
                   className="inline-flex h-10 items-center border border-[var(--accent)] bg-[var(--accent)] px-4 text-sm font-semibold text-[var(--accent-contrast)] hover:bg-transparent hover:text-[var(--text-1)]"
                 >
-                  Connect Telegram
-                </Link>
+                  {telegramConnectBusy ? "Opening..." : "Connect Telegram"}
+                </button>
               </div>
             </div>
           ) : null}
@@ -806,12 +937,23 @@ export default function DashboardWorkspace({
                 <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--text-3)]">
                   Notification Status
                 </p>
-                <Link
-                  href={telegramConnectionRequired ? "/settings/telegram" : "/settings/notifications"}
-                  className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--text-3)] hover:text-[var(--text-1)]"
-                >
-                  {telegramConnectionRequired ? "Connect Telegram" : "Edit"}
-                </Link>
+                {telegramConnectionRequired ? (
+                  <button
+                    type="button"
+                    onClick={() => void handleQuickTelegramConnect()}
+                    disabled={telegramConnectBusy}
+                    className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--text-3)] hover:text-[var(--text-1)] disabled:opacity-60"
+                  >
+                    {telegramConnectBusy ? "Opening..." : "Connect Telegram"}
+                  </button>
+                ) : (
+                  <Link
+                    href="/settings/notifications"
+                    className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--text-3)] hover:text-[var(--text-1)]"
+                  >
+                    Edit
+                  </Link>
+                )}
               </div>
               <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                 <div className="border border-[var(--border-1)] bg-[var(--bg-0)] p-4">
@@ -1069,6 +1211,11 @@ export default function DashboardWorkspace({
             {ordersError && billingHasAccess ? (
               <p className="mt-4 border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-200">{ordersError}</p>
             ) : null}
+            {ordersRetryMessage ? (
+              <p className="mt-4 border border-[var(--border-1)] bg-[var(--surface-2)] px-3 py-2 text-sm text-[var(--text-2)]">
+                {ordersRetryMessage}
+              </p>
+            ) : null}
 
             <div className="mt-4 overflow-x-auto border border-[var(--border-1)]">
               <table className="min-w-full divide-y divide-[var(--border-1)] text-left">
@@ -1138,15 +1285,33 @@ export default function DashboardWorkspace({
                           </td>
                           <td className="px-3 py-3 align-top text-sm text-[var(--text-2)]">{order.saleType ?? "N/A"}</td>
                           <td className="px-3 py-3 align-top">
-                            <span
-                              className={`inline-flex border px-2 py-1 text-xs font-semibold uppercase ${telegramStatusTone(
-                                order.latestNotification?.status ?? null,
-                              )}`}
-                            >
-                              {order.latestNotification?.status ?? "none"}
-                            </span>
+                            <AnimatePresence mode="wait" initial={false}>
+                              <motion.span
+                                key={`${order.id}:${order.latestNotification?.status ?? "none"}`}
+                                initial={{ opacity: 0, y: -4, filter: "blur(2px)" }}
+                                animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+                                exit={{ opacity: 0, y: 4, filter: "blur(2px)" }}
+                                transition={{ duration: 0.28, ease: motionEase }}
+                                className={`inline-flex border px-2 py-1 text-xs font-semibold uppercase ${telegramStatusTone(
+                                  order.latestNotification?.status ?? null,
+                                )}`}
+                              >
+                                {order.latestNotification?.status ?? "none"}
+                              </motion.span>
+                            </AnimatePresence>
                             {order.latestNotification?.reason ? (
                               <p className="mt-1 text-xs text-[var(--text-3)]">{order.latestNotification.reason}</p>
+                            ) : null}
+                            {order.latestNotification?.status === "failed" &&
+                            order.latestNotification?.eventType === "order_sold" ? (
+                              <button
+                                type="button"
+                                disabled={retryingOrderId === order.id || ordersLoading || !billingHasAccess}
+                                onClick={() => void retryOrderTelegramNotification(order.id)}
+                                className="mt-2 inline-flex h-7 items-center border border-[var(--border-1)] bg-[var(--surface-2)] px-2 text-[10px] font-semibold uppercase tracking-wide text-[var(--text-1)] hover:bg-[var(--surface-1)] disabled:opacity-50"
+                              >
+                                {retryingOrderId === order.id ? "Retrying..." : "Retry"}
+                              </button>
                             ) : null}
                           </td>
                           <td className="px-3 py-3 align-top">
@@ -1633,12 +1798,14 @@ export default function DashboardWorkspace({
                 Notification rules are ready. Link Telegram to deliver sale, sold-out, and low-stock messages.
               </p>
               <div className="mt-4 flex flex-wrap gap-3">
-                <Link
-                  href="/settings/telegram?intent=connect"
+                <button
+                  type="button"
+                  onClick={() => void handleQuickTelegramConnect()}
+                  disabled={telegramConnectBusy}
                   className="inline-flex h-10 items-center border border-[var(--accent)] bg-[var(--accent)] px-4 text-sm font-semibold text-[var(--accent-contrast)] hover:bg-transparent hover:text-[var(--text-1)]"
                 >
-                  Connect Telegram
-                </Link>
+                  {telegramConnectBusy ? "Opening..." : "Connect Telegram"}
+                </button>
               </div>
             </section>
           ) : null}
@@ -1651,12 +1818,23 @@ export default function DashboardWorkspace({
                   Notification settings
                 </h3>
               </div>
-              <Link
-                href={telegramConnectionRequired ? "/settings/telegram?intent=connect" : "/settings/notifications"}
-                className="inline-flex h-9 items-center border border-[var(--accent)] bg-[var(--accent)] px-3 text-xs font-semibold uppercase tracking-wide text-[var(--accent-contrast)] hover:bg-transparent hover:text-[var(--text-1)]"
-              >
-                {telegramConnectionRequired ? "Connect Telegram" : "Notification Settings"}
-              </Link>
+              {telegramConnectionRequired ? (
+                <button
+                  type="button"
+                  onClick={() => void handleQuickTelegramConnect()}
+                  disabled={telegramConnectBusy}
+                  className="inline-flex h-9 items-center border border-[var(--accent)] bg-[var(--accent)] px-3 text-xs font-semibold uppercase tracking-wide text-[var(--accent-contrast)] hover:bg-transparent hover:text-[var(--text-1)] disabled:opacity-60"
+                >
+                  {telegramConnectBusy ? "Opening..." : "Connect Telegram"}
+                </button>
+              ) : (
+                <Link
+                  href="/settings/notifications"
+                  className="inline-flex h-9 items-center border border-[var(--accent)] bg-[var(--accent)] px-3 text-xs font-semibold uppercase tracking-wide text-[var(--accent-contrast)] hover:bg-transparent hover:text-[var(--text-1)]"
+                >
+                  Notification Settings
+                </Link>
+              )}
             </div>
 
             <div

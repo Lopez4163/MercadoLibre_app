@@ -1,18 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useRef } from "react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 type TelegramSettingsCardProps = {
   initialHasBillingAccess?: boolean | null;
-  autoConnect?: boolean;
 };
 
-export default function TelegramSettingsCard({
-  initialHasBillingAccess = null,
-  autoConnect = false,
-}: TelegramSettingsCardProps) {
+export default function TelegramSettingsCard({ initialHasBillingAccess = null }: TelegramSettingsCardProps) {
   const [telegramConnected, setTelegramConnected] = useState(false);
   const [telegramLoading, setTelegramLoading] = useState(true);
   const [telegramActionLoading, setTelegramActionLoading] = useState(false);
@@ -20,28 +15,14 @@ export default function TelegramSettingsCard({
   const [telegramSuccess, setTelegramSuccess] = useState<string | null>(null);
   const [hasBillingAccess, setHasBillingAccess] = useState<boolean | null>(initialHasBillingAccess);
   const [connectStartToken, setConnectStartToken] = useState<string | null>(null);
-  const autoConnectAttemptedRef = useRef(false);
 
-  useEffect(() => {
-    void loadTelegramStatus();
-  }, []);
-
-  useEffect(() => {
-    if (!telegramSuccess) {
-      return;
-    }
-
-    const timer = window.setTimeout(() => {
+  const loadTelegramStatus = useCallback(async (options?: { quiet?: boolean }) => {
+    const quiet = options?.quiet ?? false;
+    if (!quiet) {
+      setTelegramLoading(true);
+      setTelegramError(null);
       setTelegramSuccess(null);
-    }, 3000);
-
-    return () => window.clearTimeout(timer);
-  }, [telegramSuccess]);
-
-  async function loadTelegramStatus() {
-    setTelegramLoading(true);
-    setTelegramError(null);
-    setTelegramSuccess(null);
+    }
 
     try {
       const [response, billingResponse] = await Promise.all([
@@ -67,13 +48,51 @@ export default function TelegramSettingsCard({
       setHasBillingAccess(Boolean(billingData.ok && billingData.hasAccess));
     } catch (error) {
       setHasBillingAccess(false);
-      setTelegramError(error instanceof Error ? error.message : "failed_to_load_status");
+      if (!quiet) {
+        setTelegramError(error instanceof Error ? error.message : "failed_to_load_status");
+      }
     } finally {
-      setTelegramLoading(false);
+      if (!quiet) {
+        setTelegramLoading(false);
+      }
     }
-  }
+  }, []);
 
-  async function handleTelegramConnect(options?: { redirectInSameTab?: boolean }) {
+  useEffect(() => {
+    void loadTelegramStatus();
+  }, [loadTelegramStatus]);
+
+  useEffect(() => {
+    if (!telegramSuccess) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      setTelegramSuccess(null);
+    }, 3000);
+
+    return () => window.clearTimeout(timer);
+  }, [telegramSuccess]);
+
+  useEffect(() => {
+    const onFocus = () => {
+      void loadTelegramStatus({ quiet: true });
+    };
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        void loadTelegramStatus({ quiet: true });
+      }
+    };
+
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    return () => {
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
+  }, [loadTelegramStatus]);
+
+  async function handleTelegramConnect() {
     setTelegramActionLoading(true);
     setTelegramError(null);
     setTelegramSuccess(null);
@@ -102,11 +121,6 @@ export default function TelegramSettingsCard({
           throw new Error("missing TELEGRAM_BOT_USERNAME");
         }
         throw new Error("missing_connect_url");
-      }
-
-      if (options?.redirectInSameTab) {
-        window.location.assign(data.connectUrl);
-        return;
       }
 
       setConnectStartToken(data.startToken ?? null);
@@ -144,18 +158,6 @@ export default function TelegramSettingsCard({
       setTelegramActionLoading(false);
     }
   }
-
-  useEffect(() => {
-    if (!autoConnect || autoConnectAttemptedRef.current) {
-      return;
-    }
-    if (hasBillingAccess !== true || telegramLoading || telegramActionLoading || telegramConnected) {
-      return;
-    }
-
-    autoConnectAttemptedRef.current = true;
-    void handleTelegramConnect({ redirectInSameTab: true });
-  }, [autoConnect, hasBillingAccess, telegramActionLoading, telegramConnected, telegramLoading]);
 
   async function handleTelegramDisconnect() {
     setTelegramActionLoading(true);
