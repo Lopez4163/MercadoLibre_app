@@ -4,9 +4,16 @@ import TelegramSettingsCard from "../../../../../components/dashboard/TelegramSe
 import { getSessionUserIdFromCookieStore } from "../../../../../lib/auth/session";
 import { getUserBillingEntitlement } from "../../../../../lib/billing/entitlements";
 
-export default async function SettingsTelegramPage() {
+type SettingsTelegramPageProps = {
+  searchParams?: Promise<{ intent?: string | string[] }>;
+};
+
+export default async function SettingsTelegramPage({ searchParams }: SettingsTelegramPageProps) {
   const cookieStore = await cookies();
   const userId = getSessionUserIdFromCookieStore(cookieStore);
+  const params = (await searchParams) ?? {};
+  const intentParam = Array.isArray(params.intent) ? params.intent[0] : params.intent;
+  const autoConnect = intentParam === "connect";
 
   if (!userId) {
     redirect("/login");
@@ -16,7 +23,7 @@ export default async function SettingsTelegramPage() {
 
   return (
     <div className="space-y-4">
-      <TelegramSettingsCard initialHasBillingAccess={entitlement.hasAccess} />
+      <TelegramSettingsCard initialHasBillingAccess={entitlement.hasAccess} autoConnect={autoConnect} />
       <section className="border border-[var(--border-1)] bg-[var(--surface-1)] p-5">
         <h3 className="text-lg font-semibold tracking-tight text-[var(--text-1)]">Telegram delivery notes</h3>
         <ul className="mt-4 space-y-3 text-sm text-[var(--text-2)]">

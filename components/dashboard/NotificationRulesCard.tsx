@@ -209,7 +209,7 @@ export default function NotificationRulesCard({ initialHasBillingAccess = null }
 
       <div className="relative mt-5">
         <div
-          className={`transition-opacity ${hasBillingAccess === true ? "opacity-100" : "pointer-events-none opacity-45"}`}
+          className={`transition-opacity ${hasBillingAccess === true ? "opacity-100" : "pointer-events-none opacity-80"}`}
           aria-hidden={hasBillingAccess !== true}
         >
           <div className="divide-y divide-[var(--border-1)] border border-[var(--border-1)] bg-[var(--bg-0)]">
@@ -372,7 +372,7 @@ export default function NotificationRulesCard({ initialHasBillingAccess = null }
 
         {hasBillingAccess === false ? (
           <div className="absolute inset-0 flex items-center justify-center bg-slate-950/45 p-4">
-            <div className="max-w-md border border-cyan-500/55 bg-cyan-500/10 p-4 text-center shadow-lg">
+            <div className="max-w-md border border-yellow-300/80 bg-yellow-300/20 p-4 text-center shadow-lg">
               <p className="text-sm font-semibold text-[var(--text-1)]">
                 Start your free trial to view and configure notification settings.
               </p>

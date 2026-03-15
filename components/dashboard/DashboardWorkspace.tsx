@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { motion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import InventoryTable from "./InventoryTable";
 
 type InventoryItem = {
@@ -198,6 +198,32 @@ function topSellerRankTone(rank: number) {
   }
   return "border-[var(--border-1)] bg-[var(--surface-2)] text-[var(--text-2)]";
 }
+
+const motionEase = [0.22, 1, 0.36, 1] as const;
+
+const layoutStagger = {
+  hidden: {},
+  visible: {
+    transition: {
+      delayChildren: 0.04,
+      staggerChildren: 0.06,
+    },
+  },
+};
+
+const fadeInUp = {
+  hidden: { opacity: 0, y: 14 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.35, ease: motionEase },
+  },
+};
+
+const tabTransition = {
+  duration: 0.28,
+  ease: motionEase,
+} as const;
 
 function RefreshSpinner() {
   return (
@@ -546,8 +572,8 @@ export default function DashboardWorkspace({
     }`;
 
   return (
-    <main className="space-y-6">
-      <section className="space-y-3">
+    <motion.main className="space-y-6" variants={layoutStagger} initial="hidden" animate="visible">
+      <motion.section className="space-y-3" variants={fadeInUp}>
         <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--text-3)]">
           Dashboard
         </p>
@@ -567,9 +593,9 @@ export default function DashboardWorkspace({
             </span>
           </div>
         </div>
-      </section>
+      </motion.section>
 
-      <section className="flex flex-wrap gap-3">
+      <motion.section className="flex flex-wrap gap-3" variants={fadeInUp}>
         <button type="button" className={tabClass("overview")} onClick={() => setActiveTab("overview")}>
           Overview
         </button>
@@ -585,56 +611,80 @@ export default function DashboardWorkspace({
         <button type="button" className={tabClass("notifications")} onClick={() => setActiveTab("notifications")}>
           Notifications
         </button>
-      </section>
+      </motion.section>
 
-      {inventoryError ? (
-        showInventorySubscriptionCta ? (
-          <section className="border border-cyan-500/55 bg-cyan-500/10 p-5">
-            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--text-3)]">Billing Required</p>
-            <h3 className="mt-2 text-xl font-semibold tracking-tight text-[var(--text-1)]">
-              Start your free trial to unlock inventory sync
-            </h3>
-            <p className="mt-2 max-w-2xl text-sm text-cyan-100/90">
-              Connect inventory refresh, alert rules, and order monitoring after trial activation.
-            </p>
-            <div className="mt-4 flex flex-wrap gap-3">
-              <Link
-                href="/billing?intent=trial"
-                className="inline-flex h-10 items-center border border-[var(--accent)] bg-[var(--accent)] px-4 text-sm font-semibold text-[var(--accent-contrast)] hover:bg-transparent hover:text-[var(--text-1)]"
-              >
-                Start Free Trial
-              </Link>
-              <Link
-                href="/settings/billing"
-                className="inline-flex h-10 items-center border border-[var(--border-1)] bg-[var(--surface-2)] px-4 text-sm font-semibold text-[var(--text-1)] hover:bg-[var(--surface-1)]"
-              >
-                Go to Billing
-              </Link>
-            </div>
-          </section>
-        ) : (
-          <div className="border border-[var(--danger)] bg-[var(--surface-2)] p-4 text-sm text-[var(--danger)]">
-            Error: {inventoryError}
-          </div>
-        )
-      ) : null}
+      <AnimatePresence initial={false} mode="popLayout">
+        {inventoryError ? (
+          showInventorySubscriptionCta ? (
+            <motion.section
+              key="billing-trial-cta"
+              className="overflow-hidden border border-yellow-300/80 bg-yellow-300/20 p-5"
+              initial={{ opacity: 0, y: -56 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -28 }}
+              transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
+            >
+              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--text-3)]">Billing Required</p>
+              <h3 className="mt-2 text-xl font-semibold tracking-tight text-[var(--text-1)]">
+                Start your free trial to unlock inventory sync and Telegram notifications
+              </h3>
+              <p className="mt-2 max-w-2xl text-sm text-yellow-50">
+                Connect inventory refresh, alert rules, and order monitoring after trial activation.
+              </p>
+              <div className="mt-4 flex flex-wrap gap-3">
+                <Link
+                  href="/billing?intent=trial"
+                  className="inline-flex h-10 items-center border border-[var(--accent)] bg-[var(--accent)] px-4 text-sm font-semibold text-[var(--accent-contrast)] hover:bg-transparent hover:text-[var(--text-1)]"
+                >
+                  Start Free Trial
+                </Link>
+                <Link
+                  href="/settings/billing"
+                  className="inline-flex h-10 items-center border border-[var(--border-1)] bg-[var(--surface-2)] px-4 text-sm font-semibold text-[var(--text-1)] hover:bg-[var(--surface-1)]"
+                >
+                  Go to Billing
+                </Link>
+              </div>
+            </motion.section>
+          ) : (
+            <motion.div
+              key="inventory-error"
+              className="border border-[var(--danger)] bg-[var(--surface-2)] p-4 text-sm text-[var(--danger)]"
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.22, ease: motionEase }}
+            >
+              Error: {inventoryError}
+            </motion.div>
+          )
+        ) : null}
+      </AnimatePresence>
 
+      <motion.div
+        key={activeTab}
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={tabTransition}
+      >
       {activeTab === "overview" ? (
-        <section className="grid gap-4 xl:grid-cols-[minmax(0,1.3fr)_minmax(320px,0.7fr)]">
+        <motion.section
+          className="grid gap-4 xl:grid-cols-[minmax(0,1.3fr)_minmax(320px,0.7fr)]"
+        >
           {telegramConnectionRequired ? (
-            <div className="xl:col-span-2 border border-cyan-500/55 bg-cyan-500/10 p-5">
+            <div className="xl:col-span-2 border border-yellow-300/80 bg-yellow-300/20 p-5">
               <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--text-3)]">
                 Telegram Required
               </p>
               <h3 className="mt-2 text-xl font-semibold tracking-tight text-[var(--text-1)]">
                 Connect Telegram to start receiving alerts
               </h3>
-              <p className="mt-2 max-w-2xl text-sm text-cyan-100/90">
+              <p className="mt-2 max-w-2xl text-sm text-yellow-50">
                 Your notification rules are ready. Link Telegram to enable delivery for sale, sold-out, and low-stock alerts.
               </p>
               <div className="mt-4 flex flex-wrap gap-3">
                 <Link
-                  href="/settings/telegram"
+                  href="/settings/telegram?intent=connect"
                   className="inline-flex h-10 items-center border border-[var(--accent)] bg-[var(--accent)] px-4 text-sm font-semibold text-[var(--accent-contrast)] hover:bg-transparent hover:text-[var(--text-1)]"
                 >
                   Connect Telegram
@@ -820,7 +870,7 @@ export default function DashboardWorkspace({
                 </button>
               </div>
 
-              {todayActivityError ? (
+              {todayActivityError && billingHasAccess ? (
                 <p className="mt-4 border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-200">
                   {todayActivityError}
                 </p>
@@ -890,11 +940,13 @@ export default function DashboardWorkspace({
 
           </div>
 
-        </section>
+        </motion.section>
       ) : null}
 
       {activeTab === "inventory" ? (
-        <section className="space-y-4">
+        <motion.section
+          className="space-y-4"
+        >
           <div className="grid gap-3 md:grid-cols-5">
             <article className="border border-[var(--border-1)] bg-[var(--surface-1)] p-4">
               <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-3)]">Total Items</p>
@@ -935,11 +987,13 @@ export default function DashboardWorkspace({
             onRefresh={() => void loadInventory()}
             refreshDisabled={!billingHasAccess}
           />
-        </section>
+        </motion.section>
       ) : null}
 
       {activeTab === "orders" ? (
-        <section className="space-y-4">
+        <motion.section
+          className="space-y-4"
+        >
           <article className="border border-[var(--border-1)] bg-[var(--surface-1)] p-5">
             <div className="flex flex-wrap items-end justify-between gap-4">
               <div>
@@ -1012,7 +1066,7 @@ export default function DashboardWorkspace({
               </div>
             </div>
 
-            {ordersError ? (
+            {ordersError && billingHasAccess ? (
               <p className="mt-4 border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-200">{ordersError}</p>
             ) : null}
 
@@ -1147,11 +1201,13 @@ export default function DashboardWorkspace({
               </div>
             </div>
           </article>
-        </section>
+        </motion.section>
       ) : null}
 
       {activeTab === "stats" ? (
-        <section className="space-y-4">
+        <motion.section
+          className="space-y-4"
+        >
           <article className="border border-[var(--border-1)] bg-[var(--surface-1)] p-5">
             <div className="flex flex-wrap items-end justify-between gap-3">
               <div>
@@ -1558,25 +1614,27 @@ export default function DashboardWorkspace({
               </div>
             </article>
           </div>
-        </section>
+        </motion.section>
       ) : null}
 
       {activeTab === "notifications" ? (
-        <section className="space-y-4">
+        <motion.section
+          className="space-y-4"
+        >
           {telegramConnectionRequired ? (
-            <section className="border border-cyan-500/55 bg-cyan-500/10 p-5">
+            <section className="border border-yellow-300/80 bg-yellow-300/20 p-5">
               <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--text-3)]">
                 Telegram Required
               </p>
               <h3 className="mt-2 text-xl font-semibold tracking-tight text-[var(--text-1)]">
                 Connect Telegram to start receiving alerts
               </h3>
-              <p className="mt-2 max-w-2xl text-sm text-cyan-100/90">
+              <p className="mt-2 max-w-2xl text-sm text-yellow-50">
                 Notification rules are ready. Link Telegram to deliver sale, sold-out, and low-stock messages.
               </p>
               <div className="mt-4 flex flex-wrap gap-3">
                 <Link
-                  href="/settings/telegram"
+                  href="/settings/telegram?intent=connect"
                   className="inline-flex h-10 items-center border border-[var(--accent)] bg-[var(--accent)] px-4 text-sm font-semibold text-[var(--accent-contrast)] hover:bg-transparent hover:text-[var(--text-1)]"
                 >
                   Connect Telegram
@@ -1594,7 +1652,7 @@ export default function DashboardWorkspace({
                 </h3>
               </div>
               <Link
-                href={telegramConnectionRequired ? "/settings/telegram" : "/settings/notifications"}
+                href={telegramConnectionRequired ? "/settings/telegram?intent=connect" : "/settings/notifications"}
                 className="inline-flex h-9 items-center border border-[var(--accent)] bg-[var(--accent)] px-3 text-xs font-semibold uppercase tracking-wide text-[var(--accent-contrast)] hover:bg-transparent hover:text-[var(--text-1)]"
               >
                 {telegramConnectionRequired ? "Connect Telegram" : "Notification Settings"}
@@ -1640,8 +1698,9 @@ export default function DashboardWorkspace({
               </div>
             </div>
           </article>
-        </section>
+        </motion.section>
       ) : null}
-    </main>
+      </motion.div>
+    </motion.main>
   );
 }

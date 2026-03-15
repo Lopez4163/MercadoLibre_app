@@ -1,13 +1,18 @@
 "use client";
 
 import Link from "next/link";
+import { useRef } from "react";
 import { useEffect, useState } from "react";
 
 type TelegramSettingsCardProps = {
   initialHasBillingAccess?: boolean | null;
+  autoConnect?: boolean;
 };
 
-export default function TelegramSettingsCard({ initialHasBillingAccess = null }: TelegramSettingsCardProps) {
+export default function TelegramSettingsCard({
+  initialHasBillingAccess = null,
+  autoConnect = false,
+}: TelegramSettingsCardProps) {
   const [telegramConnected, setTelegramConnected] = useState(false);
   const [telegramLoading, setTelegramLoading] = useState(true);
   const [telegramActionLoading, setTelegramActionLoading] = useState(false);
@@ -15,6 +20,7 @@ export default function TelegramSettingsCard({ initialHasBillingAccess = null }:
   const [telegramSuccess, setTelegramSuccess] = useState<string | null>(null);
   const [hasBillingAccess, setHasBillingAccess] = useState<boolean | null>(initialHasBillingAccess);
   const [connectStartToken, setConnectStartToken] = useState<string | null>(null);
+  const autoConnectAttemptedRef = useRef(false);
 
   useEffect(() => {
     void loadTelegramStatus();
@@ -67,7 +73,7 @@ export default function TelegramSettingsCard({ initialHasBillingAccess = null }:
     }
   }
 
-  async function handleTelegramConnect() {
+  async function handleTelegramConnect(options?: { redirectInSameTab?: boolean }) {
     setTelegramActionLoading(true);
     setTelegramError(null);
     setTelegramSuccess(null);
@@ -96,6 +102,11 @@ export default function TelegramSettingsCard({ initialHasBillingAccess = null }:
           throw new Error("missing TELEGRAM_BOT_USERNAME");
         }
         throw new Error("missing_connect_url");
+      }
+
+      if (options?.redirectInSameTab) {
+        window.location.assign(data.connectUrl);
+        return;
       }
 
       setConnectStartToken(data.startToken ?? null);
@@ -133,6 +144,18 @@ export default function TelegramSettingsCard({ initialHasBillingAccess = null }:
       setTelegramActionLoading(false);
     }
   }
+
+  useEffect(() => {
+    if (!autoConnect || autoConnectAttemptedRef.current) {
+      return;
+    }
+    if (hasBillingAccess !== true || telegramLoading || telegramActionLoading || telegramConnected) {
+      return;
+    }
+
+    autoConnectAttemptedRef.current = true;
+    void handleTelegramConnect({ redirectInSameTab: true });
+  }, [autoConnect, hasBillingAccess, telegramActionLoading, telegramConnected, telegramLoading]);
 
   async function handleTelegramDisconnect() {
     setTelegramActionLoading(true);
@@ -195,7 +218,7 @@ export default function TelegramSettingsCard({ initialHasBillingAccess = null }:
 
       <div className="relative mt-5">
         <div
-          className={`transition-opacity ${hasBillingAccess === true ? "opacity-100" : "pointer-events-none opacity-45"}`}
+          className={`transition-opacity ${hasBillingAccess === true ? "opacity-100" : "pointer-events-none opacity-80"}`}
           aria-hidden={hasBillingAccess !== true}
         >
           <div className="border border-[var(--border-1)] bg-[var(--bg-0)] px-3 py-3 text-sm">
@@ -254,7 +277,7 @@ export default function TelegramSettingsCard({ initialHasBillingAccess = null }:
 
         {hasBillingAccess === false ? (
           <div className="absolute inset-0 flex items-center justify-center bg-slate-950/45 p-4">
-            <div className="max-w-md border border-cyan-500/55 bg-cyan-500/10 p-4 text-center shadow-lg">
+            <div className="max-w-md border border-yellow-300/80 bg-yellow-300/20 p-4 text-center shadow-lg">
               <p className="text-sm font-semibold text-[var(--text-1)]">
                 Start your free trial to view and manage Telegram delivery settings.
               </p>
