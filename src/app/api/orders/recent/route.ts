@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "../../../../../lib/db/prisma";
 import { getSessionUserIdFromRequest } from "../../../../../lib/auth/session";
+import { getUserBillingEntitlement } from "../../../../../lib/billing/entitlements";
 import {
   buildRateLimitHeaders,
   buildRateLimitKey,
@@ -84,6 +85,19 @@ export async function GET(request: NextRequest) {
   const sessionUserId = getSessionUserIdFromRequest(request);
   if (!sessionUserId) {
     return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
+  }
+
+  const entitlement = await getUserBillingEntitlement(sessionUserId);
+  if (!entitlement.hasAccess) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: "subscription_required",
+        message: "Active subscription required. Start trial in Billing to access order activity.",
+        subscriptionStatus: entitlement.status,
+      },
+      { status: 402 },
+    );
   }
 
   let rateLimitDecision: RateLimitDecision;

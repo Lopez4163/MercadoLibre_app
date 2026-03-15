@@ -240,6 +240,11 @@ export default function DashboardWorkspace({
   const [todayActivityLoading, setTodayActivityLoading] = useState(true);
   const [todayActivityError, setTodayActivityError] = useState<string | null>(null);
   const inventoryBusy = loading || refreshing;
+  const inventorySubscriptionLocked =
+    Boolean(inventoryError) &&
+    (inventoryError?.toLowerCase().includes("active subscription required") ||
+      inventoryError?.toLowerCase().includes("subscription_required"));
+  const telegramConnectionRequired = billingHasAccess && telegramConnected === false;
 
   async function loadInventory(options?: { initial?: boolean }) {
     const initial = options?.initial ?? false;
@@ -582,13 +587,61 @@ export default function DashboardWorkspace({
       </section>
 
       {inventoryError ? (
-        <div className="border border-[var(--danger)] bg-[var(--surface-2)] p-4 text-sm text-[var(--danger)]">
-          Error: {inventoryError}
-        </div>
+        inventorySubscriptionLocked ? (
+          <section className="border border-cyan-500/55 bg-cyan-500/10 p-5">
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--text-3)]">Billing Required</p>
+            <h3 className="mt-2 text-xl font-semibold tracking-tight text-[var(--text-1)]">
+              Start your free trial to unlock inventory sync
+            </h3>
+            <p className="mt-2 max-w-2xl text-sm text-cyan-100/90">
+              Connect inventory refresh, alert rules, and order monitoring after trial activation.
+            </p>
+            <div className="mt-4 flex flex-wrap gap-3">
+              <Link
+                href="/billing?intent=trial"
+                className="inline-flex h-10 items-center border border-[var(--accent)] bg-[var(--accent)] px-4 text-sm font-semibold text-[var(--accent-contrast)] hover:bg-transparent hover:text-[var(--text-1)]"
+              >
+                Start Free Trial
+              </Link>
+              <Link
+                href="/settings/billing"
+                className="inline-flex h-10 items-center border border-[var(--border-1)] bg-[var(--surface-2)] px-4 text-sm font-semibold text-[var(--text-1)] hover:bg-[var(--surface-1)]"
+              >
+                Go to Billing
+              </Link>
+            </div>
+          </section>
+        ) : (
+          <div className="border border-[var(--danger)] bg-[var(--surface-2)] p-4 text-sm text-[var(--danger)]">
+            Error: {inventoryError}
+          </div>
+        )
       ) : null}
 
       {activeTab === "overview" ? (
         <section className="grid gap-4 xl:grid-cols-[minmax(0,1.3fr)_minmax(320px,0.7fr)]">
+          {telegramConnectionRequired ? (
+            <div className="xl:col-span-2 border border-cyan-500/55 bg-cyan-500/10 p-5">
+              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--text-3)]">
+                Telegram Required
+              </p>
+              <h3 className="mt-2 text-xl font-semibold tracking-tight text-[var(--text-1)]">
+                Connect Telegram to start receiving alerts
+              </h3>
+              <p className="mt-2 max-w-2xl text-sm text-cyan-100/90">
+                Your notification rules are ready. Link Telegram to enable delivery for sale, sold-out, and low-stock alerts.
+              </p>
+              <div className="mt-4 flex flex-wrap gap-3">
+                <Link
+                  href="/settings/telegram"
+                  className="inline-flex h-10 items-center border border-[var(--accent)] bg-[var(--accent)] px-4 text-sm font-semibold text-[var(--accent-contrast)] hover:bg-transparent hover:text-[var(--text-1)]"
+                >
+                  Connect Telegram
+                </Link>
+              </div>
+            </div>
+          ) : null}
+
           <div className="space-y-4">
             <article className="border border-[var(--border-1)] bg-[var(--surface-1)] p-5">
               <div className="flex items-end justify-between gap-3">
@@ -603,7 +656,7 @@ export default function DashboardWorkspace({
                 <button
                   type="button"
                   onClick={() => void loadInventory()}
-                  disabled={inventoryBusy}
+                  disabled={inventoryBusy || !billingHasAccess}
                   className="inline-flex h-9 items-center border border-[var(--border-1)] bg-[var(--surface-2)] px-3 text-xs font-semibold uppercase tracking-wide text-[var(--text-1)] hover:bg-[var(--surface-1)] disabled:opacity-60"
                 >
                   {inventoryBusy ? (
@@ -620,19 +673,27 @@ export default function DashboardWorkspace({
               <div className="mt-5 grid gap-3 sm:grid-cols-2">
                 <div className="border border-red-500/50 bg-red-500/10 p-4">
                   <p className="text-xs font-semibold uppercase tracking-wide text-red-300">Sold Out</p>
-                  <p className="mt-3 text-4xl font-semibold tracking-tight text-red-200">{soldOutItems}</p>
+                  <p className="mt-3 text-4xl font-semibold tracking-tight text-red-200">
+                    {billingHasAccess ? soldOutItems : "Locked"}
+                  </p>
                 </div>
                 <div className="border border-orange-500/50 bg-orange-500/10 p-4">
                   <p className="text-xs font-semibold uppercase tracking-wide text-orange-300">Critical</p>
-                  <p className="mt-3 text-4xl font-semibold tracking-tight text-orange-200">{criticalItems}</p>
+                  <p className="mt-3 text-4xl font-semibold tracking-tight text-orange-200">
+                    {billingHasAccess ? criticalItems : "Locked"}
+                  </p>
                 </div>
                 <div className="border border-amber-500/50 bg-amber-500/10 p-4">
                   <p className="text-xs font-semibold uppercase tracking-wide text-amber-300">Low</p>
-                  <p className="mt-3 text-4xl font-semibold tracking-tight text-amber-200">{lowItems}</p>
+                  <p className="mt-3 text-4xl font-semibold tracking-tight text-amber-200">
+                    {billingHasAccess ? lowItems : "Locked"}
+                  </p>
                 </div>
                 <div className="border border-emerald-500/50 bg-emerald-500/10 p-4">
                   <p className="text-xs font-semibold uppercase tracking-wide text-emerald-300">Healthy</p>
-                  <p className="mt-3 text-4xl font-semibold tracking-tight text-emerald-200">{healthyItems}</p>
+                  <p className="mt-3 text-4xl font-semibold tracking-tight text-emerald-200">
+                    {billingHasAccess ? healthyItems : "Locked"}
+                  </p>
                 </div>
               </div>
             </article>
@@ -695,10 +756,10 @@ export default function DashboardWorkspace({
                   Notification Status
                 </p>
                 <Link
-                  href="/settings/notifications"
+                  href={telegramConnectionRequired ? "/settings/telegram" : "/settings/notifications"}
                   className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--text-3)] hover:text-[var(--text-1)]"
                 >
-                  Edit
+                  {telegramConnectionRequired ? "Connect Telegram" : "Edit"}
                 </Link>
               </div>
               <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -744,7 +805,7 @@ export default function DashboardWorkspace({
                 <button
                   type="button"
                   onClick={() => void loadTodayActivity()}
-                  disabled={todayActivityLoading}
+                  disabled={todayActivityLoading || !billingHasAccess}
                   className="inline-flex h-8 items-center border border-[var(--border-1)] bg-[var(--surface-2)] px-3 text-xs font-semibold uppercase tracking-wide text-[var(--text-1)] hover:bg-[var(--surface-1)] disabled:opacity-60"
                 >
                   {todayActivityLoading ? (
@@ -768,25 +829,25 @@ export default function DashboardWorkspace({
                 <div className="border border-[var(--border-1)] bg-[var(--bg-0)] p-4">
                   <p className="text-xs uppercase tracking-wide text-[var(--text-3)]">Orders Today</p>
                   <p className="mt-2 text-3xl font-semibold text-[var(--text-1)]">
-                    {todayActivity.orders.toLocaleString("en-US")}
+                    {billingHasAccess ? todayActivity.orders.toLocaleString("en-US") : "Locked"}
                   </p>
                 </div>
                 <div className="border border-[var(--border-1)] bg-[var(--bg-0)] p-4">
                   <p className="text-xs uppercase tracking-wide text-[var(--text-3)]">Units Sold Today</p>
                   <p className="mt-2 text-3xl font-semibold text-[var(--text-1)]">
-                    {todayActivity.unitsSold.toLocaleString("en-US")}
+                    {billingHasAccess ? todayActivity.unitsSold.toLocaleString("en-US") : "Locked"}
                   </p>
                 </div>
                 <div className="border border-[var(--border-1)] bg-[var(--bg-0)] p-4">
                   <p className="text-xs uppercase tracking-wide text-[var(--text-3)]">Alerts Sent</p>
                   <p className="mt-2 text-3xl font-semibold text-emerald-300">
-                    {todayActivity.alertsSent.toLocaleString("en-US")}
+                    {billingHasAccess ? todayActivity.alertsSent.toLocaleString("en-US") : "Locked"}
                   </p>
                 </div>
                 <div className="border border-[var(--border-1)] bg-[var(--bg-0)] p-4">
                   <p className="text-xs uppercase tracking-wide text-[var(--text-3)]">Alerts Failed</p>
                   <p className="mt-2 text-3xl font-semibold text-red-300">
-                    {todayActivity.alertsFailed.toLocaleString("en-US")}
+                    {billingHasAccess ? todayActivity.alertsFailed.toLocaleString("en-US") : "Locked"}
                   </p>
                 </div>
               </div>
@@ -836,23 +897,33 @@ export default function DashboardWorkspace({
           <div className="grid gap-3 md:grid-cols-5">
             <article className="border border-[var(--border-1)] bg-[var(--surface-1)] p-4">
               <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-3)]">Total Items</p>
-              <p className="mt-3 text-3xl font-semibold tracking-tight text-[var(--text-1)]">{items.length}</p>
+              <p className="mt-3 text-3xl font-semibold tracking-tight text-[var(--text-1)]">
+                {billingHasAccess ? items.length : "Locked"}
+              </p>
             </article>
             <article className="border border-red-500/50 bg-red-500/10 p-4">
               <p className="text-xs font-semibold uppercase tracking-wide text-red-300">Sold Out</p>
-              <p className="mt-3 text-3xl font-semibold tracking-tight text-red-200">{soldOutItems}</p>
+              <p className="mt-3 text-3xl font-semibold tracking-tight text-red-200">
+                {billingHasAccess ? soldOutItems : "Locked"}
+              </p>
             </article>
             <article className="border border-orange-500/50 bg-orange-500/10 p-4">
               <p className="text-xs font-semibold uppercase tracking-wide text-orange-300">Critical</p>
-              <p className="mt-3 text-3xl font-semibold tracking-tight text-orange-200">{criticalItems}</p>
+              <p className="mt-3 text-3xl font-semibold tracking-tight text-orange-200">
+                {billingHasAccess ? criticalItems : "Locked"}
+              </p>
             </article>
             <article className="border border-amber-500/50 bg-amber-500/10 p-4">
               <p className="text-xs font-semibold uppercase tracking-wide text-amber-300">Low</p>
-              <p className="mt-3 text-3xl font-semibold tracking-tight text-amber-200">{lowItems}</p>
+              <p className="mt-3 text-3xl font-semibold tracking-tight text-amber-200">
+                {billingHasAccess ? lowItems : "Locked"}
+              </p>
             </article>
             <article className="border border-emerald-500/50 bg-emerald-500/10 p-4">
               <p className="text-xs font-semibold uppercase tracking-wide text-emerald-300">Healthy</p>
-              <p className="mt-3 text-3xl font-semibold tracking-tight text-emerald-200">{healthyItems}</p>
+              <p className="mt-3 text-3xl font-semibold tracking-tight text-emerald-200">
+                {billingHasAccess ? healthyItems : "Locked"}
+              </p>
             </article>
           </div>
 
@@ -861,6 +932,7 @@ export default function DashboardWorkspace({
             refreshing={refreshing}
             lastUpdatedAt={lastUpdatedAt}
             onRefresh={() => void loadInventory()}
+            refreshDisabled={!billingHasAccess}
           />
         </section>
       ) : null}
@@ -879,13 +951,17 @@ export default function DashboardWorkspace({
               <div className="flex flex-wrap items-center gap-2">
                 <select
                   value={orderStatusFilter}
+                  disabled={!billingHasAccess}
                   onChange={(event) => {
+                    if (!billingHasAccess) {
+                      return;
+                    }
                     const value = event.target.value;
                     setOrderStatusFilter(value);
                     setOrdersPage(1);
                     void loadOrders({ page: 1, status: value });
                   }}
-                  className="h-10 border border-[var(--border-1)] bg-[var(--bg-0)] px-3 text-sm text-[var(--text-1)]"
+                  className="h-10 border border-[var(--border-1)] bg-[var(--bg-0)] px-3 text-sm text-[var(--text-1)] disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   <option value="all">All statuses</option>
                   <option value="paid">Paid</option>
@@ -895,7 +971,7 @@ export default function DashboardWorkspace({
                 <button
                   type="button"
                   onClick={() => void loadOrders({ page: ordersPage, status: orderStatusFilter })}
-                  disabled={ordersLoading}
+                  disabled={ordersLoading || !billingHasAccess}
                   className="inline-flex h-10 items-center border border-[var(--border-1)] bg-[var(--surface-2)] px-4 text-xs font-semibold uppercase tracking-wide text-[var(--text-1)] hover:bg-[var(--surface-1)] disabled:opacity-60"
                 >
                   {ordersLoading ? (
@@ -913,18 +989,24 @@ export default function DashboardWorkspace({
             <div className="mt-4 grid gap-3 md:grid-cols-3">
               <div className="border border-[var(--border-1)] bg-[var(--bg-0)] p-4">
                 <p className="text-xs uppercase tracking-wide text-[var(--text-3)]">Orders in Range</p>
-                <p className="mt-2 text-3xl font-semibold text-[var(--text-1)]">{ordersTotal.toLocaleString("en-US")}</p>
+                <p className="mt-2 text-3xl font-semibold text-[var(--text-1)]">
+                  {billingHasAccess ? ordersTotal.toLocaleString("en-US") : "Locked"}
+                </p>
               </div>
               <div className="border border-[var(--border-1)] bg-[var(--bg-0)] p-4">
                 <p className="text-xs uppercase tracking-wide text-[var(--text-3)]">Telegram Sent</p>
                 <p className="mt-2 text-3xl font-semibold text-emerald-300">
-                  {orders.filter((order) => order.latestNotification?.status === "sent").length}
+                  {billingHasAccess
+                    ? orders.filter((order) => order.latestNotification?.status === "sent").length
+                    : "Locked"}
                 </p>
               </div>
               <div className="border border-[var(--border-1)] bg-[var(--bg-0)] p-4">
                 <p className="text-xs uppercase tracking-wide text-[var(--text-3)]">Telegram Failed</p>
                 <p className="mt-2 text-3xl font-semibold text-red-300">
-                  {orders.filter((order) => order.latestNotification?.status === "failed").length}
+                  {billingHasAccess
+                    ? orders.filter((order) => order.latestNotification?.status === "failed").length
+                    : "Locked"}
                 </p>
               </div>
             </div>
@@ -965,67 +1047,67 @@ export default function DashboardWorkspace({
                   ) : null}
                   {orders.map((order) => (
                     <tr key={order.id}>
-                      <td className="px-3 py-3 align-top">
-                        <p className="font-mono text-sm font-semibold text-[var(--text-1)]">{order.mlOrderId}</p>
-                        <p className="mt-1 text-xs text-[var(--text-3)]">
-                          {order.lines.length} line{order.lines.length === 1 ? "" : "s"}
-                        </p>
-                      </td>
-                      <td className="px-3 py-3 align-top">
-                        {order.lines.length === 0 ? (
-                          <p className="text-sm text-[var(--text-3)]">N/A</p>
-                        ) : (
-                          <div className="space-y-1">
-                            {order.lines.slice(0, 2).map((line) => (
-                              <p key={`${order.id}:${line.mlItemId}`} className="max-w-[280px] truncate text-sm text-[var(--text-2)]">
-                                {line.title}
-                              </p>
-                            ))}
-                            {order.lines.length > 2 ? (
-                              <p className="text-xs text-[var(--text-3)]">+{order.lines.length - 2} more</p>
+                          <td className="px-3 py-3 align-top">
+                            <p className="font-mono text-sm font-semibold text-[var(--text-1)]">{order.mlOrderId}</p>
+                            <p className="mt-1 text-xs text-[var(--text-3)]">
+                              {order.lines.length} line{order.lines.length === 1 ? "" : "s"}
+                            </p>
+                          </td>
+                          <td className="px-3 py-3 align-top">
+                            {order.lines.length === 0 ? (
+                              <p className="text-sm text-[var(--text-3)]">N/A</p>
+                            ) : (
+                              <div className="space-y-1">
+                                {order.lines.slice(0, 2).map((line) => (
+                                  <p key={`${order.id}:${line.mlItemId}`} className="max-w-[280px] truncate text-sm text-[var(--text-2)]">
+                                    {line.title}
+                                  </p>
+                                ))}
+                                {order.lines.length > 2 ? (
+                                  <p className="text-xs text-[var(--text-3)]">+{order.lines.length - 2} more</p>
+                                ) : null}
+                              </div>
+                            )}
+                          </td>
+                          <td className="px-3 py-3 align-top text-sm font-semibold text-[var(--text-1)]">
+                            {order.lines.reduce((sum, line) => sum + line.quantity, 0).toLocaleString("en-US")}
+                          </td>
+                          <td className="px-3 py-3 align-top text-sm text-[var(--text-2)]">{formatDateTime(order.createdAtMl ?? order.createdAt)}</td>
+                          <td className="px-3 py-3 align-top">
+                            <span className={`inline-flex border px-2 py-1 text-xs font-semibold uppercase ${orderStatusTone(order.status)}`}>
+                              {order.status}
+                            </span>
+                          </td>
+                          <td className="px-3 py-3 align-top text-sm font-semibold text-[var(--text-1)]">
+                            {order.totalAmount === null ? "N/A" : `$${order.totalAmount.toLocaleString("en-US")}`}
+                          </td>
+                          <td className="px-3 py-3 align-top text-sm text-[var(--text-2)]">{order.saleType ?? "N/A"}</td>
+                          <td className="px-3 py-3 align-top">
+                            <span
+                              className={`inline-flex border px-2 py-1 text-xs font-semibold uppercase ${telegramStatusTone(
+                                order.latestNotification?.status ?? null,
+                              )}`}
+                            >
+                              {order.latestNotification?.status ?? "none"}
+                            </span>
+                            {order.latestNotification?.reason ? (
+                              <p className="mt-1 text-xs text-[var(--text-3)]">{order.latestNotification.reason}</p>
                             ) : null}
-                          </div>
-                        )}
-                      </td>
-                      <td className="px-3 py-3 align-top text-sm font-semibold text-[var(--text-1)]">
-                        {order.lines.reduce((sum, line) => sum + line.quantity, 0).toLocaleString("en-US")}
-                      </td>
-                      <td className="px-3 py-3 align-top text-sm text-[var(--text-2)]">{formatDateTime(order.createdAtMl ?? order.createdAt)}</td>
-                      <td className="px-3 py-3 align-top">
-                        <span className={`inline-flex border px-2 py-1 text-xs font-semibold uppercase ${orderStatusTone(order.status)}`}>
-                          {order.status}
-                        </span>
-                      </td>
-                      <td className="px-3 py-3 align-top text-sm font-semibold text-[var(--text-1)]">
-                        {order.totalAmount === null ? "N/A" : `$${order.totalAmount.toLocaleString("en-US")}`}
-                      </td>
-                      <td className="px-3 py-3 align-top text-sm text-[var(--text-2)]">{order.saleType ?? "N/A"}</td>
-                      <td className="px-3 py-3 align-top">
-                        <span
-                          className={`inline-flex border px-2 py-1 text-xs font-semibold uppercase ${telegramStatusTone(
-                            order.latestNotification?.status ?? null,
-                          )}`}
-                        >
-                          {order.latestNotification?.status ?? "none"}
-                        </span>
-                        {order.latestNotification?.reason ? (
-                          <p className="mt-1 text-xs text-[var(--text-3)]">{order.latestNotification.reason}</p>
-                        ) : null}
-                      </td>
-                      <td className="px-3 py-3 align-top">
-                        {order.labelUrl ? (
-                          <a
-                            href={order.labelUrl}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="inline-flex h-8 items-center border border-[var(--accent)] bg-[var(--accent)] px-3 text-xs font-semibold uppercase tracking-wide text-[var(--accent-contrast)] hover:bg-transparent hover:text-[var(--text-1)]"
-                          >
-                            Download
-                          </a>
-                        ) : (
-                          <span className="text-xs text-[var(--text-3)]">Not ready</span>
-                        )}
-                      </td>
+                          </td>
+                          <td className="px-3 py-3 align-top">
+                            {order.labelUrl ? (
+                              <a
+                                href={order.labelUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="inline-flex h-8 items-center border border-[var(--accent)] bg-[var(--accent)] px-3 text-xs font-semibold uppercase tracking-wide text-[var(--accent-contrast)] hover:bg-transparent hover:text-[var(--text-1)]"
+                              >
+                                Download
+                              </a>
+                            ) : (
+                              <span className="text-xs text-[var(--text-3)]">Not ready</span>
+                            )}
+                          </td>
                     </tr>
                   ))}
                 </tbody>
@@ -1044,7 +1126,7 @@ export default function DashboardWorkspace({
                     setOrdersPage(nextPage);
                     void loadOrders({ page: nextPage, status: orderStatusFilter });
                   }}
-                  disabled={ordersLoading || ordersPage <= 1}
+                  disabled={ordersLoading || !billingHasAccess || ordersPage <= 1}
                   className="inline-flex h-9 items-center border border-[var(--border-1)] bg-[var(--surface-2)] px-3 text-xs font-semibold uppercase tracking-wide text-[var(--text-1)] disabled:opacity-50"
                 >
                   Prev
@@ -1056,7 +1138,7 @@ export default function DashboardWorkspace({
                     setOrdersPage(nextPage);
                     void loadOrders({ page: nextPage, status: orderStatusFilter });
                   }}
-                  disabled={ordersLoading || ordersPage >= ordersTotalPages}
+                  disabled={ordersLoading || !billingHasAccess || ordersPage >= ordersTotalPages}
                   className="inline-flex h-9 items-center border border-[var(--border-1)] bg-[var(--surface-2)] px-3 text-xs font-semibold uppercase tracking-wide text-[var(--text-1)] disabled:opacity-50"
                 >
                   Next
@@ -1085,7 +1167,7 @@ export default function DashboardWorkspace({
                 <button
                   type="button"
                   onClick={() => void loadInventory()}
-                  disabled={inventoryBusy}
+                  disabled={inventoryBusy || !billingHasAccess}
                   className="inline-flex h-9 items-center border border-[var(--border-1)] bg-[var(--surface-2)] px-3 text-xs font-semibold uppercase tracking-wide text-[var(--text-1)] hover:bg-[var(--surface-1)] disabled:opacity-60"
                 >
                   {inventoryBusy ? (
@@ -1106,7 +1188,7 @@ export default function DashboardWorkspace({
                 Inventory Value
               </p>
               <p className="mt-3 text-3xl font-semibold tracking-tight text-[var(--text-1)]">
-                ${inventoryValue.toLocaleString("en-US")}
+                {billingHasAccess ? `$${inventoryValue.toLocaleString("en-US")}` : "Locked"}
               </p>
               <p className="mt-2 text-sm text-[var(--text-2)]">
                 Estimated from current listing price x available units.
@@ -1117,7 +1199,7 @@ export default function DashboardWorkspace({
                 Units On Hand
               </p>
               <p className="mt-3 text-3xl font-semibold tracking-tight text-[var(--text-1)]">
-                {totalUnitsOnHand.toLocaleString("en-US")}
+                {billingHasAccess ? totalUnitsOnHand.toLocaleString("en-US") : "Locked"}
               </p>
               <p className="mt-2 text-sm text-[var(--text-2)]">
                 Total available quantity across loaded listings.
@@ -1128,7 +1210,7 @@ export default function DashboardWorkspace({
                 Total Units Sold
               </p>
               <p className="mt-3 text-3xl font-semibold tracking-tight text-[var(--text-1)]">
-                {totalUnitsSold.toLocaleString("en-US")}
+                {billingHasAccess ? totalUnitsSold.toLocaleString("en-US") : "Locked"}
               </p>
               <p className="mt-2 text-sm text-[var(--text-2)]">
                 Lifetime units sold across the loaded catalog snapshot.
@@ -1139,7 +1221,7 @@ export default function DashboardWorkspace({
                 Risk Rate
               </p>
               <p className="mt-3 text-3xl font-semibold tracking-tight text-[var(--text-1)]">
-                {riskRate}%
+                {billingHasAccess ? `${riskRate}%` : "Locked"}
               </p>
               <p className="mt-2 text-sm text-[var(--text-2)]">
                 Listings currently sold out, critical, or low on stock.
@@ -1223,7 +1305,9 @@ export default function DashboardWorkspace({
               ) : (
                 <div className="mt-6 border border-[var(--border-1)] bg-[var(--bg-0)] p-4">
                   <p className="text-sm text-[var(--text-2)]">
-                    No `sold_quantity` data is available in the loaded catalog yet.
+                    {billingHasAccess
+                      ? "No sold quantity data is available in the loaded catalog yet."
+                      : "Locked. Start your free trial to unlock best-seller insights."}
                   </p>
                 </div>
               )}
@@ -1239,36 +1323,52 @@ export default function DashboardWorkspace({
               <div className="mt-4 space-y-3">
                 <div className="flex items-center justify-between border border-[var(--border-1)] bg-[var(--bg-0)] px-3 py-3">
                   <span className="text-sm text-[var(--text-2)]">Catalog Size</span>
-                  <span className="text-sm font-semibold text-[var(--text-1)]">{items.length}</span>
+                  <span className="text-sm font-semibold text-[var(--text-1)]">
+                    {billingHasAccess ? items.length : "Locked"}
+                  </span>
                 </div>
                 <div className="flex items-center justify-between border border-[var(--border-1)] bg-[var(--bg-0)] px-3 py-3">
                   <span className="text-sm text-[var(--text-2)]">Active Listings</span>
-                  <span className="text-sm font-semibold text-emerald-300">{activeItems}</span>
+                  <span className="text-sm font-semibold text-emerald-300">
+                    {billingHasAccess ? activeItems : "Locked"}
+                  </span>
                 </div>
                 <div className="flex items-center justify-between border border-[var(--border-1)] bg-[var(--bg-0)] px-3 py-3">
                   <span className="text-sm text-[var(--text-2)]">Paused Listings</span>
-                  <span className="text-sm font-semibold text-[var(--text-1)]">{pausedItems}</span>
+                  <span className="text-sm font-semibold text-[var(--text-1)]">
+                    {billingHasAccess ? pausedItems : "Locked"}
+                  </span>
                 </div>
                 <div className="flex items-center justify-between border border-[var(--border-1)] bg-[var(--bg-0)] px-3 py-3">
                   <span className="text-sm text-[var(--text-2)]">Healthy Listings</span>
-                  <span className="text-sm font-semibold text-emerald-300">{healthyItems}</span>
+                  <span className="text-sm font-semibold text-emerald-300">
+                    {billingHasAccess ? healthyItems : "Locked"}
+                  </span>
                 </div>
                 <div className="flex items-center justify-between border border-[var(--border-1)] bg-[var(--bg-0)] px-3 py-3">
                   <span className="text-sm text-[var(--text-2)]">Sold Out Share</span>
                   <span className="text-sm font-semibold text-red-300">
-                    {items.length === 0 ? "0%" : `${Math.round((soldOutItems / items.length) * 100)}%`}
+                    {billingHasAccess
+                      ? items.length === 0
+                        ? "0%"
+                        : `${Math.round((soldOutItems / items.length) * 100)}%`
+                      : "Locked"}
                   </span>
                 </div>
                 <div className="flex items-center justify-between border border-[var(--border-1)] bg-[var(--bg-0)] px-3 py-3">
                   <span className="text-sm text-[var(--text-2)]">Low Stock Share</span>
                   <span className="text-sm font-semibold text-amber-300">
-                    {items.length === 0 ? "0%" : `${Math.round(((criticalItems + lowItems) / items.length) * 100)}%`}
+                    {billingHasAccess
+                      ? items.length === 0
+                        ? "0%"
+                        : `${Math.round(((criticalItems + lowItems) / items.length) * 100)}%`
+                      : "Locked"}
                   </span>
                 </div>
                 <div className="flex items-center justify-between border border-[var(--border-1)] bg-[var(--bg-0)] px-3 py-3">
                   <span className="text-sm text-[var(--text-2)]">Avg Units / Listing</span>
                   <span className="text-sm font-semibold text-[var(--text-1)]">
-                    {averageUnitsPerListing.toLocaleString("en-US")}
+                    {billingHasAccess ? averageUnitsPerListing.toLocaleString("en-US") : "Locked"}
                   </span>
                 </div>
               </div>
@@ -1284,7 +1384,13 @@ export default function DashboardWorkspace({
                 Popular items running shallow
               </h3>
               <div className="mt-4 space-y-3">
-                {fastMoversAtRisk.length === 0 ? (
+                {!billingHasAccess ? (
+                  <div className="border border-[var(--border-1)] bg-[var(--bg-0)] p-4">
+                    <p className="text-sm text-[var(--text-2)]">
+                      Locked. Start your free trial to unlock fast-mover risk insights.
+                    </p>
+                  </div>
+                ) : fastMoversAtRisk.length === 0 ? (
                   <div className="border border-[var(--border-1)] bg-[var(--bg-0)] p-4">
                     <p className="text-sm text-[var(--text-2)]">
                       No high-selling low-stock listings are currently in the loaded catalog.
@@ -1343,7 +1449,13 @@ export default function DashboardWorkspace({
                 Inventory sitting without sales
               </h3>
               <div className="mt-4 space-y-3">
-                {dormantStock.length === 0 ? (
+                {!billingHasAccess ? (
+                  <div className="border border-[var(--border-1)] bg-[var(--bg-0)] p-4">
+                    <p className="text-sm text-[var(--text-2)]">
+                      Locked. Start your free trial to unlock dormant stock insights.
+                    </p>
+                  </div>
+                ) : dormantStock.length === 0 ? (
                   <div className="border border-[var(--border-1)] bg-[var(--bg-0)] p-4">
                     <p className="text-sm text-[var(--text-2)]">
                       No inactive stock stands out from the current catalog snapshot.
@@ -1402,7 +1514,13 @@ export default function DashboardWorkspace({
                 Listings moving the cleanest
               </h3>
               <div className="mt-4 space-y-3">
-                {sellThroughLeaders.length === 0 ? (
+                {!billingHasAccess ? (
+                  <div className="border border-[var(--border-1)] bg-[var(--bg-0)] p-4">
+                    <p className="text-sm text-[var(--text-2)]">
+                      Locked. Start your free trial to unlock sell-through leader insights.
+                    </p>
+                  </div>
+                ) : sellThroughLeaders.length === 0 ? (
                   <div className="border border-[var(--border-1)] bg-[var(--bg-0)] p-4">
                     <p className="text-sm text-[var(--text-2)]">
                       No sell-through leaders can be calculated from the current catalog snapshot.
@@ -1444,6 +1562,28 @@ export default function DashboardWorkspace({
 
       {activeTab === "notifications" ? (
         <section className="space-y-4">
+          {telegramConnectionRequired ? (
+            <section className="border border-cyan-500/55 bg-cyan-500/10 p-5">
+              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--text-3)]">
+                Telegram Required
+              </p>
+              <h3 className="mt-2 text-xl font-semibold tracking-tight text-[var(--text-1)]">
+                Connect Telegram to start receiving alerts
+              </h3>
+              <p className="mt-2 max-w-2xl text-sm text-cyan-100/90">
+                Notification rules are ready. Link Telegram to deliver sale, sold-out, and low-stock messages.
+              </p>
+              <div className="mt-4 flex flex-wrap gap-3">
+                <Link
+                  href="/settings/telegram"
+                  className="inline-flex h-10 items-center border border-[var(--accent)] bg-[var(--accent)] px-4 text-sm font-semibold text-[var(--accent-contrast)] hover:bg-transparent hover:text-[var(--text-1)]"
+                >
+                  Connect Telegram
+                </Link>
+              </div>
+            </section>
+          ) : null}
+
           <article className="border border-[var(--border-1)] bg-[var(--surface-1)] p-5">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
@@ -1453,14 +1593,18 @@ export default function DashboardWorkspace({
                 </h3>
               </div>
               <Link
-                href="/settings/notifications"
+                href={telegramConnectionRequired ? "/settings/telegram" : "/settings/notifications"}
                 className="inline-flex h-9 items-center border border-[var(--accent)] bg-[var(--accent)] px-3 text-xs font-semibold uppercase tracking-wide text-[var(--accent-contrast)] hover:bg-transparent hover:text-[var(--text-1)]"
               >
-                Notification Settings
+                {telegramConnectionRequired ? "Connect Telegram" : "Notification Settings"}
               </Link>
             </div>
 
-            <div className="mt-5 grid gap-3 sm:grid-cols-2">
+            <div
+              className={`mt-5 grid gap-3 sm:grid-cols-2 ${
+                telegramConnectionRequired ? "pointer-events-none opacity-60" : ""
+              }`}
+            >
               <div className="border border-[var(--border-1)] bg-[var(--bg-0)] p-4">
                 <p className="text-xs uppercase tracking-wide text-[var(--text-3)]">Every Sale</p>
                 <p className="mt-2 text-3xl font-semibold text-[var(--text-1)]">

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionUserIdFromRequest } from "../../../../../../lib/auth/session";
+import { getUserBillingEntitlement } from "../../../../../../lib/billing/entitlements";
 import { prisma } from "../../../../../../lib/db/prisma";
 import { getOrderLabelTokenPayload } from "../../../../../../lib/labels/token";
 import { getPrimaryOrderShipment, getShipmentLabelDocument } from "../../../../../../lib/ml/api";
@@ -98,6 +99,11 @@ export async function GET(
 
   if (!user) {
     return buildHtmlFallback("Not authorized", "The account for this shipping label is no longer available.", 404);
+  }
+
+  const entitlement = await getUserBillingEntitlement(tokenPayload.userId);
+  if (!entitlement.hasAccess) {
+    return buildHtmlFallback("Subscription required", "Start trial in Billing to access shipping labels.", 402);
   }
 
   try {

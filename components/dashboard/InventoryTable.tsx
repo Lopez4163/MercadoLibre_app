@@ -17,6 +17,7 @@ type InventoryTableProps = {
   refreshing: boolean;
   lastUpdatedAt: number | null;
   onRefresh: () => void;
+  refreshDisabled?: boolean;
 };
 
 type SortOption = "stock_asc" | "stock_desc" | "price_asc" | "price_desc";
@@ -95,11 +96,18 @@ function RefreshSpinner() {
   );
 }
 
-export default function InventoryTable({ items, refreshing, lastUpdatedAt, onRefresh }: InventoryTableProps) {
+export default function InventoryTable({
+  items,
+  refreshing,
+  lastUpdatedAt,
+  onRefresh,
+  refreshDisabled = false,
+}: InventoryTableProps) {
   const [pageSize, setPageSize] = useState<"10" | "20" | "all">("10");
   const [currentPage, setCurrentPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<SortOption>("stock_asc");
+  const controlsDisabled = refreshDisabled;
 
   const filteredItems = useMemo(() => {
     const normalizedQuery = searchQuery.trim().toLowerCase();
@@ -176,7 +184,7 @@ export default function InventoryTable({ items, refreshing, lastUpdatedAt, onRef
             <button
               type="button"
               onClick={onRefresh}
-              disabled={refreshing}
+              disabled={refreshing || refreshDisabled}
               className="inline-flex h-8 cursor-pointer items-center border border-[var(--border-1)] bg-[var(--surface-2)] px-3 text-[11px] font-semibold uppercase tracking-wide text-[var(--text-1)] hover:bg-[var(--surface-1)] disabled:cursor-not-allowed disabled:text-[var(--text-3)] disabled:hover:bg-[var(--surface-2)]"
             >
               {refreshing ? (
@@ -191,7 +199,11 @@ export default function InventoryTable({ items, refreshing, lastUpdatedAt, onRef
           </div>
         </div>
         <div className="mt-4">
-          <InventorySearchBar query={searchQuery} onQueryChange={onSearchQueryChange} />
+          <InventorySearchBar
+            query={searchQuery}
+            onQueryChange={onSearchQueryChange}
+            disabled={controlsDisabled}
+          />
         </div>
         <div className="mt-4 flex flex-wrap items-center gap-3 border border-[var(--border-1)] bg-[var(--bg-0)] p-3 text-sm">
           <label htmlFor="sort-by" className="text-[var(--text-2)]">
@@ -200,8 +212,9 @@ export default function InventoryTable({ items, refreshing, lastUpdatedAt, onRef
           <select
             id="sort-by"
             value={sortBy}
+            disabled={controlsDisabled}
             onChange={(event) => onSortByChange(event.target.value as SortOption)}
-            className="h-9 border border-[var(--border-1)] bg-[var(--surface-1)] px-3 text-[var(--text-1)]"
+            className="h-9 border border-[var(--border-1)] bg-[var(--surface-1)] px-3 text-[var(--text-1)] disabled:cursor-not-allowed disabled:opacity-60"
           >
             <option value="stock_asc">Lowest stock - highest</option>
             <option value="stock_desc">Highest stock - lowest</option>
@@ -214,8 +227,9 @@ export default function InventoryTable({ items, refreshing, lastUpdatedAt, onRef
           <select
             id="page-size"
             value={pageSize}
+            disabled={controlsDisabled}
             onChange={(event) => onPageSizeChange(event.target.value as "10" | "20" | "all")}
-            className="h-9 border border-[var(--border-1)] bg-[var(--surface-1)] px-3 text-[var(--text-1)]"
+            className="h-9 border border-[var(--border-1)] bg-[var(--surface-1)] px-3 text-[var(--text-1)] disabled:cursor-not-allowed disabled:opacity-60"
           >
             <option value="10">10</option>
             <option value="20">20</option>
@@ -232,7 +246,7 @@ export default function InventoryTable({ items, refreshing, lastUpdatedAt, onRef
               <button
                 type="button"
                 onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
-                disabled={safeCurrentPage === 1}
+                disabled={controlsDisabled || safeCurrentPage === 1}
                 className="h-9 border border-[var(--border-1)] bg-[var(--bg-0)] px-3 text-xs font-semibold uppercase tracking-wide text-[var(--text-1)] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Prev
@@ -240,7 +254,7 @@ export default function InventoryTable({ items, refreshing, lastUpdatedAt, onRef
               <button
                 type="button"
                 onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
-                disabled={safeCurrentPage === totalPages}
+                disabled={controlsDisabled || safeCurrentPage === totalPages}
                 className="h-9 border border-[var(--border-1)] bg-[var(--bg-0)] px-3 text-xs font-semibold uppercase tracking-wide text-[var(--text-1)] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Next

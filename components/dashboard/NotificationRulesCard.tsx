@@ -368,7 +368,7 @@ export default function NotificationRulesCard() {
 
         {!hasBillingAccess ? (
           <div className="absolute inset-0 flex items-center justify-center bg-slate-950/45 p-4">
-            <div className="max-w-md border border-[var(--border-1)] bg-[var(--surface-1)] p-4 text-center shadow-lg">
+            <div className="max-w-md border border-cyan-500/55 bg-cyan-500/10 p-4 text-center shadow-lg">
               <p className="text-sm font-semibold text-[var(--text-1)]">
                 Start your free trial to view and configure notification settings.
               </p>
