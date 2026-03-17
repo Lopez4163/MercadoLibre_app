@@ -36,6 +36,12 @@ export default async function Navbar() {
               >
                 Billing
               </Link>
+              <Link
+                href="/settings/feedback"
+                className="inline-flex h-9 items-center border border-[var(--border-1)] bg-[var(--surface-2)] px-4 text-sm font-semibold text-[var(--text-1)] hover:bg-[var(--surface-1)]"
+              >
+                Feedback
+              </Link>
               <form action="/api/auth/logout" method="post">
                 <button
                   type="submit"
