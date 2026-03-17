@@ -122,6 +122,60 @@ export default function HomePage() {
         </div>
       </section>
 
+      <section className="border-t border-[var(--border-1)]">
+        <div className="mx-auto max-w-6xl px-6 py-14">
+          <div className="mx-auto max-w-3xl text-center">
+            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--text-3)]">Pricing</p>
+            <h2 className="mt-3 text-3xl font-semibold tracking-tight text-[var(--text-1)] md:text-4xl">
+              One simple beta plan
+            </h2>
+            <p className="mt-3 text-[var(--text-2)]">
+              Start with a single plan while we expand features with early users.
+            </p>
+          </div>
+
+          <div className="mx-auto mt-8 max-w-2xl border border-[var(--border-1)] bg-[var(--surface-1)] p-6 md:p-8">
+            <div className="flex flex-wrap items-end justify-between gap-4 border-b border-[var(--border-1)] pb-5">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--text-3)]">MercadoLibs Beta</p>
+                <h3 className="mt-2 text-2xl font-semibold tracking-tight text-[var(--text-1)]">$5/month</h3>
+              </div>
+              <p className="border border-[var(--accent)] bg-[var(--accent)] px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-[var(--accent-contrast)]">
+                Early Access Pricing
+              </p>
+            </div>
+
+            <ul className="mt-5 grid gap-3 text-sm text-[var(--text-2)]">
+              <li className="border border-[var(--border-1)] bg-[var(--surface-2)] px-4 py-3">Real-time Telegram sale alerts</li>
+              <li className="border border-[var(--border-1)] bg-[var(--surface-2)] px-4 py-3">
+                Low-stock and sold-out risk notifications
+              </li>
+              <li className="border border-[var(--border-1)] bg-[var(--surface-2)] px-4 py-3">
+                Dashboard for inventory, orders, and notification controls
+              </li>
+              <li className="border border-[var(--border-1)] bg-[var(--surface-2)] px-4 py-3">
+                Stripe billing with cancel/resume any time
+              </li>
+            </ul>
+
+            <div className="mt-6 flex flex-wrap gap-3">
+              <Link
+                href="/start-trial"
+                className="inline-flex h-11 items-center border border-[var(--accent)] bg-[var(--accent)] px-5 text-sm font-semibold text-[var(--accent-contrast)] hover:bg-transparent hover:text-[var(--text-1)]"
+              >
+                Start Free Trial
+              </Link>
+              <Link
+                href="/settings/billing"
+                className="inline-flex h-11 items-center border border-[var(--border-1)] bg-[var(--surface-2)] px-5 text-sm font-semibold text-[var(--text-1)] hover:bg-[var(--surface-1)]"
+              >
+                View Billing
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <section className="border-t border-[var(--border-1)] bg-[var(--surface-1)]">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-6 py-10">
           <div>

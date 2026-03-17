@@ -3,8 +3,8 @@ import { Prisma } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "../../../../../lib/db/prisma";
 import { getStripe, getStripeWebhookSecret } from "../../../../../lib/stripe/client";
-import { isBillingStatusActive } from "../../../../../lib/billing/entitlements";
 import { disconnectUserIntegrationsForBillingEnd } from "../../../../../lib/account/disconnect";
+import { resolveDegradedSince, shouldDisconnectForBillingStatus } from "../../../../../lib/billing/disconnect-policy";
 
 export const runtime = "nodejs";
 const DEFAULT_STRIPE_WEBHOOK_EVENT_RETENTION_DAYS = 30;
@@ -90,11 +90,37 @@ async function upsertSubscriptionState(subscription: Stripe.Subscription, fallba
     typeof subscription.latest_invoice === "string"
       ? subscription.latest_invoice
       : subscription.latest_invoice?.id ?? null;
+  const now = new Date();
+  const existingByUser = await prisma.billingSubscription.findUnique({
+    where: { userId },
+    select: {
+      stripeSubscriptionId: true,
+      status: true,
+      degradedSince: true,
+    },
+  });
+  const existingBySubscription =
+    existingByUser?.stripeSubscriptionId === subscription.id
+      ? null
+      : await prisma.billingSubscription.findUnique({
+          where: { stripeSubscriptionId: subscription.id },
+          select: {
+            status: true,
+            degradedSince: true,
+          },
+        });
+  const degradedSince = resolveDegradedSince({
+    status: subscription.status,
+    previousStatus: existingByUser?.status ?? existingBySubscription?.status ?? null,
+    previousDegradedSince: existingByUser?.degradedSince ?? existingBySubscription?.degradedSince ?? null,
+    now,
+  });
 
   const payload = {
     stripeSubscriptionId: subscription.id,
     stripeCustomerId,
     status: subscription.status,
+    degradedSince,
     priceId,
     currentPeriodStart: toDate(subscription.items.data[0]?.current_period_start),
     currentPeriodEnd: toDate(subscription.items.data[0]?.current_period_end),
@@ -104,11 +130,6 @@ async function upsertSubscriptionState(subscription: Stripe.Subscription, fallba
     trialEnd: toDate(subscription.trial_end),
     latestInvoiceId: latestInvoice,
   };
-
-  const existingByUser = await prisma.billingSubscription.findUnique({
-    where: { userId },
-    select: { stripeSubscriptionId: true },
-  });
 
   if (existingByUser) {
     await prisma.billingSubscription.update({
@@ -126,7 +147,7 @@ async function upsertSubscriptionState(subscription: Stripe.Subscription, fallba
     });
   }
 
-  if (!isBillingStatusActive(subscription.status)) {
+  if (shouldDisconnectForBillingStatus(subscription.status, degradedSince, now)) {
     await disconnectUserIntegrationsForBillingEnd(userId);
   }
 }
