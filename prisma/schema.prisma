@@ -25,6 +25,7 @@ model User {
   mlWebhookEvents       MlWebhookEvent[]
   items                 Item[]
   orders                Order[]
+  feedbackEntries       Feedback[]
   billingSubscription   BillingSubscription?
 }
 
@@ -197,5 +198,20 @@ model StripeWebhookEvent {
   eventType String
   createdAt DateTime @default(now())
 
+  @@index([createdAt])
+}
+
+model Feedback {
+  id        String   @id @default(cuid())
+  userId    String
+  category  String
+  message   String
+  pagePath  String?
+  userAgent String?
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@index([userId, createdAt])
+  @@index([category, createdAt])
   @@index([createdAt])
 }

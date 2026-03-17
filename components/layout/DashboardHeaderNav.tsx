@@ -33,6 +33,14 @@ export default function DashboardHeaderNav() {
           {link.label}
         </Link>
       ))}
+      {!isCurrentPath(pathname, "/settings/feedback") ? (
+        <Link
+          href={`/settings/feedback?from=${encodeURIComponent(pathname)}`}
+          className="inline-flex h-9 items-center border border-[var(--border-1)] bg-[var(--surface-2)] px-3 text-sm font-semibold text-[var(--text-1)] transition-all duration-150 hover:border-[var(--text-2)] hover:bg-[var(--surface-1)] active:translate-y-px active:scale-[0.99] active:bg-[var(--bg-0)]"
+        >
+          Feedback
+        </Link>
+      ) : null}
       <ThemeToggle />
       <form action="/api/auth/logout" method="post">
         <button
