@@ -13,14 +13,19 @@ const feedbackCategoryOptions: Array<{ value: FeedbackCategory; label: string }>
   { value: "general", label: "General" },
 ];
 
+const FEEDBACK_SUCCESS_COOLDOWN_MS = 15_000;
+
 export default function FeedbackSettingsCard() {
   const searchParams = useSearchParams();
   const [category, setCategory] = useState<FeedbackCategory>("bug");
   const [message, setMessage] = useState("");
   const [pagePath, setPagePath] = useState("");
+  const [website, setWebsite] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [cooldownUntil, setCooldownUntil] = useState<number | null>(null);
+  const [cooldownRemainingSeconds, setCooldownRemainingSeconds] = useState(0);
 
   useEffect(() => {
     const from = searchParams.get("from")?.trim();
@@ -41,6 +46,28 @@ export default function FeedbackSettingsCard() {
     return () => window.clearTimeout(timer);
   }, [success]);
 
+  useEffect(() => {
+    if (!cooldownUntil) {
+      setCooldownRemainingSeconds(0);
+      return;
+    }
+
+    const updateCooldown = () => {
+      const remainingMs = cooldownUntil - Date.now();
+      if (remainingMs <= 0) {
+        setCooldownUntil(null);
+        setCooldownRemainingSeconds(0);
+        return;
+      }
+
+      setCooldownRemainingSeconds(Math.ceil(remainingMs / 1000));
+    };
+
+    updateCooldown();
+    const timer = window.setInterval(updateCooldown, 1000);
+    return () => window.clearInterval(timer);
+  }, [cooldownUntil]);
+
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setSubmitting(true);
@@ -57,6 +84,7 @@ export default function FeedbackSettingsCard() {
           category,
           message,
           pagePath,
+          website,
         }),
       });
 
@@ -71,12 +99,16 @@ export default function FeedbackSettingsCard() {
 
       setMessage("");
       setSuccess("Feedback submitted.");
+      setCooldownUntil(Date.now() + FEEDBACK_SUCCESS_COOLDOWN_MS);
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : "failed_to_submit_feedback");
     } finally {
       setSubmitting(false);
     }
   }
+
+  const isCooldownActive = cooldownUntil !== null && cooldownRemainingSeconds > 0;
+  const isSubmitDisabled = submitting || isCooldownActive || message.trim().length < 10;
 
   return (
     <div className="space-y-4">
@@ -133,14 +165,30 @@ export default function FeedbackSettingsCard() {
             />
           </label>
 
+          <label className="hidden" aria-hidden="true">
+            <span>Website</span>
+            <input
+              tabIndex={-1}
+              autoComplete="off"
+              value={website}
+              onChange={(event) => setWebsite(event.target.value)}
+              disabled={submitting}
+              name="website"
+            />
+          </label>
+
           <div className="flex items-center justify-between gap-3">
             <p className="text-xs text-[var(--text-3)]">Minimum 10 characters.</p>
             <button
               type="submit"
-              disabled={submitting || message.trim().length < 10}
+              disabled={isSubmitDisabled}
               className="inline-flex h-11 items-center border border-[var(--border-1)] bg-[var(--surface-2)] px-4 text-sm font-semibold text-[var(--text-1)] transition-all duration-150 hover:bg-[var(--surface-1)] disabled:cursor-not-allowed disabled:text-[var(--text-3)]"
             >
-              {submitting ? "Submitting..." : "Submit feedback"}
+              {submitting
+                ? "Submitting..."
+                : isCooldownActive
+                  ? `Wait ${cooldownRemainingSeconds}s`
+                  : "Submit feedback"}
             </button>
           </div>
 
