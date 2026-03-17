@@ -11,7 +11,7 @@ export default function SettingsLayout({ children }: { children: ReactNode }) {
           Operational settings
         </h2>
         <p className="text-sm text-[var(--text-2)]">
-          Configure delivery, alerts, billing, and account connections from one workspace.
+          Configure delivery, alerts, billing, account connections, and feedback from one workspace.
         </p>
       </section>
 

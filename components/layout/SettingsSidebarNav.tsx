@@ -29,6 +29,11 @@ const settingsNavItems = [
     label: "Profile",
     description: "Account identity and connection info",
   },
+  {
+    href: "/settings/feedback",
+    label: "Feedback",
+    description: "Report bugs and share product ideas",
+  },
 ];
 
 export default function SettingsSidebarNav() {
