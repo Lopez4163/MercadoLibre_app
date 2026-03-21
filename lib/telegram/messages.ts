@@ -107,6 +107,16 @@ export function buildTelegramConnectionExpiredMessage() {
   });
 }
 
+export function buildTelegramPrivateChatRequiredMessage() {
+  return buildCompactAlertMessage({
+    tag: "PRIVATE CHAT REQUIRED",
+    order: "-",
+    items: "-",
+    total: "-",
+    status: "Open a direct chat with the bot and run /start there",
+  });
+}
+
 export function buildTelegramTestPingMessage() {
   return buildCompactAlertMessage({
     tag: "CHANNEL HEALTH",
