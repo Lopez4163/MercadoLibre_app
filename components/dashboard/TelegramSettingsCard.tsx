@@ -7,6 +7,34 @@ type TelegramSettingsCardProps = {
   initialHasBillingAccess?: boolean | null;
 };
 
+function telegramErrorLabel(value: string) {
+  if (value === "subscription_required") {
+    return "Se requiere una suscripcion activa.";
+  }
+  if (value === "failed_to_load_status") {
+    return "No se pudo cargar el estado de Telegram.";
+  }
+  if (value === "failed_to_create_connect_link") {
+    return "No se pudo crear el enlace de conexion.";
+  }
+  if (value === "missing TELEGRAM_BOT_USERNAME") {
+    return "Falta configurar TELEGRAM_BOT_USERNAME.";
+  }
+  if (value === "missing_connect_url") {
+    return "No se recibio la URL de conexion.";
+  }
+  if (value === "failed_to_connect") {
+    return "No se pudo completar la conexion con Telegram.";
+  }
+  if (value === "failed_to_disconnect") {
+    return "No se pudo desconectar Telegram.";
+  }
+  if (value === "failed_to_send_test_ping") {
+    return "No se pudo enviar la prueba de Telegram.";
+  }
+  return value;
+}
+
 export default function TelegramSettingsCard({ initialHasBillingAccess = null }: TelegramSettingsCardProps) {
   const [telegramConnected, setTelegramConnected] = useState(false);
   const [telegramLoading, setTelegramLoading] = useState(true);
@@ -49,7 +77,8 @@ export default function TelegramSettingsCard({ initialHasBillingAccess = null }:
     } catch (error) {
       setHasBillingAccess(false);
       if (!quiet) {
-        setTelegramError(error instanceof Error ? error.message : "failed_to_load_status");
+        const rawMessage = error instanceof Error ? error.message : "failed_to_load_status";
+        setTelegramError(telegramErrorLabel(rawMessage));
       }
     } finally {
       if (!quiet) {
@@ -151,9 +180,10 @@ export default function TelegramSettingsCard({ initialHasBillingAccess = null }:
         }
       }
 
-      setTelegramSuccess("Aun esperando Telegram. Pulsa Actualizar despues de presionar Start en el chat del bot.");
+      setTelegramSuccess("Aun esperando Telegram. Pulsa Actualizar despues de enviar /start en el chat del bot.");
     } catch (error) {
-      setTelegramError(error instanceof Error ? error.message : "failed_to_connect");
+      const rawMessage = error instanceof Error ? error.message : "failed_to_connect";
+      setTelegramError(telegramErrorLabel(rawMessage));
     } finally {
       setTelegramActionLoading(false);
     }
@@ -177,7 +207,8 @@ export default function TelegramSettingsCard({ initialHasBillingAccess = null }:
       await loadTelegramStatus();
       setTelegramSuccess("Telegram desconectado.");
     } catch (error) {
-      setTelegramError(error instanceof Error ? error.message : "failed_to_disconnect");
+      const rawMessage = error instanceof Error ? error.message : "failed_to_disconnect";
+      setTelegramError(telegramErrorLabel(rawMessage));
     } finally {
       setTelegramActionLoading(false);
     }
@@ -203,7 +234,8 @@ export default function TelegramSettingsCard({ initialHasBillingAccess = null }:
 
       setTelegramSuccess("Prueba enviada.");
     } catch (error) {
-      setTelegramError(error instanceof Error ? error.message : "failed_to_send_test_ping");
+      const rawMessage = error instanceof Error ? error.message : "failed_to_send_test_ping";
+      setTelegramError(telegramErrorLabel(rawMessage));
     } finally {
       setTelegramActionLoading(false);
     }

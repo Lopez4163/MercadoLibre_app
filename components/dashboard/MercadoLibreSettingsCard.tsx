@@ -2,6 +2,13 @@
 
 import { useState } from "react";
 
+function mlDisconnectErrorLabel(value: string) {
+  if (value === "failed_to_disconnect") {
+    return "No se pudo desconectar Mercado Libre.";
+  }
+  return value;
+}
+
 export default function MercadoLibreSettingsCard() {
   const [disconnecting, setDisconnecting] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -23,7 +30,8 @@ export default function MercadoLibreSettingsCard() {
 
       window.location.assign("/login?disconnected=mercadolibre");
     } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : "failed_to_disconnect");
+      const rawMessage = nextError instanceof Error ? nextError.message : "failed_to_disconnect";
+      setError(mlDisconnectErrorLabel(rawMessage));
       setDisconnecting(false);
     }
   }

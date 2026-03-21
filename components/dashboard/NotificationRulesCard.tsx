@@ -23,6 +23,22 @@ type NotificationRulesCardProps = {
   initialHasBillingAccess?: boolean | null;
 };
 
+function notificationErrorLabel(value: string) {
+  if (value === "subscription_required") {
+    return "Se requiere una suscripcion activa.";
+  }
+  if (value === "failed_to_load_settings") {
+    return "No se pudo cargar la configuracion de notificaciones.";
+  }
+  if (value === "failed_to_save_settings") {
+    return "No se pudo guardar la configuracion.";
+  }
+  if (value === "failed_to_send_test") {
+    return "No se pudo enviar la prueba.";
+  }
+  return value;
+}
+
 export default function NotificationRulesCard({ initialHasBillingAccess = null }: NotificationRulesCardProps) {
   const [notifyEverySale, setNotifyEverySale] = useState(false);
   const [notifyLowStock, setNotifyLowStock] = useState(true);
@@ -102,7 +118,8 @@ export default function NotificationRulesCard({ initialHasBillingAccess = null }
       setHasBillingAccess(true);
     } catch (error) {
       setHasBillingAccess(false);
-      setSettingsError(error instanceof Error ? error.message : "failed_to_load_settings");
+      const rawMessage = error instanceof Error ? error.message : "failed_to_load_settings";
+      setSettingsError(notificationErrorLabel(rawMessage));
     } finally {
       setSettingsLoading(false);
     }
@@ -157,7 +174,8 @@ export default function NotificationRulesCard({ initialHasBillingAccess = null }
       setSavedSettings(nextSettings);
       setSettingsSuccess("Configuracion de notificaciones guardada.");
     } catch (error) {
-      setSettingsError(error instanceof Error ? error.message : "failed_to_save_settings");
+      const rawMessage = error instanceof Error ? error.message : "failed_to_save_settings";
+      setSettingsError(notificationErrorLabel(rawMessage));
     } finally {
       setSettingsSaving(false);
     }
@@ -185,7 +203,8 @@ export default function NotificationRulesCard({ initialHasBillingAccess = null }
       const selectedOption = notificationTestOptions.find((option) => option.value === type);
       setTestSuccess(`${selectedOption?.label ?? "Prueba"} enviada.`);
     } catch (error) {
-      setTestError(error instanceof Error ? error.message : "failed_to_send_test");
+      const rawMessage = error instanceof Error ? error.message : "failed_to_send_test";
+      setTestError(notificationErrorLabel(rawMessage));
     } finally {
       setTestRunningType(null);
     }

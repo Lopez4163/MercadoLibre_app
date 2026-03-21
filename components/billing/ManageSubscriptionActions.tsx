@@ -19,6 +19,16 @@ function canManageSubscription(status: string | null) {
   return status === "active" || status === "trialing" || status === "past_due" || status === "unpaid";
 }
 
+function billingActionErrorLabel(value: string) {
+  if (value === "billing_action_failed") {
+    return "No se pudo actualizar la suscripcion.";
+  }
+  if (value === "unknown_error") {
+    return "Ocurrio un error inesperado.";
+  }
+  return value;
+}
+
 export default function ManageSubscriptionActions(props: ManageSubscriptionActionsProps) {
   const [status, setStatus] = useState<string | null>(props.initialStatus);
   const [cancelAtPeriodEnd, setCancelAtPeriodEnd] = useState(props.initialCancelAtPeriodEnd);
@@ -54,7 +64,8 @@ export default function ManageSubscriptionActions(props: ManageSubscriptionActio
 
       setMessage(mode === "cancel" ? "Cancelacion programada." : "Cancelacion removida. La suscripcion se renovara.");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "unknown_error");
+      const rawMessage = err instanceof Error ? err.message : "unknown_error";
+      setError(billingActionErrorLabel(rawMessage));
     } finally {
       setLoading(null);
     }

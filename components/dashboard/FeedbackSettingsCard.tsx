@@ -15,6 +15,13 @@ const feedbackCategoryOptions: Array<{ value: FeedbackCategory; label: string }>
 
 const FEEDBACK_SUCCESS_COOLDOWN_MS = 15_000;
 
+function feedbackErrorLabel(value: string) {
+  if (value === "failed_to_submit_feedback") {
+    return "No se pudo enviar el comentario.";
+  }
+  return value;
+}
+
 export default function FeedbackSettingsCard() {
   const searchParams = useSearchParams();
   const [category, setCategory] = useState<FeedbackCategory>("bug");
@@ -101,7 +108,8 @@ export default function FeedbackSettingsCard() {
       setSuccess("Comentario enviado.");
       setCooldownUntil(Date.now() + FEEDBACK_SUCCESS_COOLDOWN_MS);
     } catch (submitError) {
-      setError(submitError instanceof Error ? submitError.message : "failed_to_submit_feedback");
+      const rawMessage = submitError instanceof Error ? submitError.message : "failed_to_submit_feedback";
+      setError(feedbackErrorLabel(rawMessage));
     } finally {
       setSubmitting(false);
     }
