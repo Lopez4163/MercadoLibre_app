@@ -2,7 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSessionUserIdFromRequest } from "../../../../../../lib/auth/session";
 import { getUserBillingEntitlement } from "../../../../../../lib/billing/entitlements";
 import { prisma } from "../../../../../../lib/db/prisma";
-import { sendOrderSoldNotification } from "../../../../../../lib/notifications/sender";
+import {
+  sendOrderLabelReadyNotification,
+  sendOrderSoldNotification,
+} from "../../../../../../lib/notifications/sender";
 import {
   buildRateLimitHeaders,
   buildRateLimitKey,
@@ -21,6 +24,24 @@ const RETRY_TELEGRAM_RATE_LIMIT = {
 type RouteContext = {
   params: Promise<{ orderId: string }>;
 };
+
+type RetryableEventType = "order_sold" | "label_ready";
+
+function isRetryableEventType(value: string): value is RetryableEventType {
+  return value === "order_sold" || value === "label_ready";
+}
+
+function readStringRecord(value: unknown) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return null;
+  }
+
+  return value as Record<string, unknown>;
+}
+
+function readOptionalString(value: unknown) {
+  return typeof value === "string" ? value : undefined;
+}
 
 export async function POST(request: NextRequest, context: RouteContext) {
   const sessionUserId = getSessionUserIdFromRequest(request);
@@ -102,6 +123,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
         select: {
           eventType: true,
           status: true,
+          payload: true,
         },
       },
     },
@@ -122,31 +144,62 @@ export async function POST(request: NextRequest, context: RouteContext) {
     );
   }
 
-  if (latestNotification.eventType !== "order_sold") {
+  if (!isRetryableEventType(latestNotification.eventType)) {
     return NextResponse.json(
       { ok: false, error: "unsupported_retry_event" },
       { status: 400, headers: buildRateLimitHeaders(rateLimitDecision) },
     );
   }
 
+  const eventType: RetryableEventType = latestNotification.eventType;
+  const retryPayload = readStringRecord(latestNotification.payload);
+
   try {
-    const result = await sendOrderSoldNotification({
-      userId: sessionUserId,
-      orderId: order.mlOrderId,
-      status: order.status,
-      totalAmount: order.totalAmount === null ? undefined : Number(order.totalAmount),
-      lines: order.lines.map((line) => ({
-        itemId: line.mlItemId,
-        title: line.title,
-        quantity: line.quantity,
-      })),
-    });
+    let result: Awaited<
+      ReturnType<typeof sendOrderSoldNotification> | ReturnType<typeof sendOrderLabelReadyNotification>
+    > | null = null;
+
+    if (eventType === "order_sold") {
+      result = await sendOrderSoldNotification({
+        userId: sessionUserId,
+        orderId: order.mlOrderId,
+        status: order.status,
+        totalAmount: order.totalAmount === null ? undefined : Number(order.totalAmount),
+        lines: order.lines.map((line) => ({
+          itemId: line.mlItemId,
+          title: line.title,
+          quantity: line.quantity,
+        })),
+      });
+    } else {
+      const shipmentId = readOptionalString(retryPayload?.shipmentId);
+      if (shipmentId) {
+        result = await sendOrderLabelReadyNotification({
+          userId: sessionUserId,
+          orderId: order.mlOrderId,
+          shipmentId,
+          destinationCity: readOptionalString(retryPayload?.destinationCity),
+          saleType: readOptionalString(retryPayload?.saleType),
+          lines: order.lines.map((line) => ({
+            title: line.title,
+            quantity: line.quantity,
+          })),
+        });
+      }
+    }
+
+    if (!result) {
+      return NextResponse.json(
+        { ok: false, error: "missing_retry_context" },
+        { status: 400, headers: buildRateLimitHeaders(rateLimitDecision) },
+      );
+    }
 
     await prisma.orderNotificationLog.create({
       data: {
         orderId: order.id,
         channel: "telegram",
-        eventType: "order_sold",
+        eventType,
         status: result.sent ? "sent" : "failed",
         reason: result.sent ? null : result.reason,
         payload: {
@@ -177,7 +230,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
       data: {
         orderId: order.id,
         channel: "telegram",
-        eventType: "order_sold",
+        eventType,
         status: "failed",
         reason: "telegram_send_failed",
         payload: {
