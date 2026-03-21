@@ -16,6 +16,8 @@
     "security:check-env": "node scripts/security-env-check.mjs",
     "security:check-webhooks": "node scripts/security-webhook-check.mjs",
     "security:smoke-staging": "node scripts/security-smoke-staging.mjs",
+    "telegram:webhook:check": "node scripts/telegram-webhook-sync.mjs",
+    "telegram:webhook:register": "node scripts/telegram-webhook-sync.mjs --apply",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio"
