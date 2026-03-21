@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSessionUserIdFromRequest } from "../../../../../../lib/auth/session";
 import { getUserBillingEntitlement } from "../../../../../../lib/billing/entitlements";
 import { prisma } from "../../../../../../lib/db/prisma";
+import type { MlOrderSaleType } from "../../../../../../lib/ml/api";
 import {
   sendOrderLabelReadyNotification,
   sendOrderSoldNotification,
@@ -41,6 +42,14 @@ function readStringRecord(value: unknown) {
 
 function readOptionalString(value: unknown) {
   return typeof value === "string" ? value : undefined;
+}
+
+function readOptionalSaleType(value: unknown): MlOrderSaleType | undefined {
+  if (value === "flex" || value === "full" || value === "other") {
+    return value;
+  }
+
+  return undefined;
 }
 
 export async function POST(request: NextRequest, context: RouteContext) {
@@ -179,7 +188,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
           orderId: order.mlOrderId,
           shipmentId,
           destinationCity: readOptionalString(retryPayload?.destinationCity),
-          saleType: readOptionalString(retryPayload?.saleType),
+          saleType: readOptionalSaleType(retryPayload?.saleType),
           lines: order.lines.map((line) => ({
             title: line.title,
             quantity: line.quantity,

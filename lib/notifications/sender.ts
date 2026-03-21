@@ -9,7 +9,7 @@ import {
 import {
   buildLowStockMessage,
   buildOrderLabelReadyMessage,
-  buildOrderSoldMessage,
+  buildOrderSoldMessageWithOverflow,
   buildOutOfStockMessage,
 } from "../telegram/messages";
 
@@ -95,7 +95,7 @@ export async function sendOrderSoldNotification(input: OrderSoldNotificationInpu
     return { sent: false as const, reason: "telegram_not_connected" as const };
   }
 
-  const message = buildOrderSoldMessage({
+  const messageContent = buildOrderSoldMessageWithOverflow({
     orderId: input.orderId,
     status: input.status,
     totalAmount: input.totalAmount,
@@ -111,8 +111,12 @@ export async function sendOrderSoldNotification(input: OrderSoldNotificationInpu
           fileName: input.labelDocument.fileName,
           contentType: input.labelDocument.contentType,
         },
-        { caption: message },
+        { caption: messageContent.primaryMessage },
       );
+
+      for (const overflowMessage of messageContent.overflowMessages) {
+        await sendTelegramMessage(account.chatId, overflowMessage);
+      }
       return { sent: true as const };
     } catch (error) {
       const reason = mapTelegramDeliveryFailureReason(error);
@@ -138,9 +142,14 @@ export async function sendOrderSoldNotification(input: OrderSoldNotificationInpu
   }
 
   try {
-    await sendTelegramMessage(account.chatId, message, {
+    await sendTelegramMessage(account.chatId, messageContent.primaryMessage, {
       inlineButtons: input.inlineButtons,
     });
+
+    for (const overflowMessage of messageContent.overflowMessages) {
+      await sendTelegramMessage(account.chatId, overflowMessage);
+    }
+
     return { sent: true as const };
   } catch (error) {
     return handleTelegramDeliveryFailure({

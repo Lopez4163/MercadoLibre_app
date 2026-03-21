@@ -48,43 +48,73 @@ function buildCompactAlertMessage(input: {
   ].join("\n");
 }
 
-function appendLineItemsSection(
+const PRIMARY_MESSAGE_CHAR_LIMIT = 980;
+const FOLLOW_UP_MESSAGE_CHAR_LIMIT = 3500;
+
+type LineItemInput = {
+  title: string;
+  quantity: number;
+};
+
+function buildLineItemsMessages(
   baseMessage: string,
-  lines?: Array<{ title: string; quantity: number }>,
+  lines?: Array<LineItemInput>,
 ) {
   if (!lines || lines.length === 0) {
-    return baseMessage;
+    return {
+      primaryMessage: baseMessage,
+      overflowMessages: [] as string[],
+    };
   }
 
-  const maxVisibleLines = 5;
-  const visible = lines.slice(0, maxVisibleLines);
-  const hiddenCount = Math.max(0, lines.length - visible.length);
-  const lineSection = [
-    "",
-    "Line items:",
-    ...visible.map((line) => `- ${line.quantity} x ${line.title}`),
-    hiddenCount > 0 ? `- +${hiddenCount} more` : null,
-  ]
-    .filter((line): line is string => line !== null)
-    .join("\n");
+  const renderedLines = lines.map((line) => `- ${line.quantity} x ${line.title}`);
+  const primaryPrefix = [baseMessage, "", "Line items:"].join("\n");
 
-  // Keep Telegram document caption safely under the practical limit.
-  const combined = `${baseMessage}${lineSection}`;
-  const maxCaptionChars = 980;
-  if (combined.length <= maxCaptionChars) {
-    return combined;
-  }
-
-  const clippedLines: string[] = [];
-  for (const line of visible.map((entry) => `- ${entry.quantity} x ${entry.title}`)) {
-    const candidate = [baseMessage, "", "Line items:", ...clippedLines, line].join("\n");
-    if (candidate.length > maxCaptionChars) {
+  const primaryLines: string[] = [];
+  for (const line of renderedLines) {
+    const candidate = [primaryPrefix, ...primaryLines, line].join("\n");
+    if (candidate.length > PRIMARY_MESSAGE_CHAR_LIMIT) {
       break;
     }
-    clippedLines.push(line);
+    primaryLines.push(line);
   }
 
-  return [baseMessage, "", "Line items:", ...clippedLines, "- +more"].join("\n");
+  const remainingLines = renderedLines.slice(primaryLines.length);
+  const primaryMessage =
+    remainingLines.length === 0
+      ? [primaryPrefix, ...primaryLines].join("\n")
+      : [primaryPrefix, ...primaryLines, `- +${remainingLines.length} more`].join("\n");
+
+  if (remainingLines.length === 0) {
+    return {
+      primaryMessage,
+      overflowMessages: [] as string[],
+    };
+  }
+
+  const overflowMessages: string[] = [];
+  let chunk: string[] = [];
+
+  for (const line of remainingLines) {
+    const prefix = `More line items (${overflowMessages.length + 1}):`;
+    const candidate = [prefix, ...chunk, line].join("\n");
+    if (candidate.length > FOLLOW_UP_MESSAGE_CHAR_LIMIT && chunk.length > 0) {
+      overflowMessages.push([prefix, ...chunk].join("\n"));
+      chunk = [line];
+      continue;
+    }
+    chunk.push(line);
+  }
+
+  if (chunk.length > 0) {
+    const prefix = `More line items (${overflowMessages.length + 1}):`;
+    overflowMessages.push([prefix, ...chunk].join("\n"));
+  }
+
+  return {
+    primaryMessage,
+    overflowMessages,
+  };
 }
 
 export function buildTelegramConnectedMessage() {
@@ -164,7 +194,30 @@ export function buildOrderSoldMessage(input: {
     status: formatStatusLabel(input.status),
   });
 
-  return appendLineItemsSection(base, input.lines);
+  return buildLineItemsMessages(base, input.lines).primaryMessage;
+}
+
+export function buildOrderSoldMessageWithOverflow(input: {
+  orderId: string;
+  status?: string;
+  totalAmount?: number;
+  lines: Array<{
+    itemId: string;
+    title: string;
+    quantity: number;
+  }>;
+}) {
+  const totalUnits = input.lines.reduce((sum, line) => sum + line.quantity, 0);
+
+  const base = buildCompactAlertMessage({
+    tag: "✅ ORDER SOLD",
+    order: input.orderId,
+    items: String(totalUnits),
+    total: formatCurrencyCOP(input.totalAmount),
+    status: formatStatusLabel(input.status),
+  });
+
+  return buildLineItemsMessages(base, input.lines);
 }
 
 export function buildOrderLabelReadyMessage(input: {
@@ -194,7 +247,7 @@ export function buildOrderLabelReadyMessage(input: {
     `Status: ${saleTypeLabel}`,
   ].join("\n");
 
-  return appendLineItemsSection(base, input.lines);
+  return buildLineItemsMessages(base, input.lines).primaryMessage;
 }
 
 export function buildOutOfStockMessage(input: {
