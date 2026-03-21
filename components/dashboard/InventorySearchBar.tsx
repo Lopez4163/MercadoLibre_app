@@ -18,7 +18,7 @@ export default function InventorySearchBar({ query, onQueryChange, disabled = fa
         value={query}
         onChange={(event) => onQueryChange(event.target.value)}
         disabled={disabled}
-        placeholder="Escribe el nombre de un item..."
+        placeholder="Escribe el nombre de un articulo..."
         className="h-9 w-full border border-[var(--border-1)] bg-[var(--bg-0)] px-3 text-sm text-[var(--text-1)] placeholder:text-[var(--text-3)] focus:outline-none disabled:cursor-not-allowed disabled:opacity-60"
       />
     </div>

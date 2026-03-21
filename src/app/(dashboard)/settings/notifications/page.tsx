@@ -29,7 +29,7 @@ export default async function SettingsNotificationsPage() {
           </summary>
           <ul className="space-y-2 border-t border-[var(--border-1)] bg-[var(--surface-2)] px-4 py-3 text-sm text-[var(--text-2)]">
             <li>Las alertas de venta se envian cuando un nuevo pedido coincide con tus reglas.</li>
-            <li>Las alertas de agotado se disparan cuando un item pasa de stock positivo a cero.</li>
+            <li>Las alertas de agotado se disparan cuando un articulo pasa de stock positivo a cero.</li>
             <li>Las alertas de bajo stock se disparan cuando la cantidad disponible baja de tu umbral.</li>
           </ul>
         </details>

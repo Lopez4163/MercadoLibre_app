@@ -15,6 +15,38 @@ type StartFreeTrialButtonProps = {
   autoStart?: boolean;
 };
 
+function billingStatusLabel(status: string | null | undefined) {
+  if (status === "active") {
+    return "activa";
+  }
+  if (status === "trialing") {
+    return "en prueba";
+  }
+  if (status === "past_due") {
+    return "con pago pendiente";
+  }
+  if (status === "unpaid") {
+    return "impaga";
+  }
+  if (status === "canceled") {
+    return "cancelada";
+  }
+  return "activa";
+}
+
+function checkoutErrorLabel(value: string) {
+  if (value === "checkout_failed") {
+    return "No se pudo iniciar el checkout.";
+  }
+  if (value === "missing_checkout_url") {
+    return "No se recibio la URL de checkout.";
+  }
+  if (value === "unknown_error") {
+    return "Ocurrio un error inesperado.";
+  }
+  return value;
+}
+
 export default function StartFreeTrialButton(props: StartFreeTrialButtonProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -38,7 +70,7 @@ export default function StartFreeTrialButton(props: StartFreeTrialButtonProps) {
       }
 
       if (data.alreadyEntitled) {
-        setMessage(`Tu suscripcion ya esta ${data.status ?? "active"}.`);
+        setMessage(`Tu suscripcion ya esta ${billingStatusLabel(data.status)}.`);
         return;
       }
 
@@ -49,7 +81,7 @@ export default function StartFreeTrialButton(props: StartFreeTrialButtonProps) {
       window.location.assign(data.url);
     } catch (err) {
       const messageText = err instanceof Error ? err.message : "unknown_error";
-      setError(messageText);
+      setError(checkoutErrorLabel(messageText));
     } finally {
       setLoading(false);
     }

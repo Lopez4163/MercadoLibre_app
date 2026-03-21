@@ -279,7 +279,7 @@ export default function InventoryTable({
             {visibleItems.length === 0 && (
               <tr>
                 <td className="px-4 py-6 text-[var(--text-3)]" colSpan={5}>
-                  No se encontraron items.
+                  No se encontraron articulos.
                 </td>
               </tr>
             )}

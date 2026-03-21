@@ -214,7 +214,7 @@ export default function NotificationRulesCard({ initialHasBillingAccess = null }
         >
           <div className="divide-y divide-[var(--border-1)] border border-[var(--border-1)] bg-[var(--bg-0)]">
             <div className="flex items-center justify-between px-3 py-3 text-sm">
-              <span className="text-[var(--text-1)]">Notificar cada item vendido</span>
+              <span className="text-[var(--text-1)]">Notificar cada articulo vendido</span>
               <button
                 type="button"
                 role="switch"

@@ -28,7 +28,7 @@ export default async function ConnectMercadoLibrePage() {
           <p className="mt-3 text-[var(--text-2)]">
             {connectedUser
               ? "Tu cuenta de Mercado Libre ya esta vinculada. Puedes abrir el panel o reconectar si hace falta."
-              : "Inicia sesion y autoriza Mercado Libre para sincronizar items, detectar ventas y enviar alertas por Telegram."}
+              : "Inicia sesion y autoriza Mercado Libre para sincronizar articulos, detectar ventas y enviar alertas por Telegram."}
           </p>
 
           {connectedUser ? (
