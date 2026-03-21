@@ -41,10 +41,10 @@ export default function ThemeToggle() {
       type="button"
       onClick={handleToggle}
       className="inline-flex h-9 items-center justify-center border border-[var(--border-1)] bg-[var(--surface-2)] px-3 text-xs font-semibold uppercase tracking-wide text-[var(--text-1)] hover:bg-[var(--surface-1)]"
-      aria-label="Toggle color theme"
-      title={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
+      aria-label="Cambiar tema de color"
+      title={`Cambiar a modo ${theme === "dark" ? "claro" : "oscuro"}`}
     >
-      {theme === "dark" ? "Light" : "Dark"}
+      {theme === "dark" ? "Claro" : "Oscuro"}
     </button>
   );
 }

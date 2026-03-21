@@ -37,6 +37,25 @@ function storeInitial(user: { mlNickname: string | null; email: string }) {
   return first ? first.toUpperCase() : "?";
 }
 
+function billingStatusLabel(status: string | null | undefined) {
+  if (status === "active") {
+    return "activa";
+  }
+  if (status === "trialing") {
+    return "en prueba";
+  }
+  if (status === "past_due") {
+    return "pago pendiente";
+  }
+  if (status === "unpaid") {
+    return "impaga";
+  }
+  if (status === "canceled") {
+    return "cancelada";
+  }
+  return "sin estado";
+}
+
 export default async function SettingsProfilePage() {
   const cookieStore = await cookies();
   const sessionUserId = getSessionUserIdFromCookieStore(cookieStore);
@@ -115,7 +134,7 @@ export default async function SettingsProfilePage() {
         <article className="border border-[var(--border-1)] bg-[var(--surface-1)] p-4">
           <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-3)]">Facturacion</p>
           <p className="mt-3 text-base font-semibold capitalize text-[var(--text-1)]">
-            {user.billingSubscription?.status ?? "none"}
+            {billingStatusLabel(user.billingSubscription?.status)}
           </p>
         </article>
       </section>
@@ -136,7 +155,7 @@ export default async function SettingsProfilePage() {
             </dd>
           </div>
           <div className="border border-[var(--border-1)] bg-[var(--bg-0)] px-3 py-3">
-            <dt className="text-[var(--text-3)]">ML User ID</dt>
+            <dt className="text-[var(--text-3)]">ID de usuario ML</dt>
             <dd className="mt-1 overflow-x-auto whitespace-nowrap font-medium text-[var(--text-1)]">
               {user.mlUserId}
             </dd>
@@ -182,7 +201,7 @@ export default async function SettingsProfilePage() {
           <div>
             <dt className="text-[var(--text-3)]">Estado de suscripcion</dt>
             <dd className="mt-1 font-medium capitalize text-[var(--text-1)]">
-              {user.billingSubscription?.status ?? "none"}
+              {billingStatusLabel(user.billingSubscription?.status)}
             </dd>
           </div>
           <div>

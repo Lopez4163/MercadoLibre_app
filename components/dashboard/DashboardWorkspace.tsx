@@ -207,6 +207,25 @@ function topSellerRankTone(rank: number) {
   return "border-[var(--border-1)] bg-[var(--surface-2)] text-[var(--text-2)]";
 }
 
+function billingStatusLabel(status: string) {
+  if (status === "active") {
+    return "activa";
+  }
+  if (status === "trialing") {
+    return "en prueba";
+  }
+  if (status === "past_due") {
+    return "pago pendiente";
+  }
+  if (status === "unpaid") {
+    return "impaga";
+  }
+  if (status === "canceled") {
+    return "cancelada";
+  }
+  return "sin estado";
+}
+
 const motionEase = [0.22, 1, 0.36, 1] as const;
 
 const layoutStagger = {
@@ -711,7 +730,7 @@ export default function DashboardWorkspace({
           <div className="inline-flex items-center gap-2 border border-[var(--border-1)] bg-[var(--surface-1)] px-3 py-2">
             <span className={`h-2 w-2 ${billingHasAccess ? "bg-emerald-400" : "bg-red-400"}`} />
             <span className="text-xs font-semibold uppercase tracking-wide text-[var(--text-3)]">
-              Facturacion {billingStatus}
+              Facturacion {billingStatusLabel(billingStatus)}
             </span>
           </div>
         </div>
@@ -913,7 +932,7 @@ export default function DashboardWorkspace({
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--text-3)]">
-                    Top 3 mas vendidos
+                    Los 3 mas vendidos
                   </p>
                   <h3 className="mt-2 text-lg font-semibold tracking-tight text-[var(--text-1)]">
                     Resumen por unidades vendidas
@@ -1251,7 +1270,7 @@ export default function DashboardWorkspace({
                 <thead className="bg-[var(--surface-2)]">
                   <tr>
                     <th className="px-3 py-3 text-xs font-semibold uppercase tracking-wide text-[var(--text-3)]">Pedido</th>
-                    <th className="px-3 py-3 text-xs font-semibold uppercase tracking-wide text-[var(--text-3)]">Items</th>
+                    <th className="px-3 py-3 text-xs font-semibold uppercase tracking-wide text-[var(--text-3)]">Articulos</th>
                     <th className="px-3 py-3 text-xs font-semibold uppercase tracking-wide text-[var(--text-3)]">Cant.</th>
                     <th className="px-3 py-3 text-xs font-semibold uppercase tracking-wide text-[var(--text-3)]">Creado</th>
                     <th className="px-3 py-3 text-xs font-semibold uppercase tracking-wide text-[var(--text-3)]">Estado</th>
@@ -1286,7 +1305,7 @@ export default function DashboardWorkspace({
                           </td>
                           <td className="px-3 py-3 align-top">
                             {order.lines.length === 0 ? (
-                              <p className="text-sm text-[var(--text-3)]">N/A</p>
+                              <p className="text-sm text-[var(--text-3)]">No aplica</p>
                             ) : (
                               <div className="space-y-1">
                                 {order.lines.slice(0, 2).map((line) => (
@@ -1483,7 +1502,7 @@ export default function DashboardWorkspace({
           <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1.25fr)_minmax(320px,0.75fr)]">
             <article className="h-fit self-start overflow-hidden border border-[var(--border-1)] bg-[linear-gradient(135deg,color-mix(in_srgb,var(--accent)_18%,transparent),transparent_55%),var(--surface-1)] p-6">
               <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--text-3)]">
-                Top 3 mas vendidos
+                Los 3 mas vendidos
               </p>
               <h3 className="mt-2 text-2xl font-semibold tracking-tight text-[var(--text-1)]">
                 Productos lideres por unidades vendidas

@@ -43,7 +43,7 @@ export default function HomePage() {
               </div>
               <div className="border border-[var(--border-1)] bg-[var(--surface-1)] p-4">
                 <p className="text-xs uppercase tracking-[0.2em] text-[var(--text-3)]">Configuracion</p>
-                <p className="mt-2 text-2xl font-semibold text-[var(--text-1)]">3 steps</p>
+                <p className="mt-2 text-2xl font-semibold text-[var(--text-1)]">3 pasos</p>
               </div>
             </div>
           </div>

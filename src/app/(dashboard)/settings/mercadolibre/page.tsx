@@ -55,7 +55,7 @@ export default async function SettingsMercadoLibrePage() {
             <dd className="mt-1 font-medium text-[var(--text-1)]">{mlConnected ? "Conectado" : "Desconectado"}</dd>
           </div>
           <div>
-            <dt className="text-[var(--text-3)]">ML User ID</dt>
+            <dt className="text-[var(--text-3)]">ID de usuario ML</dt>
             <dd className="mt-1 font-medium text-[var(--text-1)]">{user.mlUserId}</dd>
           </div>
           <div>

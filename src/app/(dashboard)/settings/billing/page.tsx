@@ -34,6 +34,25 @@ function statusTone(status: string | null) {
   return "text-[var(--text-3)]";
 }
 
+function statusLabel(status: string | null) {
+  if (status === "active") {
+    return "activa";
+  }
+  if (status === "trialing") {
+    return "en prueba";
+  }
+  if (status === "past_due") {
+    return "pago pendiente";
+  }
+  if (status === "unpaid") {
+    return "impaga";
+  }
+  if (status === "canceled") {
+    return "cancelada";
+  }
+  return "sin estado";
+}
+
 type BillingSettingsPageProps = {
   searchParams?: Promise<{ intent?: string | string[] }>;
 };
@@ -62,7 +81,7 @@ export default async function BillingSettingsPage({ searchParams }: BillingSetti
     getUserBillingEntitlement(userId),
   ]);
 
-  const billingStatus = subscription?.status ?? "none";
+  const billingStatus = statusLabel(subscription?.status ?? null);
   const showTrialEnds = subscription?.status === "trialing";
 
   return (

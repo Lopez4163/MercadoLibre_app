@@ -269,17 +269,17 @@ export default function InventoryTable({
           <thead className="bg-[var(--bg-0)] text-[var(--text-1)]">
             <tr>
               <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider">ID</th>
-              <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider">Title</th>
+              <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider">Titulo</th>
               <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider">Stock</th>
-              <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider">Price</th>
-              <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider">Status</th>
+              <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider">Precio</th>
+              <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider">Estado</th>
             </tr>
           </thead>
           <tbody>
             {visibleItems.length === 0 && (
               <tr>
                 <td className="px-4 py-6 text-[var(--text-3)]" colSpan={5}>
-                  No items found.
+                  No se encontraron items.
                 </td>
               </tr>
             )}
