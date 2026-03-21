@@ -14,6 +14,18 @@ Last updated: March 15, 2026
    - header `x-reconcile-secret: <RECONCILE_CRON_SECRET>`
 3. Verification command:
    - `RECONCILE_BASE_URL=https://<domain> RECONCILE_CRON_SECRET=<secret> npm run reconcile:check`
+4. Configure `ORDERS_CLEANUP_CRON_SECRET`.
+5. Schedule daily:
+   - `POST /api/jobs/orders-cleanup`
+   - header `x-orders-cleanup-secret: <ORDERS_CLEANUP_CRON_SECRET>`
+6. Verification command:
+   - `ORDERS_CLEANUP_BASE_URL=https://<domain> ORDERS_CLEANUP_CRON_SECRET=<secret> npm run orders:cleanup:check`
+7. Configure `TELEGRAM_CONNECT_TOKENS_CLEANUP_CRON_SECRET`.
+8. Schedule every 12 hours:
+   - `POST /api/jobs/telegram-connect-tokens-cleanup`
+   - header `x-telegram-connect-tokens-cleanup-secret: <TELEGRAM_CONNECT_TOKENS_CLEANUP_CRON_SECRET>`
+9. Verification command:
+   - `TELEGRAM_CONNECT_TOKENS_CLEANUP_BASE_URL=https://<domain> TELEGRAM_CONNECT_TOKENS_CLEANUP_CRON_SECRET=<secret> npm run telegram:connect-tokens:cleanup:check`
 
 ## Telegram Webhook Registration (Operator-Safe)
 1. Check current Telegram webhook target before changing anything:
