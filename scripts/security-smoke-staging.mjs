@@ -49,6 +49,9 @@ const sharedEnv = { ...process.env };
 if (!sharedEnv.ORDERS_CLEANUP_BASE_URL && sharedEnv.RECONCILE_BASE_URL) {
   sharedEnv.ORDERS_CLEANUP_BASE_URL = sharedEnv.RECONCILE_BASE_URL;
 }
+if (!sharedEnv.TELEGRAM_CONNECT_TOKENS_CLEANUP_BASE_URL && sharedEnv.ORDERS_CLEANUP_BASE_URL) {
+  sharedEnv.TELEGRAM_CONNECT_TOKENS_CLEANUP_BASE_URL = sharedEnv.ORDERS_CLEANUP_BASE_URL;
+}
 
 let failed = false;
 
@@ -133,6 +136,13 @@ async function main() {
   runCommand("Webhook baseline", "npm", ["run", "security:check-webhooks", "--", `--env-file=${envFile}`]);
   runCommand("Reconcile scheduler check", "bash", ["scripts/reconcile-check.sh"]);
   runCommand("Orders cleanup scheduler check", "bash", ["scripts/orders-cleanup-check.sh"]);
+  if (normalize(sharedEnv.TELEGRAM_CONNECT_TOKENS_CLEANUP_CRON_SECRET)) {
+    runCommand("Telegram connect token cleanup scheduler check", "bash", [
+      "scripts/telegram-connect-tokens-cleanup-check.sh",
+    ]);
+  } else {
+    console.log("SKIP: Telegram connect token cleanup scheduler check (missing TELEGRAM_CONNECT_TOKENS_CLEANUP_CRON_SECRET)");
+  }
 
   await expectRedirect(
     "OAuth start",

@@ -24,6 +24,7 @@ const OPTIONAL_BUT_RECOMMENDED = [
   { name: "OAUTH_STATE_SECRET", group: "Session/OAuth" },
   { name: "RECONCILE_CRON_SECRET", group: "Schedulers" },
   { name: "ORDERS_CLEANUP_CRON_SECRET", group: "Schedulers" },
+  { name: "TELEGRAM_CONNECT_TOKENS_CLEANUP_CRON_SECRET", group: "Schedulers" },
 ];
 
 function loadEnvFile(filePath) {

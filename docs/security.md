@@ -6,12 +6,13 @@ Last updated: March 15, 2026
 1. [x] Mercado Libre webhook fails closed in production if secret missing/malformed.
 2. [x] Telegram webhook fails closed in production if secret missing.
 3. [x] `POST /api/jobs/orders-cleanup` hardened (rate limit, generic errors, optional IP allow-list support).
-4. [x] `GET /api/orders/recent` status filter allow-list + page-size cap.
-5. [x] Anti-abuse throttling on test endpoints:
+4. [x] `POST /api/jobs/telegram-connect-tokens-cleanup` hardened (rate limit, generic errors, optional IP allow-list support).
+5. [x] `GET /api/orders/recent` status filter allow-list + page-size cap.
+6. [x] Anti-abuse throttling on test endpoints:
    - `POST /api/notifications/test`
    - `POST /api/telegram/test`
-6. [x] Placeholder API routes removed/locked down.
-7. [x] Per-user refresh rate limits:
+7. [x] Placeholder API routes removed/locked down.
+8. [x] Per-user refresh rate limits:
    - `GET /api/ml/items`
    - `GET /api/orders/recent`
    - `GET /api/orders/today-summary`
@@ -50,6 +51,7 @@ Required:
 14. `STRIPE_WEBHOOK_SECRET`
 15. `UPSTASH_REDIS_REST_URL` (prod strict mode)
 16. `UPSTASH_REDIS_REST_TOKEN` (prod strict mode)
+17. `TELEGRAM_CONNECT_TOKENS_CLEANUP_CRON_SECRET`
 
 Operational rule:
 - If `TELEGRAM_WEBHOOK_SECRET` changes, re-run Telegram `setWebhook` immediately with the same secret.
