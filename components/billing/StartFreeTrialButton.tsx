@@ -38,7 +38,7 @@ export default function StartFreeTrialButton(props: StartFreeTrialButtonProps) {
       }
 
       if (data.alreadyEntitled) {
-        setMessage(`Your subscription is already ${data.status ?? "active"}.`);
+        setMessage(`Tu suscripcion ya esta ${data.status ?? "active"}.`);
         return;
       }
 
@@ -79,10 +79,10 @@ export default function StartFreeTrialButton(props: StartFreeTrialButtonProps) {
         disabled={loading || props.initiallyEntitled}
         className="inline-flex h-11 items-center border border-[var(--accent)] bg-[var(--accent)] px-5 text-sm font-semibold text-[var(--accent-contrast)] hover:bg-transparent hover:text-[var(--text-1)] disabled:cursor-not-allowed disabled:opacity-60"
       >
-        {loading ? "Redirecting..." : props.initiallyEntitled ? "Trial Active" : "Start Free Trial"}
+        {loading ? "Redirigiendo..." : props.initiallyEntitled ? "Prueba activa" : "Iniciar prueba gratis"}
       </button>
       {message && <p className="text-sm text-emerald-300">{message}</p>}
-      {error && <p className="text-sm text-red-300">Checkout error: {error}</p>}
+      {error && <p className="text-sm text-red-300">Error de checkout: {error}</p>}
     </div>
   );
 }

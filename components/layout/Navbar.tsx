@@ -28,26 +28,26 @@ export default async function Navbar() {
                 href="/dashboard"
                 className="inline-flex h-9 items-center border border-[var(--border-1)] bg-[var(--surface-2)] px-4 text-sm font-semibold text-[var(--text-1)] hover:bg-[var(--surface-1)]"
               >
-                Dashboard
+                Panel
               </Link>
               <Link
                 href="/billing"
                 className="inline-flex h-9 items-center border border-[var(--border-1)] bg-[var(--surface-2)] px-4 text-sm font-semibold text-[var(--text-1)] hover:bg-[var(--surface-1)]"
               >
-                Billing
+                Facturacion
               </Link>
               <Link
                 href="/settings/feedback"
                 className="inline-flex h-9 items-center border border-[var(--border-1)] bg-[var(--surface-2)] px-4 text-sm font-semibold text-[var(--text-1)] hover:bg-[var(--surface-1)]"
               >
-                Feedback
+                Comentarios
               </Link>
               <form action="/api/auth/logout" method="post">
                 <button
                   type="submit"
                   className="inline-flex h-9 items-center border border-[var(--border-1)] bg-[var(--surface-2)] px-4 text-sm font-semibold text-[var(--text-1)] hover:bg-[var(--surface-1)]"
                 >
-                  Logout
+                  Cerrar sesion
                 </button>
               </form>
             </>
@@ -57,13 +57,13 @@ export default async function Navbar() {
                 href="/login"
                 className="inline-flex h-9 items-center border border-[var(--border-1)] bg-[var(--surface-2)] px-4 text-sm font-semibold text-[var(--text-1)] hover:bg-[var(--surface-1)]"
               >
-                Login
+                Iniciar sesion
               </Link>
               <Link
                 href="/register"
                 className="inline-flex h-9 items-center border border-[var(--border-1)] bg-[var(--surface-2)] px-4 text-sm font-semibold text-[var(--text-1)] hover:bg-[var(--surface-1)]"
               >
-                Sign up
+                Registrarse
               </Link>
             </>
           )}

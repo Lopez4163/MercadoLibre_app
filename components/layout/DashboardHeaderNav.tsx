@@ -10,9 +10,9 @@ type HeaderLink = {
 };
 
 const HEADER_LINKS: HeaderLink[] = [
-  { href: "/dashboard", label: "Dashboard" },
-  { href: "/settings/notifications", label: "Settings" },
-  { href: "/settings/profile", label: "Profile" },
+  { href: "/dashboard", label: "Panel" },
+  { href: "/settings/notifications", label: "Configuracion" },
+  { href: "/settings/profile", label: "Perfil" },
 ];
 
 function isCurrentPath(pathname: string, href: string) {
@@ -38,7 +38,7 @@ export default function DashboardHeaderNav() {
           href={`/settings/feedback?from=${encodeURIComponent(pathname)}`}
           className="inline-flex h-9 items-center border border-[var(--border-1)] bg-[var(--surface-2)] px-3 text-sm font-semibold text-[var(--text-1)] transition-all duration-150 hover:border-[var(--text-2)] hover:bg-[var(--surface-1)] active:translate-y-px active:scale-[0.99] active:bg-[var(--bg-0)]"
         >
-          Feedback
+          Comentarios
         </Link>
       ) : null}
       <ThemeToggle />
@@ -47,7 +47,7 @@ export default function DashboardHeaderNav() {
           type="submit"
           className="inline-flex h-9 items-center border border-[var(--border-1)] bg-[var(--surface-2)] px-3 text-sm font-semibold text-[var(--text-1)] transition-all duration-150 hover:border-[var(--text-2)] hover:bg-[var(--surface-1)] active:translate-y-px active:scale-[0.99] active:bg-[var(--bg-0)]"
         >
-          Logout
+          Cerrar sesion
         </button>
       </form>
     </div>

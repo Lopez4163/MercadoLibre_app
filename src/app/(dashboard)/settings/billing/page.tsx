@@ -8,7 +8,7 @@ import { getUserBillingEntitlement } from "../../../../../lib/billing/entitlemen
 
 function formatDate(value: Date | null) {
   if (!value) {
-    return "N/A";
+    return "No aplica";
   }
 
   return new Intl.DateTimeFormat("en-US", {
@@ -68,38 +68,38 @@ export default async function BillingSettingsPage({ searchParams }: BillingSetti
   return (
     <div className="space-y-4">
       <section className="border border-[var(--border-1)] bg-[var(--surface-1)] p-5">
-        <h3 className="text-lg font-semibold tracking-tight text-[var(--text-1)]">Billing</h3>
+        <h3 className="text-lg font-semibold tracking-tight text-[var(--text-1)]">Facturacion</h3>
         <p className="mt-2 text-sm text-[var(--text-2)]">
-          Subscription access is granted through Stripe webhook events after checkout confirmation.
+          El acceso por suscripcion se habilita por eventos webhook de Stripe despues de confirmar checkout.
         </p>
 
         <div className={`mt-5 grid gap-3 md:grid-cols-2 ${showTrialEnds ? "xl:grid-cols-4" : "xl:grid-cols-3"}`}>
           <article className="border border-[var(--border-1)] bg-[var(--surface-2)] p-4">
-            <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-3)]">Entitlement</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-3)]">Acceso</p>
             <p
               className={`mt-3 text-2xl font-semibold tracking-tight ${
                 entitlement.hasAccess ? "text-emerald-200" : "text-red-200"
               }`}
             >
-              {entitlement.hasAccess ? "Enabled" : "Locked"}
+              {entitlement.hasAccess ? "Habilitado" : "Bloqueado"}
             </p>
           </article>
           <article className="border border-[var(--border-1)] bg-[var(--surface-2)] p-4">
-            <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-3)]">Status</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-3)]">Estado</p>
             <p className={`mt-3 text-2xl font-semibold tracking-tight capitalize ${statusTone(subscription?.status ?? null)}`}>
               {billingStatus}
             </p>
           </article>
           {showTrialEnds && (
             <article className="border border-[var(--border-1)] bg-[var(--surface-2)] p-4">
-              <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-3)]">Trial Ends</p>
+              <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-3)]">Fin de prueba</p>
               <p className="mt-3 text-2xl font-semibold tracking-tight text-[var(--text-1)]">
                 {formatDate(subscription?.trialEnd ?? null)}
               </p>
             </article>
           )}
           <article className="border border-[var(--border-1)] bg-[var(--surface-2)] p-4">
-            <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-3)]">Current Period Ends</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-3)]">Fin del periodo actual</p>
             <p className="mt-3 text-2xl font-semibold tracking-tight text-[var(--text-1)]">
               {formatDate(subscription?.currentPeriodEnd ?? null)}
             </p>
@@ -108,25 +108,25 @@ export default async function BillingSettingsPage({ searchParams }: BillingSetti
 
         <dl className="mt-5 grid gap-3 text-sm text-[var(--text-2)] md:grid-cols-2">
           <div>
-            <dt className="text-[var(--text-3)]">Cancel At Period End</dt>
-            <dd className="mt-1 font-medium text-[var(--text-1)]">{subscription?.cancelAtPeriodEnd ? "Yes" : "No"}</dd>
+            <dt className="text-[var(--text-3)]">Cancelar al fin del periodo</dt>
+            <dd className="mt-1 font-medium text-[var(--text-1)]">{subscription?.cancelAtPeriodEnd ? "Si" : "No"}</dd>
           </div>
         </dl>
 
       </section>
 
       <section className="border border-[var(--border-1)] bg-[var(--surface-1)] p-5">
-        <h3 className="text-lg font-semibold tracking-tight text-[var(--text-1)]">Subscription Actions</h3>
+        <h3 className="text-lg font-semibold tracking-tight text-[var(--text-1)]">Acciones de suscripcion</h3>
         <p className="mt-2 text-sm text-[var(--text-2)]">
-          Manage cancellation and trial checkout from one place. Access changes only after Stripe webhook confirmation.
+          Administra cancelacion y checkout de prueba desde un solo lugar. El acceso cambia solo despues de confirmar webhook de Stripe.
         </p>
 
         <div className="mt-5 space-y-4">
           {!entitlement.hasAccess && (
             <div className="border border-[var(--border-1)] bg-[var(--surface-2)] p-4">
-              <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-3)]">Start Free Trial</p>
+              <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-3)]">Iniciar prueba gratis</p>
               <p className="mt-2 text-sm text-[var(--text-2)]">
-                Checkout is hosted by Stripe and opens in a secure Stripe page.
+                El checkout es alojado por Stripe y se abre en una pagina segura de Stripe.
               </p>
               <div className="mt-4">
                 <StartFreeTrialButton initiallyEntitled={entitlement.hasAccess} autoStart={autoStartTrial} />
@@ -135,9 +135,9 @@ export default async function BillingSettingsPage({ searchParams }: BillingSetti
           )}
 
           <div className="border border-[var(--border-1)] bg-[var(--surface-2)] p-4">
-            <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-3)]">Cancel Or Resume</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-3)]">Cancelar o reanudar</p>
             <p className="mt-2 text-sm text-[var(--text-2)]">
-              Canceling sets your plan to end at the close of the current billing period.
+              Cancelar programa que tu plan termine al cierre del periodo de facturacion actual.
             </p>
             <div className="mt-4">
               <ManageSubscriptionActions

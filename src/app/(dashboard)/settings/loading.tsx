@@ -22,7 +22,7 @@ export default function SettingsLoading() {
             animate={{ rotate: 360 }}
             transition={{ duration: 0.9, ease: "linear", repeat: Infinity }}
           />
-          Loading settings
+          Cargando configuracion
         </div>
 
         <div className="space-y-3 animate-pulse">

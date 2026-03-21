@@ -11,38 +11,38 @@ export default function HomePage() {
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_16%_12%,rgba(255,209,0,0.16),transparent_28%),radial-gradient(circle_at_82%_22%,rgba(42,171,238,0.18),transparent_30%)]" />
         <div className="relative mx-auto grid max-w-6xl gap-8 px-6 py-12 md:grid-cols-2 md:items-center md:py-20">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--text-3)]">MercadoLibs Platform</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--text-3)]">Plataforma MercadoLibs</p>
             <h1 className="mt-4 text-4xl font-semibold tracking-tight text-[var(--text-1)] md:text-6xl">
-              Telegram-first operations for Mercado Libre sellers
+              Operaciones para vendedores de Mercado Libre, con Telegram primero
             </h1>
             <p className="mt-4 max-w-xl text-[var(--text-2)]">
-              Monitor inventory, receive sale notifications instantly, and catch sold-out risk before it impacts revenue.
+              Monitorea inventario, recibe notificaciones de venta al instante y detecta riesgo de quiebre de stock antes de afectar ingresos.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Link
                 href="/start-trial"
                 className="inline-flex h-11 items-center border border-[var(--accent)] bg-[var(--accent)] px-5 text-sm font-semibold text-[var(--accent-contrast)] hover:bg-transparent hover:text-[var(--text-1)]"
               >
-                Start Free Trial
+                Iniciar prueba gratis
               </Link>
               <Link
                 href="/dashboard"
                 className="inline-flex h-11 items-center border border-[var(--border-1)] bg-[var(--surface-2)] px-5 text-sm font-semibold text-[var(--text-1)] hover:bg-[var(--surface-1)]"
               >
-                View Dashboard
+                Ver panel
               </Link>
             </div>
             <div className="mt-10 grid gap-3 sm:grid-cols-3">
               <div className="border border-[var(--border-1)] bg-[var(--surface-1)] p-4">
-                <p className="text-xs uppercase tracking-[0.2em] text-[var(--text-3)]">Delivery</p>
+                <p className="text-xs uppercase tracking-[0.2em] text-[var(--text-3)]">Entrega</p>
                 <p className="mt-2 text-2xl font-semibold text-[var(--text-1)]">&lt; 1s</p>
               </div>
               <div className="border border-[var(--border-1)] bg-[var(--surface-1)] p-4">
-                <p className="text-xs uppercase tracking-[0.2em] text-[var(--text-3)]">Channels</p>
+                <p className="text-xs uppercase tracking-[0.2em] text-[var(--text-3)]">Canales</p>
                 <p className="mt-2 text-2xl font-semibold text-[var(--text-1)]">ML + TG</p>
               </div>
               <div className="border border-[var(--border-1)] bg-[var(--surface-1)] p-4">
-                <p className="text-xs uppercase tracking-[0.2em] text-[var(--text-3)]">Setup</p>
+                <p className="text-xs uppercase tracking-[0.2em] text-[var(--text-3)]">Configuracion</p>
                 <p className="mt-2 text-2xl font-semibold text-[var(--text-1)]">3 steps</p>
               </div>
             </div>
@@ -53,7 +53,7 @@ export default function HomePage() {
             <div className="relative border border-[var(--border-1)] bg-[var(--surface-1)] p-3">
               <Image
                 src="/graphics/iphone-telegram.svg"
-                alt="iPhone preview showing Telegram stock alerts"
+                alt="Vista previa en iPhone con alertas de stock en Telegram"
                 width={720}
                 height={900}
                 className="h-auto w-full border border-[var(--border-1)] bg-black"
@@ -66,12 +66,12 @@ export default function HomePage() {
 
       <section className="mx-auto max-w-6xl px-6 py-14">
         <div className="mx-auto max-w-5xl text-center">
-          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--text-3)]">Inside The Dashboard</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--text-3)]">Dentro del panel</p>
           <h2 className="mt-3 text-3xl font-semibold tracking-tight text-[var(--text-1)] md:text-4xl">
-            See how orders, trends, and operational risk look in the product
+            Mira pedidos, tendencias y riesgo operativo en el producto
           </h2>
           <p className="mt-3 text-[var(--text-2)]">
-            Real screens from the app, organized the same way your team works day to day.
+            Pantallas reales de la app, organizadas como trabaja tu equipo cada dia.
           </p>
         </div>
         <div className="mt-8">
@@ -82,12 +82,12 @@ export default function HomePage() {
       <section className="border-t border-[var(--border-1)]">
         <div className="mx-auto max-w-6xl px-6 py-14">
           <div className="mx-auto max-w-3xl text-center">
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--text-3)]">Pricing</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--text-3)]">Precios</p>
             <h2 className="mt-3 text-3xl font-semibold tracking-tight text-[var(--text-1)] md:text-4xl">
-              One simple beta plan
+              Un plan beta simple
             </h2>
             <p className="mt-3 text-[var(--text-2)]">
-              Start with a single plan while we expand features with early users.
+              Empieza con un solo plan mientras ampliamos funciones con usuarios iniciales.
             </p>
           </div>
 
@@ -95,23 +95,23 @@ export default function HomePage() {
             <div className="flex flex-wrap items-end justify-between gap-4 border-b border-[var(--border-1)] pb-5">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--text-3)]">MercadoLibs Beta</p>
-                <h3 className="mt-2 text-2xl font-semibold tracking-tight text-[var(--text-1)]">$5/month</h3>
+                <h3 className="mt-2 text-2xl font-semibold tracking-tight text-[var(--text-1)]">$5/mes</h3>
               </div>
               <p className="border border-[var(--accent)] bg-[var(--accent)] px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-[var(--accent-contrast)]">
-                Early Access Pricing
+                Precio de acceso temprano
               </p>
             </div>
 
             <ul className="mt-5 grid gap-3 text-sm text-[var(--text-2)]">
-              <li className="border border-[var(--border-1)] bg-[var(--surface-2)] px-4 py-3">Real-time Telegram sale alerts</li>
+              <li className="border border-[var(--border-1)] bg-[var(--surface-2)] px-4 py-3">Alertas de ventas por Telegram en tiempo real</li>
               <li className="border border-[var(--border-1)] bg-[var(--surface-2)] px-4 py-3">
-                Low-stock and sold-out risk notifications
+                Notificaciones de bajo stock y riesgo de quiebre
               </li>
               <li className="border border-[var(--border-1)] bg-[var(--surface-2)] px-4 py-3">
-                Dashboard for inventory, orders, and notification controls
+                Panel de inventario, pedidos y controles de notificaciones
               </li>
               <li className="border border-[var(--border-1)] bg-[var(--surface-2)] px-4 py-3">
-                Stripe billing with cancel/resume any time
+                Cobro con Stripe para cancelar o reanudar en cualquier momento
               </li>
             </ul>
 
@@ -120,13 +120,13 @@ export default function HomePage() {
                 href="/start-trial"
                 className="inline-flex h-11 items-center border border-[var(--accent)] bg-[var(--accent)] px-5 text-sm font-semibold text-[var(--accent-contrast)] hover:bg-transparent hover:text-[var(--text-1)]"
               >
-                Start Free Trial
+                Iniciar prueba gratis
               </Link>
               <Link
                 href="/settings/billing"
                 className="inline-flex h-11 items-center border border-[var(--border-1)] bg-[var(--surface-2)] px-5 text-sm font-semibold text-[var(--text-1)] hover:bg-[var(--surface-1)]"
               >
-                View Billing
+                Ver facturacion
               </Link>
             </div>
           </div>
@@ -136,9 +136,9 @@ export default function HomePage() {
       <section className="border-t border-[var(--border-1)] bg-[var(--surface-1)]">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-6 py-10">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--text-3)]">Ready to launch?</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--text-3)]">Listo para lanzar?</p>
             <h2 className="mt-2 text-2xl font-semibold tracking-tight text-[var(--text-1)]">
-              Connect your account and go live today
+              Conecta tu cuenta y publica hoy
             </h2>
           </div>
           <div className="flex flex-wrap gap-3">
@@ -146,13 +146,13 @@ export default function HomePage() {
               href="/start-trial"
               className="inline-flex h-11 items-center border border-[var(--accent)] bg-[var(--accent)] px-5 text-sm font-semibold text-[var(--accent-contrast)] hover:bg-transparent hover:text-[var(--text-1)]"
             >
-              Start Free Trial
+              Iniciar prueba gratis
             </Link>
             <Link
               href="/login"
               className="inline-flex h-11 items-center border border-[var(--border-1)] bg-[var(--surface-2)] px-5 text-sm font-semibold text-[var(--text-1)] hover:bg-[var(--surface-1)]"
             >
-              Login
+              Iniciar sesion
             </Link>
           </div>
         </div>

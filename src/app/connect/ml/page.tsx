@@ -20,25 +20,25 @@ export default async function ConnectMercadoLibrePage() {
       <section className="mx-auto max-w-3xl px-6 py-14">
         <div className="border border-[var(--border-1)] bg-[var(--surface-1)] p-8">
           <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--text-3)]">
-            Mercado Libre Connection
+            Conexion de Mercado Libre
           </p>
           <h1 className="mt-4 text-3xl font-semibold tracking-tight text-[var(--text-1)] md:text-4xl">
-            {connectedUser ? "Account connected" : "Connect your seller account"}
+            {connectedUser ? "Cuenta conectada" : "Conecta tu cuenta vendedora"}
           </h1>
           <p className="mt-3 text-[var(--text-2)]">
             {connectedUser
-              ? "Your Mercado Libre account is already linked. You can open the dashboard or reconnect if needed."
-              : "Sign in and authorize Mercado Libre so we can sync items, detect sales, and send Telegram alerts."}
+              ? "Tu cuenta de Mercado Libre ya esta vinculada. Puedes abrir el panel o reconectar si hace falta."
+              : "Inicia sesion y autoriza Mercado Libre para sincronizar items, detectar ventas y enviar alertas por Telegram."}
           </p>
 
           {connectedUser ? (
             <div className="mt-8 space-y-4">
               <div className="border border-[var(--border-1)] bg-[var(--surface-2)] p-4 text-sm text-[var(--text-2)]">
                 <p>
-                  <span className="font-semibold text-[var(--text-1)]">Email:</span> {connectedUser.email}
+                  <span className="font-semibold text-[var(--text-1)]">Correo:</span> {connectedUser.email}
                 </p>
                 <p className="mt-1">
-                  <span className="font-semibold text-[var(--text-1)]">ML User ID:</span> {connectedUser.mlUserId}
+                  <span className="font-semibold text-[var(--text-1)]">ID de usuario ML:</span> {connectedUser.mlUserId}
                 </p>
               </div>
               <div className="flex flex-wrap gap-3">
@@ -46,13 +46,13 @@ export default async function ConnectMercadoLibrePage() {
                   href="/dashboard"
                   className="inline-flex h-11 items-center border border-[var(--accent)] bg-[var(--accent)] px-5 text-sm font-semibold text-[var(--accent-contrast)] hover:bg-transparent hover:text-[var(--text-1)]"
                 >
-                  Go to Dashboard
+                  Ir al panel
                 </Link>
                 <Link
                   href="/login"
                   className="inline-flex h-11 items-center border border-[var(--border-1)] bg-[var(--surface-2)] px-5 text-sm font-semibold text-[var(--text-1)] hover:bg-[var(--surface-1)]"
                 >
-                  Reconnect Account
+                  Reconectar cuenta
                 </Link>
               </div>
             </div>
@@ -62,13 +62,13 @@ export default async function ConnectMercadoLibrePage() {
                 href="/login"
                 className="inline-flex h-11 items-center border border-[var(--accent)] bg-[var(--accent)] px-5 text-sm font-semibold text-[var(--accent-contrast)] hover:bg-transparent hover:text-[var(--text-1)]"
               >
-                Continue to Login
+                Continuar al inicio de sesion
               </Link>
               <Link
                 href="/register"
                 className="inline-flex h-11 items-center border border-[var(--border-1)] bg-[var(--surface-2)] px-5 text-sm font-semibold text-[var(--text-1)] hover:bg-[var(--surface-1)]"
               >
-                Create Account
+                Crear cuenta
               </Link>
             </div>
           )}
