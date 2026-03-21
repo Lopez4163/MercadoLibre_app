@@ -93,7 +93,7 @@ describe("POST /api/orders/[orderId]/retry-telegram", () => {
           payload: {
             shipmentId: "SHIP-1",
             destinationCity: "Buenos Aires",
-            saleType: "fulfillment",
+            saleType: "full",
           },
         },
       ],
@@ -109,7 +109,7 @@ describe("POST /api/orders/[orderId]/retry-telegram", () => {
       orderId: "ML-123",
       shipmentId: "SHIP-1",
       destinationCity: "Buenos Aires",
-      saleType: "fulfillment",
+      saleType: "full",
       lines: [
         { title: "Printer Paper", quantity: 2 },
         { title: "Thermal Label", quantity: 1 },
