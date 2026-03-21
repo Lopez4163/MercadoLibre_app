@@ -14,7 +14,7 @@ const jetBrainsMono = JetBrains_Mono({
 
 export const metadata: Metadata = {
   title: "MercadoLibs",
-  description: "Mercado Libre notifications dashboard",
+  description: "Panel de notificaciones para Mercado Libre",
 };
 
 const themeInitScript = `

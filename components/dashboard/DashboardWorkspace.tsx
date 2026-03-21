@@ -950,7 +950,7 @@ export default function DashboardWorkspace({
                         </p>
                       </div>
                       <span className="shrink-0 text-xs text-[var(--text-3)]">
-                        Sold:{" "}
+                        Vendidas:{" "}
                         <span className="font-semibold text-[var(--text-1)]">
                           {(item.sold_quantity ?? 0).toLocaleString("en-US")}
                         </span>
@@ -980,31 +980,31 @@ export default function DashboardWorkspace({
                     href="/settings/notifications"
                     className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--text-3)] hover:text-[var(--text-1)]"
                   >
-                    Edit
+                    Editar
                   </Link>
                 )}
               </div>
               <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                 <div className="border border-[var(--border-1)] bg-[var(--bg-0)] p-4">
-                  <p className="text-xs uppercase tracking-wide text-[var(--text-3)]">Every Sale</p>
+                  <p className="text-xs uppercase tracking-wide text-[var(--text-3)]">Cada venta</p>
                   <p className="mt-2 text-2xl font-semibold text-[var(--text-1)]">
                     {billingHasAccess ? toggleLabel(notificationSettings?.notifyEverySale ?? null) : "Bloqueado"}
                   </p>
                 </div>
                 <div className="border border-[var(--border-1)] bg-[var(--bg-0)] p-4">
-                  <p className="text-xs uppercase tracking-wide text-[var(--text-3)]">Sold Out</p>
+                  <p className="text-xs uppercase tracking-wide text-[var(--text-3)]">Agotado</p>
                   <p className="mt-2 text-2xl font-semibold text-[var(--text-1)]">
                     {billingHasAccess ? toggleLabel(notificationSettings?.notifySoldOut ?? null) : "Bloqueado"}
                   </p>
                 </div>
                 <div className="border border-[var(--border-1)] bg-[var(--bg-0)] p-4">
-                  <p className="text-xs uppercase tracking-wide text-[var(--text-3)]">Low Stock</p>
+                  <p className="text-xs uppercase tracking-wide text-[var(--text-3)]">Stock bajo</p>
                   <p className="mt-2 text-2xl font-semibold text-[var(--text-1)]">
                     {billingHasAccess ? toggleLabel(notificationSettings?.notifyLowStock ?? null) : "Bloqueado"}
                   </p>
                 </div>
                 <div className="border border-[var(--border-1)] bg-[var(--bg-0)] p-4">
-                  <p className="text-xs uppercase tracking-wide text-[var(--text-3)]">Threshold</p>
+                  <p className="text-xs uppercase tracking-wide text-[var(--text-3)]">Umbral</p>
                   <p className="mt-2 text-2xl font-semibold text-[var(--text-1)]">
                     {billingHasAccess ? (notificationSettings ? notificationSettings.lowStockThreshold : "Verificando") : "Bloqueado"}
                   </p>
@@ -1021,7 +1021,7 @@ export default function DashboardWorkspace({
                     Actividad de hoy
                   </p>
                   <h3 className="mt-2 text-lg font-semibold tracking-tight text-[var(--text-1)]">
-                    Daily operational pulse
+                    Pulso operativo diario
                   </h3>
                 </div>
                 <button
@@ -1091,7 +1091,7 @@ export default function DashboardWorkspace({
                   </span>
                 </div>
                 <div className="flex items-center justify-between border border-[var(--border-1)] bg-[var(--bg-0)] px-3 py-3">
-                  <span className="text-sm text-[var(--text-2)]">ML Name</span>
+                  <span className="text-sm text-[var(--text-2)]">Nombre ML</span>
                   <span className="text-sm font-semibold text-[var(--text-1)]">{mlName}</span>
                 </div>
                 <div className="flex items-center justify-between border border-[var(--border-1)] bg-[var(--bg-0)] px-3 py-3">
@@ -1120,31 +1120,31 @@ export default function DashboardWorkspace({
         >
           <div className="grid gap-3 md:grid-cols-5">
             <article className="border border-[var(--border-1)] bg-[var(--surface-1)] p-4">
-              <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-3)]">Total Items</p>
+              <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-3)]">Total de items</p>
               <p className="mt-3 text-3xl font-semibold tracking-tight text-[var(--text-1)]">
                 {billingHasAccess ? items.length : "Bloqueado"}
               </p>
             </article>
             <article className="border border-red-500/50 bg-red-500/10 p-4">
-              <p className="text-xs font-semibold uppercase tracking-wide text-red-300">Sold Out</p>
+              <p className="text-xs font-semibold uppercase tracking-wide text-red-300">Agotados</p>
               <p className="mt-3 text-3xl font-semibold tracking-tight text-red-200">
                 {billingHasAccess ? soldOutItems : "Bloqueado"}
               </p>
             </article>
             <article className="border border-orange-500/50 bg-orange-500/10 p-4">
-              <p className="text-xs font-semibold uppercase tracking-wide text-orange-300">Critical</p>
+              <p className="text-xs font-semibold uppercase tracking-wide text-orange-300">Critico</p>
               <p className="mt-3 text-3xl font-semibold tracking-tight text-orange-200">
                 {billingHasAccess ? criticalItems : "Bloqueado"}
               </p>
             </article>
             <article className="border border-amber-500/50 bg-amber-500/10 p-4">
-              <p className="text-xs font-semibold uppercase tracking-wide text-amber-300">Low</p>
+              <p className="text-xs font-semibold uppercase tracking-wide text-amber-300">Bajo</p>
               <p className="mt-3 text-3xl font-semibold tracking-tight text-amber-200">
                 {billingHasAccess ? lowItems : "Bloqueado"}
               </p>
             </article>
             <article className="border border-emerald-500/50 bg-emerald-500/10 p-4">
-              <p className="text-xs font-semibold uppercase tracking-wide text-emerald-300">Healthy</p>
+              <p className="text-xs font-semibold uppercase tracking-wide text-emerald-300">Saludable</p>
               <p className="mt-3 text-3xl font-semibold tracking-tight text-emerald-200">
                 {billingHasAccess ? healthyItems : "Bloqueado"}
               </p>
@@ -1168,10 +1168,10 @@ export default function DashboardWorkspace({
           <article className="border border-[var(--border-1)] bg-[var(--surface-1)] p-5">
             <div className="flex flex-wrap items-end justify-between gap-4">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--text-3)]">Orders</p>
-                <h3 className="mt-2 text-xl font-semibold tracking-tight text-[var(--text-1)]">Recent Order Activity</h3>
+                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--text-3)]">Pedidos</p>
+                <h3 className="mt-2 text-xl font-semibold tracking-tight text-[var(--text-1)]">Actividad reciente de pedidos</h3>
                 <p className="mt-2 text-sm text-[var(--text-2)]">
-                  Last 30 days of order events and latest Telegram delivery state.
+                  Ultimos 30 dias de eventos de pedidos y ultimo estado de entrega en Telegram.
                 </p>
               </div>
               <div className="flex flex-wrap items-center gap-2">
@@ -1189,10 +1189,10 @@ export default function DashboardWorkspace({
                   }}
                   className="h-10 border border-[var(--border-1)] bg-[var(--bg-0)] px-3 text-sm text-[var(--text-1)] disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  <option value="all">All statuses</option>
-                  <option value="paid">Paid</option>
-                  <option value="confirmed">Confirmed</option>
-                  <option value="cancelled">Cancelled</option>
+                  <option value="all">Todos los estados</option>
+                  <option value="paid">Pagado</option>
+                  <option value="confirmed">Confirmado</option>
+                  <option value="cancelled">Cancelado</option>
                 </select>
                 <button
                   type="button"
@@ -1203,7 +1203,7 @@ export default function DashboardWorkspace({
                   {ordersLoading ? (
                     <span className="inline-flex items-center gap-2">
                       <RefreshSpinner />
-                      Refreshing...
+                      Actualizando...
                     </span>
                   ) : (
                     "Actualizar"
@@ -1214,13 +1214,13 @@ export default function DashboardWorkspace({
 
             <div className="mt-4 grid gap-3 md:grid-cols-3">
               <div className="border border-[var(--border-1)] bg-[var(--bg-0)] p-4">
-                <p className="text-xs uppercase tracking-wide text-[var(--text-3)]">Orders in Range</p>
+                <p className="text-xs uppercase tracking-wide text-[var(--text-3)]">Pedidos en rango</p>
                 <p className="mt-2 text-3xl font-semibold text-[var(--text-1)]">
                   {billingHasAccess ? ordersTotal.toLocaleString("en-US") : "Bloqueado"}
                 </p>
               </div>
               <div className="border border-[var(--border-1)] bg-[var(--bg-0)] p-4">
-                <p className="text-xs uppercase tracking-wide text-[var(--text-3)]">Telegram Sent</p>
+                <p className="text-xs uppercase tracking-wide text-[var(--text-3)]">Telegram enviado</p>
                 <p className="mt-2 text-3xl font-semibold text-emerald-300">
                   {billingHasAccess
                     ? orders.filter((order) => order.latestNotification?.status === "sent").length
@@ -1228,7 +1228,7 @@ export default function DashboardWorkspace({
                 </p>
               </div>
               <div className="border border-[var(--border-1)] bg-[var(--bg-0)] p-4">
-                <p className="text-xs uppercase tracking-wide text-[var(--text-3)]">Telegram Failed</p>
+                <p className="text-xs uppercase tracking-wide text-[var(--text-3)]">Telegram fallido</p>
                 <p className="mt-2 text-3xl font-semibold text-red-300">
                   {billingHasAccess
                     ? orders.filter((order) => order.latestNotification?.status === "failed").length
@@ -1250,29 +1250,29 @@ export default function DashboardWorkspace({
               <table className="min-w-full divide-y divide-[var(--border-1)] text-left">
                 <thead className="bg-[var(--surface-2)]">
                   <tr>
-                    <th className="px-3 py-3 text-xs font-semibold uppercase tracking-wide text-[var(--text-3)]">Order</th>
+                    <th className="px-3 py-3 text-xs font-semibold uppercase tracking-wide text-[var(--text-3)]">Pedido</th>
                     <th className="px-3 py-3 text-xs font-semibold uppercase tracking-wide text-[var(--text-3)]">Items</th>
-                    <th className="px-3 py-3 text-xs font-semibold uppercase tracking-wide text-[var(--text-3)]">Qty</th>
-                    <th className="px-3 py-3 text-xs font-semibold uppercase tracking-wide text-[var(--text-3)]">Created</th>
-                    <th className="px-3 py-3 text-xs font-semibold uppercase tracking-wide text-[var(--text-3)]">Status</th>
+                    <th className="px-3 py-3 text-xs font-semibold uppercase tracking-wide text-[var(--text-3)]">Cant.</th>
+                    <th className="px-3 py-3 text-xs font-semibold uppercase tracking-wide text-[var(--text-3)]">Creado</th>
+                    <th className="px-3 py-3 text-xs font-semibold uppercase tracking-wide text-[var(--text-3)]">Estado</th>
                     <th className="px-3 py-3 text-xs font-semibold uppercase tracking-wide text-[var(--text-3)]">Total</th>
-                    <th className="px-3 py-3 text-xs font-semibold uppercase tracking-wide text-[var(--text-3)]">Sale Type</th>
+                    <th className="px-3 py-3 text-xs font-semibold uppercase tracking-wide text-[var(--text-3)]">Tipo de venta</th>
                     <th className="px-3 py-3 text-xs font-semibold uppercase tracking-wide text-[var(--text-3)]">Telegram</th>
-                    <th className="px-3 py-3 text-xs font-semibold uppercase tracking-wide text-[var(--text-3)]">Label</th>
+                    <th className="px-3 py-3 text-xs font-semibold uppercase tracking-wide text-[var(--text-3)]">Etiqueta</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[var(--border-1)] bg-[var(--surface-1)]">
                   {ordersLoading && orders.length === 0 ? (
                     <tr>
                       <td colSpan={9} className="px-3 py-6 text-center text-sm text-[var(--text-2)]">
-                        Loading orders...
+                        Cargando pedidos...
                       </td>
                     </tr>
                   ) : null}
                   {!ordersLoading && orders.length === 0 ? (
                     <tr>
                       <td colSpan={9} className="px-3 py-6 text-center text-sm text-[var(--text-2)]">
-                        No orders found for this filter.
+                        No se encontraron pedidos para este filtro.
                       </td>
                     </tr>
                   ) : null}
@@ -1281,7 +1281,7 @@ export default function DashboardWorkspace({
                           <td className="px-3 py-3 align-top">
                             <p className="font-mono text-sm font-semibold text-[var(--text-1)]">{order.mlOrderId}</p>
                             <p className="mt-1 text-xs text-[var(--text-3)]">
-                              {order.lines.length} line{order.lines.length === 1 ? "" : "s"}
+                              {order.lines.length} linea{order.lines.length === 1 ? "" : "s"}
                             </p>
                           </td>
                           <td className="px-3 py-3 align-top">
@@ -1295,7 +1295,7 @@ export default function DashboardWorkspace({
                                   </p>
                                 ))}
                                 {order.lines.length > 2 ? (
-                                  <p className="text-xs text-[var(--text-3)]">+{order.lines.length - 2} more</p>
+                                  <p className="text-xs text-[var(--text-3)]">+{order.lines.length - 2} mas</p>
                                 ) : null}
                               </div>
                             )}
@@ -1325,7 +1325,7 @@ export default function DashboardWorkspace({
                                   order.latestNotification?.status ?? null,
                                 )}`}
                               >
-                                {order.latestNotification?.status ?? "none"}
+                                {order.latestNotification?.status ?? "sin envio"}
                               </motion.span>
                             </AnimatePresence>
                             {order.latestNotification?.reason ? (
@@ -1351,10 +1351,10 @@ export default function DashboardWorkspace({
                                 rel="noreferrer"
                                 className="inline-flex h-8 items-center border border-[var(--accent)] bg-[var(--accent)] px-3 text-xs font-semibold uppercase tracking-wide text-[var(--accent-contrast)] hover:bg-transparent hover:text-[var(--text-1)]"
                               >
-                                Download
+                                Descargar
                               </a>
                             ) : (
-                              <span className="text-xs text-[var(--text-3)]">Not ready</span>
+                              <span className="text-xs text-[var(--text-3)]">No lista</span>
                             )}
                           </td>
                     </tr>
@@ -1365,7 +1365,7 @@ export default function DashboardWorkspace({
 
             <div className="mt-4 flex items-center justify-between gap-3">
               <p className="text-xs text-[var(--text-3)]">
-                Page {ordersPage} of {ordersTotalPages}
+                Pagina {ordersPage} de {ordersTotalPages}
               </p>
               <div className="flex items-center gap-2">
                 <button
@@ -1378,7 +1378,7 @@ export default function DashboardWorkspace({
                   disabled={ordersLoading || !billingHasAccess || ordersPage <= 1}
                   className="inline-flex h-9 items-center border border-[var(--border-1)] bg-[var(--surface-2)] px-3 text-xs font-semibold uppercase tracking-wide text-[var(--text-1)] disabled:opacity-50"
                 >
-                  Prev
+                  Anterior
                 </button>
                 <button
                   type="button"
@@ -1390,7 +1390,7 @@ export default function DashboardWorkspace({
                   disabled={ordersLoading || !billingHasAccess || ordersPage >= ordersTotalPages}
                   className="inline-flex h-9 items-center border border-[var(--border-1)] bg-[var(--surface-2)] px-3 text-xs font-semibold uppercase tracking-wide text-[var(--text-1)] disabled:opacity-50"
                 >
-                  Next
+                  Siguiente
                 </button>
               </div>
             </div>
@@ -1406,13 +1406,13 @@ export default function DashboardWorkspace({
             <div className="flex flex-wrap items-end justify-between gap-3">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--text-3)]">
-                  Stats
+                  Estadisticas
                 </p>
                 <h3 className="mt-2 text-xl font-semibold tracking-tight text-[var(--text-1)]">
-                  Sales and inventory performance
+                  Rendimiento de ventas e inventario
                 </h3>
                 <p className="mt-1 text-sm text-[var(--text-2)]">
-                  Last sync: {loading ? "Cargando..." : formatRelativeTime(lastUpdatedAt)}
+                  Ultima sincronizacion: {loading ? "Cargando..." : formatRelativeTime(lastUpdatedAt)}
                 </p>
               </div>
                 <button
@@ -1424,7 +1424,7 @@ export default function DashboardWorkspace({
                   {inventoryBusy ? (
                     <span className="inline-flex items-center gap-2">
                       <RefreshSpinner />
-                      Refreshing...
+                      Actualizando...
                     </span>
                   ) : (
                     "Actualizar estadisticas"
@@ -1436,46 +1436,46 @@ export default function DashboardWorkspace({
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
             <article className="border border-[var(--border-1)] bg-[var(--surface-1)] p-5">
               <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--text-3)]">
-                Inventory Value
+                Valor del inventario
               </p>
               <p className="mt-3 text-3xl font-semibold tracking-tight text-[var(--text-1)]">
                 {billingHasAccess ? `$${inventoryValue.toLocaleString("en-US")}` : "Bloqueado"}
               </p>
               <p className="mt-2 text-sm text-[var(--text-2)]">
-                Estimated from current listing price x available units.
+                Estimado segun precio actual de publicacion x unidades disponibles.
               </p>
             </article>
             <article className="border border-[var(--border-1)] bg-[var(--surface-1)] p-5">
               <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--text-3)]">
-                Units On Hand
+                Unidades en stock
               </p>
               <p className="mt-3 text-3xl font-semibold tracking-tight text-[var(--text-1)]">
                 {billingHasAccess ? totalUnitsOnHand.toLocaleString("en-US") : "Bloqueado"}
               </p>
               <p className="mt-2 text-sm text-[var(--text-2)]">
-                Total available quantity across loaded listings.
+                Cantidad disponible total en las publicaciones cargadas.
               </p>
             </article>
             <article className="border border-[var(--border-1)] bg-[var(--surface-1)] p-5">
               <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--text-3)]">
-                Total Units Sold
+                Unidades vendidas total
               </p>
               <p className="mt-3 text-3xl font-semibold tracking-tight text-[var(--text-1)]">
                 {billingHasAccess ? totalUnitsSold.toLocaleString("en-US") : "Bloqueado"}
               </p>
               <p className="mt-2 text-sm text-[var(--text-2)]">
-                Lifetime units sold across the loaded catalog snapshot.
+                Unidades vendidas historicas en el catalogo cargado.
               </p>
             </article>
             <article className="border border-[var(--border-1)] bg-[var(--surface-1)] p-5">
               <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--text-3)]">
-                Risk Rate
+                Tasa de riesgo
               </p>
               <p className="mt-3 text-3xl font-semibold tracking-tight text-[var(--text-1)]">
                 {billingHasAccess ? `${riskRate}%` : "Bloqueado"}
               </p>
               <p className="mt-2 text-sm text-[var(--text-2)]">
-                Listings currently sold out, critical, or low on stock.
+                Publicaciones actualmente agotadas, criticas o con stock bajo.
               </p>
             </article>
           </div>
@@ -1483,13 +1483,13 @@ export default function DashboardWorkspace({
           <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1.25fr)_minmax(320px,0.75fr)]">
             <article className="h-fit self-start overflow-hidden border border-[var(--border-1)] bg-[linear-gradient(135deg,color-mix(in_srgb,var(--accent)_18%,transparent),transparent_55%),var(--surface-1)] p-6">
               <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--text-3)]">
-                Top 3 Best Sellers
+                Top 3 mas vendidos
               </p>
               <h3 className="mt-2 text-2xl font-semibold tracking-tight text-[var(--text-1)]">
-                Top performers by units sold
+                Productos lideres por unidades vendidas
               </h3>
               <p className="mt-2 max-w-xl text-sm text-[var(--text-2)]">
-                Ranked from your current Mercado Libre catalog snapshot.
+                Ordenado segun tu catalogo actual de Mercado Libre.
               </p>
 
               {topSellers.length > 0 ? (
@@ -1523,26 +1523,26 @@ export default function DashboardWorkspace({
                         ) : null}
                         <div className="mt-3 space-y-2 text-xs text-[var(--text-2)]">
                           <div className="flex items-center justify-between">
-                            <span>Units Sold</span>
+                            <span>Unidades vendidas</span>
                             <span className="font-semibold text-[var(--text-1)]">
                               {(item.sold_quantity ?? 0).toLocaleString("en-US")}
                             </span>
                           </div>
                           <div className="flex items-center justify-between">
-                            <span>Units On Hand</span>
+                            <span>Unidades en stock</span>
                             <span className="font-semibold text-[var(--text-1)]">
                               {typeof item.available_quantity === "number"
                                 ? item.available_quantity.toLocaleString("en-US")
-                                : "Unknown"}
+                                : "Desconocido"}
                             </span>
                           </div>
                           <div className="flex items-center justify-between">
-                            <span>Listing Value</span>
+                            <span>Valor publicado</span>
                             <span className="font-semibold text-[var(--text-1)]">
                               $
                               {typeof item.price === "number"
                                 ? item.price.toLocaleString("en-US")
-                                : "Unknown"}
+                                : "Desconocido"}
                             </span>
                           </div>
                         </div>
@@ -1566,38 +1566,38 @@ export default function DashboardWorkspace({
 
             <article className="border border-[var(--border-1)] bg-[var(--surface-1)] p-5">
               <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--text-3)]">
-                Catalog Health
+                Salud del catalogo
               </p>
               <h3 className="mt-2 text-xl font-semibold tracking-tight text-[var(--text-1)]">
-                Snapshot of listing posture
+                Estado actual de publicaciones
               </h3>
               <div className="mt-4 space-y-3">
                 <div className="flex items-center justify-between border border-[var(--border-1)] bg-[var(--bg-0)] px-3 py-3">
-                  <span className="text-sm text-[var(--text-2)]">Catalog Size</span>
+                  <span className="text-sm text-[var(--text-2)]">Tamano del catalogo</span>
                   <span className="text-sm font-semibold text-[var(--text-1)]">
                     {billingHasAccess ? items.length : "Bloqueado"}
                   </span>
                 </div>
                 <div className="flex items-center justify-between border border-[var(--border-1)] bg-[var(--bg-0)] px-3 py-3">
-                  <span className="text-sm text-[var(--text-2)]">Active Listings</span>
+                  <span className="text-sm text-[var(--text-2)]">Publicaciones activas</span>
                   <span className="text-sm font-semibold text-emerald-300">
                     {billingHasAccess ? activeItems : "Bloqueado"}
                   </span>
                 </div>
                 <div className="flex items-center justify-between border border-[var(--border-1)] bg-[var(--bg-0)] px-3 py-3">
-                  <span className="text-sm text-[var(--text-2)]">Paused Listings</span>
+                  <span className="text-sm text-[var(--text-2)]">Publicaciones pausadas</span>
                   <span className="text-sm font-semibold text-[var(--text-1)]">
                     {billingHasAccess ? pausedItems : "Bloqueado"}
                   </span>
                 </div>
                 <div className="flex items-center justify-between border border-[var(--border-1)] bg-[var(--bg-0)] px-3 py-3">
-                  <span className="text-sm text-[var(--text-2)]">Healthy Listings</span>
+                  <span className="text-sm text-[var(--text-2)]">Publicaciones saludables</span>
                   <span className="text-sm font-semibold text-emerald-300">
                     {billingHasAccess ? healthyItems : "Bloqueado"}
                   </span>
                 </div>
                 <div className="flex items-center justify-between border border-[var(--border-1)] bg-[var(--bg-0)] px-3 py-3">
-                  <span className="text-sm text-[var(--text-2)]">Sold Out Share</span>
+                  <span className="text-sm text-[var(--text-2)]">Porcentaje agotado</span>
                   <span className="text-sm font-semibold text-red-300">
                     {billingHasAccess
                       ? items.length === 0
@@ -1607,7 +1607,7 @@ export default function DashboardWorkspace({
                   </span>
                 </div>
                 <div className="flex items-center justify-between border border-[var(--border-1)] bg-[var(--bg-0)] px-3 py-3">
-                  <span className="text-sm text-[var(--text-2)]">Low Stock Share</span>
+                  <span className="text-sm text-[var(--text-2)]">Porcentaje bajo stock</span>
                   <span className="text-sm font-semibold text-amber-300">
                     {billingHasAccess
                       ? items.length === 0
@@ -1617,7 +1617,7 @@ export default function DashboardWorkspace({
                   </span>
                 </div>
                 <div className="flex items-center justify-between border border-[var(--border-1)] bg-[var(--bg-0)] px-3 py-3">
-                  <span className="text-sm text-[var(--text-2)]">Avg Units / Listing</span>
+                  <span className="text-sm text-[var(--text-2)]">Promedio de unidades / publicacion</span>
                   <span className="text-sm font-semibold text-[var(--text-1)]">
                     {billingHasAccess ? averageUnitsPerListing.toLocaleString("en-US") : "Bloqueado"}
                   </span>
@@ -1629,22 +1629,22 @@ export default function DashboardWorkspace({
           <div className="grid gap-4 xl:grid-cols-3">
             <article className="border border-[var(--border-1)] bg-[var(--surface-1)] p-5">
               <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--text-3)]">
-                Fast Movers At Risk
+                Mas vendidos en riesgo
               </p>
               <h3 className="mt-2 text-lg font-semibold tracking-tight text-[var(--text-1)]">
-                Popular items running shallow
+                Productos populares con poco stock
               </h3>
               <div className="mt-4 space-y-3">
                 {!billingHasAccess ? (
                   <div className="border border-[var(--border-1)] bg-[var(--bg-0)] p-4">
                     <p className="text-sm text-[var(--text-2)]">
-                      Locked. Start your free trial to unlock fast-mover risk insights.
+                      Bloqueado. Inicia tu prueba gratis para desbloquear insights de riesgo en mas vendidos.
                     </p>
                   </div>
                 ) : fastMoversAtRisk.length === 0 ? (
                   <div className="border border-[var(--border-1)] bg-[var(--bg-0)] p-4">
                     <p className="text-sm text-[var(--text-2)]">
-                      No high-selling low-stock listings are currently in the loaded catalog.
+                      No hay publicaciones muy vendidas con stock bajo en el catalogo cargado.
                     </p>
                   </div>
                 ) : (
@@ -1661,12 +1661,12 @@ export default function DashboardWorkspace({
                             {item.title ?? item.id}
                           </p>
                           <div className="mt-2 flex items-center justify-between gap-3 text-xs text-[var(--text-3)]">
-                            <span>Sold: {(item.sold_quantity ?? 0).toLocaleString("en-US")}</span>
+                            <span>Vendidas: {(item.sold_quantity ?? 0).toLocaleString("en-US")}</span>
                             <span>
                               Stock:{" "}
                               {typeof item.available_quantity === "number"
                                 ? item.available_quantity.toLocaleString("en-US")
-                                : "Unknown"}
+                                : "Desconocido"}
                             </span>
                           </div>
                           <div className="mt-3 h-2 overflow-hidden bg-[var(--surface-2)]">
@@ -1694,22 +1694,22 @@ export default function DashboardWorkspace({
 
             <article className="border border-[var(--border-1)] bg-[var(--surface-1)] p-5">
               <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--text-3)]">
-                Dormant Stock
+                Stock sin movimiento
               </p>
               <h3 className="mt-2 text-lg font-semibold tracking-tight text-[var(--text-1)]">
-                Inventory sitting without sales
+                Inventario sin ventas
               </h3>
               <div className="mt-4 space-y-3">
                 {!billingHasAccess ? (
                   <div className="border border-[var(--border-1)] bg-[var(--bg-0)] p-4">
                     <p className="text-sm text-[var(--text-2)]">
-                      Locked. Start your free trial to unlock dormant stock insights.
+                      Bloqueado. Inicia tu prueba gratis para desbloquear insights de stock sin movimiento.
                     </p>
                   </div>
                 ) : dormantStock.length === 0 ? (
                   <div className="border border-[var(--border-1)] bg-[var(--bg-0)] p-4">
                     <p className="text-sm text-[var(--text-2)]">
-                      No inactive stock stands out from the current catalog snapshot.
+                      No hay stock inactivo destacado en el catalogo cargado.
                     </p>
                   </div>
                 ) : (
@@ -1726,12 +1726,12 @@ export default function DashboardWorkspace({
                             {item.title ?? item.id}
                           </p>
                           <div className="mt-2 flex items-center justify-between gap-3 text-xs text-[var(--text-3)]">
-                            <span>Sold: {(item.sold_quantity ?? 0).toLocaleString("en-US")}</span>
+                            <span>Vendidas: {(item.sold_quantity ?? 0).toLocaleString("en-US")}</span>
                             <span>
                               Stock:{" "}
                               {typeof item.available_quantity === "number"
                                 ? item.available_quantity.toLocaleString("en-US")
-                                : "Unknown"}
+                                : "Desconocido"}
                             </span>
                           </div>
                           <div className="mt-3 h-2 overflow-hidden bg-[var(--surface-2)]">
@@ -1759,22 +1759,22 @@ export default function DashboardWorkspace({
 
             <article className="border border-[var(--border-1)] bg-[var(--surface-1)] p-5">
               <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--text-3)]">
-                Sell-Through Leaders
+                Lideres en rotacion
               </p>
               <h3 className="mt-2 text-lg font-semibold tracking-tight text-[var(--text-1)]">
-                Listings moving the cleanest
+                Publicaciones con mejor rotacion
               </h3>
               <div className="mt-4 space-y-3">
                 {!billingHasAccess ? (
                   <div className="border border-[var(--border-1)] bg-[var(--bg-0)] p-4">
                     <p className="text-sm text-[var(--text-2)]">
-                      Locked. Start your free trial to unlock sell-through leader insights.
+                      Bloqueado. Inicia tu prueba gratis para desbloquear insights de lideres en rotacion.
                     </p>
                   </div>
                 ) : sellThroughLeaders.length === 0 ? (
                   <div className="border border-[var(--border-1)] bg-[var(--bg-0)] p-4">
                     <p className="text-sm text-[var(--text-2)]">
-                      No sell-through leaders can be calculated from the current catalog snapshot.
+                      No se pueden calcular lideres en rotacion con el catalogo cargado.
                     </p>
                   </div>
                 ) : (
@@ -1791,8 +1791,8 @@ export default function DashboardWorkspace({
                             {item.title ?? item.id}
                           </p>
                           <div className="mt-2 flex items-center justify-between gap-3 text-xs text-[var(--text-3)]">
-                            <span>Sell-through: {Math.round(item.sellThroughRate * 100)}%</span>
-                            <span>Sold: {(item.sold_quantity ?? 0).toLocaleString("en-US")}</span>
+                            <span>Rotacion: {Math.round(item.sellThroughRate * 100)}%</span>
+                            <span>Vendidas: {(item.sold_quantity ?? 0).toLocaleString("en-US")}</span>
                           </div>
                           <div className="mt-3 h-2 overflow-hidden bg-[var(--surface-2)]">
                             <div
@@ -1830,21 +1830,21 @@ export default function DashboardWorkspace({
             >
               <div className="flex items-start justify-between gap-3">
                 <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--text-3)]">
-                  Telegram Required
+                  Telegram requerido
                 </p>
                 <button
                   type="button"
                   onClick={() => setTelegramNoticeDismissed(true)}
                   className="inline-flex h-7 items-center border border-[var(--border-1)] bg-[var(--surface-2)] px-2 text-[10px] font-semibold uppercase tracking-wide text-[var(--text-2)] transition-colors hover:border-[var(--text-2)] hover:bg-[var(--surface-1)]"
                 >
-                  Dismiss
+                  Cerrar
                 </button>
               </div>
               <h3 className="mt-2 text-xl font-semibold tracking-tight text-[var(--text-1)]">
-                Connect Telegram to start receiving alerts
+                Conecta Telegram para empezar a recibir alertas
               </h3>
               <p className="mt-2 max-w-2xl text-sm text-yellow-50">
-                Notification rules are ready. Link Telegram to deliver sale, sold-out, and low-stock messages.
+                Las reglas de notificacion estan listas. Vincula Telegram para entregar mensajes de venta, agotado y bajo stock.
               </p>
               <div className="mt-4 flex flex-wrap gap-3">
                 <button
@@ -1867,9 +1867,9 @@ export default function DashboardWorkspace({
           >
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--text-3)]">Notifications</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--text-3)]">Notificaciones</p>
                 <h3 className="mt-2 text-xl font-semibold tracking-tight text-[var(--text-1)]">
-                  Notification settings
+                  Configuracion de notificaciones
                 </h3>
               </div>
               {telegramConnectionRequired ? (
@@ -1886,7 +1886,7 @@ export default function DashboardWorkspace({
                   href="/settings/notifications"
                   className="inline-flex h-9 items-center border border-[var(--accent)] bg-[var(--accent)] px-3 text-xs font-semibold uppercase tracking-wide text-[var(--accent-contrast)] hover:bg-transparent hover:text-[var(--text-1)]"
                 >
-                  Notification Settings
+                  Configuracion de notificaciones
                 </Link>
               )}
             </div>
@@ -1897,7 +1897,7 @@ export default function DashboardWorkspace({
               }`}
             >
               <div className="border border-[var(--border-1)] bg-[var(--bg-0)] p-4">
-                <p className="text-xs uppercase tracking-wide text-[var(--text-3)]">Every Sale</p>
+                <p className="text-xs uppercase tracking-wide text-[var(--text-3)]">Cada venta</p>
                 <p className="mt-2 text-3xl font-semibold text-[var(--text-1)]">
                   {billingHasAccess ? toggleLabel(notificationSettings?.notifyEverySale ?? null) : "Bloqueado"}
                 </p>
@@ -1909,21 +1909,21 @@ export default function DashboardWorkspace({
                 </p>
               </div>
               <div className="border border-[var(--border-1)] bg-[var(--bg-0)] p-4">
-                <p className="text-xs uppercase tracking-wide text-[var(--text-3)]">Sold Out Rule</p>
+                <p className="text-xs uppercase tracking-wide text-[var(--text-3)]">Regla de agotado</p>
                 <p className="mt-2 text-3xl font-semibold text-[var(--text-1)]">
                   {billingHasAccess ? toggleLabel(notificationSettings?.notifySoldOut ?? null) : "Bloqueado"}
                 </p>
               </div>
               <div className="border border-[var(--border-1)] bg-[var(--bg-0)] p-4">
-                <p className="text-xs uppercase tracking-wide text-[var(--text-3)]">Low Stock Rule</p>
+                <p className="text-xs uppercase tracking-wide text-[var(--text-3)]">Regla de bajo stock</p>
                 <p className="mt-2 text-3xl font-semibold text-[var(--text-1)]">
                   {billingHasAccess ? toggleLabel(notificationSettings?.notifyLowStock ?? null) : "Bloqueado"}
                 </p>
                 <p className="mt-2 text-xs text-[var(--text-3)]">
-                  Threshold:{" "}
+                  Umbral:{" "}
                   {billingHasAccess
                     ? notificationSettings
-                      ? `${notificationSettings.lowStockThreshold.toLocaleString("en-US")} units`
+                      ? `${notificationSettings.lowStockThreshold.toLocaleString("en-US")} unidades`
                       : "Verificando"
                     : "Bloqueado"}
                 </p>
