@@ -3,7 +3,7 @@ import { createHash } from "crypto";
 import { Prisma } from "@prisma/client";
 import { createOrderLabelToken } from "../labels/token";
 import { prisma } from "../db/prisma";
-import { isBillingStatusActive } from "../billing/entitlements";
+import { isBillingStatusActive } from "../billing/status";
 import {
   sendLowStockNotification,
   sendOrderLabelReadyNotification,

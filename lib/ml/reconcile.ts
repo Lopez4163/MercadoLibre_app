@@ -1,6 +1,6 @@
 import { prisma } from "../db/prisma";
 import { sendLowStockNotification, sendOutOfStockNotification } from "../notifications/sender";
-import { ACTIVE_SUBSCRIPTION_STATUSES } from "../billing/entitlements";
+import { ACTIVE_SUBSCRIPTION_STATUSES } from "../billing/status";
 import { getItemsByIds, getSellerItemIds } from "./api";
 import { withUserMlAccessToken } from "./tokens";
 
