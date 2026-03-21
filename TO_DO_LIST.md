@@ -3,16 +3,16 @@
 Date reorganized by priority: 2026-03-20 11:25:00 PM EDT
 
 ## Level 1 (Critical Before Production)
-1. Fix test suite reliability so `npm test` passes in CI/local without requiring an implicit runtime DB URL for pure unit suites.
-2. Add CI workflow(s) to enforce `npm run lint`, `npm test`, and `npm run build` on pull requests and protected branches.
-3. Caveat: billing route tests are mocked/unit-level; run a staging smoke test with real Stripe webhook events to validate end-to-end delivery and entitlement transitions.
-4. Run the pre-production validation scripts against staging before launch: `npm run security:check-env`, `npm run security:check-webhooks`, and `npm run security:smoke-staging`.
-5. Verify production schedulers are actually configured for `/api/jobs/reconcile` and `/api/jobs/orders-cleanup` with the correct cron secrets and expected cadence.
-6. Validate webhook endpoint auth checks against a live staging/production base URL (not an offline tunnel) and confirm expected status codes for ML, Telegram, and Stripe probes.
-7. Add an operator-safe production webhook registration flow for Telegram so webhook URL/secret changes are applied deliberately after deploys instead of relying on manual drift checks.
-8. Restrict Telegram linking to private chats only so users cannot accidentally connect a group chat and send store notifications there.
-9. Handle permanent Telegram delivery failures more explicitly (for example, blocked bot / invalid chat) instead of retrying forever against a stale saved chat ID.
-10. Keep label-link fallback token lifetime at 24h to support overnight sales workflows (morning batch printing), but add safeguards:
+1. [x] Fix test suite reliability so `npm test` passes in CI/local without requiring an implicit runtime DB URL for pure unit suites.
+2. [x] Add CI workflow(s) to enforce `npm run lint`, `npm test`, and `npm run build` on pull requests and protected branches.
+3. [ ] Caveat: billing route tests are mocked/unit-level; run a staging smoke test with real Stripe webhook events to validate end-to-end delivery and entitlement transitions.
+4. [x] Run the pre-production validation scripts against staging before launch: `npm run security:check-env`, `npm run security:check-webhooks`, and `npm run security:smoke-staging`.
+5. [ ] Verify production schedulers are actually configured for `/api/jobs/reconcile` and `/api/jobs/orders-cleanup` with the correct cron secrets and expected cadence.
+6. [ ] Validate webhook endpoint auth checks against a live staging/production base URL (not an offline tunnel) and confirm expected status codes for ML, Telegram, and Stripe probes.
+7. [x] Add an operator-safe production webhook registration flow for Telegram so webhook URL/secret changes are applied deliberately after deploys instead of relying on manual drift checks.
+8. [x] Restrict Telegram linking to private chats only so users cannot accidentally connect a group chat and send store notifications there.
+9. [x] Handle permanent Telegram delivery failures more explicitly (for example, blocked bot / invalid chat) instead of retrying forever against a stale saved chat ID.
+10. [x] Keep label-link fallback token lifetime at 24h to support overnight sales workflows (morning batch printing), but add safeguards:
     - One-time use token invalidation after first successful access.
     - Strict ownership/account validation on token redemption.
     - Hard 24h expiry enforcement.
