@@ -6,6 +6,8 @@ import { getOrderLabelTokenPayload } from "../../../../../../lib/labels/token";
 import { getPrimaryOrderShipment, getShipmentLabelDocument } from "../../../../../../lib/ml/api";
 import { withUserMlAccessToken } from "../../../../../../lib/ml/tokens";
 
+const ORDER_LABEL_LINK_TOPIC = "order_label_link";
+
 function buildHtmlFallback(title: string, message: string, status: number) {
   return new NextResponse(
     `<!doctype html>
@@ -68,6 +70,83 @@ function isLabelNotReadyError(message: string) {
   );
 }
 
+function toIsoDateFromUnixSeconds(seconds: number) {
+  return new Date(seconds * 1000);
+}
+
+async function hasUserRevokedPendingLabelLinks(userId: string, tokenIssuedAtSeconds: number) {
+  const latestRevocation = await prisma.mlWebhookEvent.findFirst({
+    where: {
+      userId,
+      topic: ORDER_LABEL_LINK_TOPIC,
+      action: "revoked_all",
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
+    select: {
+      createdAt: true,
+    },
+  });
+
+  if (!latestRevocation) {
+    return false;
+  }
+
+  return latestRevocation.createdAt >= toIsoDateFromUnixSeconds(tokenIssuedAtSeconds);
+}
+
+async function isOrderLabelTokenAlreadyUsed(tokenId: string) {
+  const existing = await prisma.mlWebhookEvent.findUnique({
+    where: {
+      eventKey: `order_label_link_used:${tokenId}`,
+    },
+    select: {
+      id: true,
+    },
+  });
+
+  return Boolean(existing);
+}
+
+async function markOrderLabelTokenUsed(input: {
+  tokenId: string;
+  userId: string;
+  orderId: string;
+}) {
+  const created = await prisma.mlWebhookEvent
+    .create({
+      data: {
+        eventKey: `order_label_link_used:${input.tokenId}`,
+        userId: input.userId,
+        topic: ORDER_LABEL_LINK_TOPIC,
+        action: "used",
+        resource: `/orders/${input.orderId}`,
+      },
+      select: { id: true },
+    })
+    .catch(() => null);
+
+  if (!created) {
+    return false;
+  }
+
+  await prisma.mlWebhookEvent
+    .create({
+      data: {
+        eventKey: `order_label_link_access:${input.tokenId}:${Date.now()}`,
+        userId: input.userId,
+        topic: ORDER_LABEL_LINK_TOPIC,
+        action: "access_granted",
+        resource: `/orders/${input.orderId}`,
+      },
+      select: { id: true },
+    })
+    .catch(() => null);
+
+  return true;
+}
+
 export async function GET(
   request: NextRequest,
   context: {
@@ -82,8 +161,43 @@ export async function GET(
     return buildHtmlFallback("Invalid link", "This shipping label link is invalid or has expired.", 401);
   }
 
+  if (await hasUserRevokedPendingLabelLinks(tokenPayload.userId, tokenPayload.issuedAt)) {
+    return buildHtmlFallback("Invalid link", "This shipping label link is invalid or has expired.", 401);
+  }
+
+  if (await isOrderLabelTokenAlreadyUsed(tokenPayload.tokenId)) {
+    return buildHtmlFallback("Link already used", "This shipping label link has already been used.", 409);
+  }
+
   const sessionUserId = getSessionUserIdFromRequest(request);
   if (sessionUserId && sessionUserId !== tokenPayload.userId) {
+    await prisma.mlWebhookEvent
+      .create({
+        data: {
+          eventKey: `order_label_link_access_denied:${tokenPayload.tokenId}:${Date.now()}`,
+          userId: tokenPayload.userId,
+          topic: ORDER_LABEL_LINK_TOPIC,
+          action: "access_denied_session_mismatch",
+          resource: `/orders/${tokenPayload.orderId}`,
+        },
+        select: { id: true },
+      })
+      .catch(() => null);
+    return buildHtmlFallback("Not authorized", "This shipping label link does not belong to your account.", 403);
+  }
+
+  const conflictingOrderOwner = await prisma.order.findFirst({
+    where: {
+      mlOrderId: tokenPayload.orderId,
+      userId: {
+        not: tokenPayload.userId,
+      },
+    },
+    select: {
+      userId: true,
+    },
+  });
+  if (conflictingOrderOwner) {
     return buildHtmlFallback("Not authorized", "This shipping label link does not belong to your account.", 403);
   }
 
@@ -130,6 +244,15 @@ export async function GET(
 
     if (!document) {
       return buildHtmlFallback("Label not ready", "This order does not have a printable label yet. Try again shortly.", 404);
+    }
+
+    const markedAsUsed = await markOrderLabelTokenUsed({
+      tokenId: tokenPayload.tokenId,
+      userId: tokenPayload.userId,
+      orderId: tokenPayload.orderId,
+    });
+    if (!markedAsUsed) {
+      return buildHtmlFallback("Link already used", "This shipping label link has already been used.", 409);
     }
 
     return new NextResponse(document.data, {
