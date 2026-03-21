@@ -4,6 +4,7 @@ import { consumeTelegramConnectCode } from "../../../../../lib/telegram/connect"
 import {
   buildTelegramConnectedMessage,
   buildTelegramConnectionExpiredMessage,
+  buildTelegramPrivateChatRequiredMessage,
 } from "../../../../../lib/telegram/messages";
 import { sendTelegramMessage } from "../../../../../lib/telegram/bot";
 
@@ -12,6 +13,7 @@ type TelegramWebhookUpdate = {
   message?: {
     chat?: {
       id?: number;
+      type?: string;
     };
     text?: string;
   };
@@ -34,8 +36,18 @@ function extractStartToken(text?: string) {
 async function processStartCommand(update: TelegramWebhookUpdate) {
   const token = extractStartToken(update.message?.text);
   const chatIdRaw = update.message?.chat?.id;
+  const chatType = update.message?.chat?.type?.trim().toLowerCase();
 
   if (!token || chatIdRaw === undefined || chatIdRaw === null) {
+    return;
+  }
+
+  if (chatType !== "private") {
+    try {
+      await sendTelegramMessage(String(chatIdRaw), buildTelegramPrivateChatRequiredMessage());
+    } catch (error) {
+      console.error("telegram webhook private-chat warning failed", error);
+    }
     return;
   }
 
