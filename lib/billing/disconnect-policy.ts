@@ -1,4 +1,4 @@
-import { isBillingStatusActive } from "./entitlements";
+import { isBillingStatusActive } from "./status";
 
 export const BILLING_DISCONNECT_GRACE_MS = 24 * 60 * 60 * 1000;
 
