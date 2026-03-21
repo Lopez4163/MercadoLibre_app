@@ -4,7 +4,7 @@ import { prisma } from "../../../../../lib/db/prisma";
 import { getSessionUserIdFromCookieStore } from "../../../../../lib/auth/session";
 
 function formatDate(value: Date) {
-  return new Intl.DateTimeFormat("en-US", {
+  return new Intl.DateTimeFormat("es-AR", {
     month: "short",
     day: "numeric",
     year: "numeric",

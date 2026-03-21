@@ -111,7 +111,7 @@ function formatRelativeTime(timestamp: number | null) {
     return "Sin sincronizar";
   }
 
-  return new Intl.DateTimeFormat("en-US", {
+  return new Intl.DateTimeFormat("es-AR", {
     hour: "numeric",
     minute: "2-digit",
   }).format(new Date(timestamp));
@@ -151,7 +151,7 @@ function formatDateTime(value: string | null) {
     return "No aplica";
   }
 
-  return new Intl.DateTimeFormat("en-US", {
+  return new Intl.DateTimeFormat("es-AR", {
     month: "short",
     day: "numeric",
     hour: "numeric",
@@ -178,6 +178,23 @@ function orderStatusTone(status: string) {
   return "text-amber-300 border-amber-500/40 bg-amber-500/10";
 }
 
+function orderStatusLabel(status: string) {
+  const normalized = status.toLowerCase();
+  if (normalized === "paid") {
+    return "Pagado";
+  }
+  if (normalized === "confirmed") {
+    return "Confirmado";
+  }
+  if (normalized === "cancelled" || normalized === "canceled") {
+    return "Cancelado";
+  }
+  if (normalized === "closed") {
+    return "Cerrado";
+  }
+  return status;
+}
+
 function telegramStatusTone(status: string | null) {
   if (!status) {
     return "text-[var(--text-3)] border-[var(--border-1)] bg-[var(--bg-0)]";
@@ -186,6 +203,19 @@ function telegramStatusTone(status: string | null) {
     return "text-emerald-300 border-emerald-500/40 bg-emerald-500/10";
   }
   return "text-red-300 border-red-500/40 bg-red-500/10";
+}
+
+function telegramStatusLabel(status: string | null) {
+  if (!status) {
+    return "Sin envio";
+  }
+  if (status === "sent") {
+    return "Enviado";
+  }
+  if (status === "failed") {
+    return "Fallido";
+  }
+  return status;
 }
 
 function topSellerRankTone(rank: number) {
@@ -971,7 +1001,7 @@ export default function DashboardWorkspace({
                       <span className="shrink-0 text-xs text-[var(--text-3)]">
                         Vendidas:{" "}
                         <span className="font-semibold text-[var(--text-1)]">
-                          {(item.sold_quantity ?? 0).toLocaleString("en-US")}
+                          {(item.sold_quantity ?? 0).toLocaleString("es-AR")}
                         </span>
                       </span>
                     </div>
@@ -1070,25 +1100,25 @@ export default function DashboardWorkspace({
                 <div className="border border-[var(--border-1)] bg-[var(--bg-0)] p-4">
                   <p className="text-xs uppercase tracking-wide text-[var(--text-3)]">Pedidos de hoy</p>
                   <p className="mt-2 text-3xl font-semibold text-[var(--text-1)]">
-                    {billingHasAccess ? todayActivity.orders.toLocaleString("en-US") : "Bloqueado"}
+                    {billingHasAccess ? todayActivity.orders.toLocaleString("es-AR") : "Bloqueado"}
                   </p>
                 </div>
                 <div className="border border-[var(--border-1)] bg-[var(--bg-0)] p-4">
                   <p className="text-xs uppercase tracking-wide text-[var(--text-3)]">Unidades vendidas hoy</p>
                   <p className="mt-2 text-3xl font-semibold text-[var(--text-1)]">
-                    {billingHasAccess ? todayActivity.unitsSold.toLocaleString("en-US") : "Bloqueado"}
+                    {billingHasAccess ? todayActivity.unitsSold.toLocaleString("es-AR") : "Bloqueado"}
                   </p>
                 </div>
                 <div className="border border-[var(--border-1)] bg-[var(--bg-0)] p-4">
                   <p className="text-xs uppercase tracking-wide text-[var(--text-3)]">Alertas enviadas</p>
                   <p className="mt-2 text-3xl font-semibold text-emerald-300">
-                    {billingHasAccess ? todayActivity.alertsSent.toLocaleString("en-US") : "Bloqueado"}
+                    {billingHasAccess ? todayActivity.alertsSent.toLocaleString("es-AR") : "Bloqueado"}
                   </p>
                 </div>
                 <div className="border border-[var(--border-1)] bg-[var(--bg-0)] p-4">
                   <p className="text-xs uppercase tracking-wide text-[var(--text-3)]">Alertas fallidas</p>
                   <p className="mt-2 text-3xl font-semibold text-red-300">
-                    {billingHasAccess ? todayActivity.alertsFailed.toLocaleString("en-US") : "Bloqueado"}
+                    {billingHasAccess ? todayActivity.alertsFailed.toLocaleString("es-AR") : "Bloqueado"}
                   </p>
                 </div>
               </div>
@@ -1235,7 +1265,7 @@ export default function DashboardWorkspace({
               <div className="border border-[var(--border-1)] bg-[var(--bg-0)] p-4">
                 <p className="text-xs uppercase tracking-wide text-[var(--text-3)]">Pedidos en rango</p>
                 <p className="mt-2 text-3xl font-semibold text-[var(--text-1)]">
-                  {billingHasAccess ? ordersTotal.toLocaleString("en-US") : "Bloqueado"}
+                  {billingHasAccess ? ordersTotal.toLocaleString("es-AR") : "Bloqueado"}
                 </p>
               </div>
               <div className="border border-[var(--border-1)] bg-[var(--bg-0)] p-4">
@@ -1320,16 +1350,16 @@ export default function DashboardWorkspace({
                             )}
                           </td>
                           <td className="px-3 py-3 align-top text-sm font-semibold text-[var(--text-1)]">
-                            {order.lines.reduce((sum, line) => sum + line.quantity, 0).toLocaleString("en-US")}
+                            {order.lines.reduce((sum, line) => sum + line.quantity, 0).toLocaleString("es-AR")}
                           </td>
                           <td className="px-3 py-3 align-top text-sm text-[var(--text-2)]">{formatDateTime(order.createdAtMl ?? order.createdAt)}</td>
                           <td className="px-3 py-3 align-top">
                             <span className={`inline-flex border px-2 py-1 text-xs font-semibold uppercase ${orderStatusTone(order.status)}`}>
-                              {order.status}
+                              {orderStatusLabel(order.status)}
                             </span>
                           </td>
                           <td className="px-3 py-3 align-top text-sm font-semibold text-[var(--text-1)]">
-                            {order.totalAmount === null ? "No aplica" : `$${order.totalAmount.toLocaleString("en-US")}`}
+                            {order.totalAmount === null ? "No aplica" : `$${order.totalAmount.toLocaleString("es-AR")}`}
                           </td>
                           <td className="px-3 py-3 align-top text-sm text-[var(--text-2)]">{order.saleType ?? "No aplica"}</td>
                           <td className="px-3 py-3 align-top">
@@ -1344,7 +1374,7 @@ export default function DashboardWorkspace({
                                   order.latestNotification?.status ?? null,
                                 )}`}
                               >
-                                {order.latestNotification?.status ?? "sin envio"}
+                                {telegramStatusLabel(order.latestNotification?.status ?? null)}
                               </motion.span>
                             </AnimatePresence>
                             {order.latestNotification?.reason ? (
@@ -1458,7 +1488,7 @@ export default function DashboardWorkspace({
                 Valor del inventario
               </p>
               <p className="mt-3 text-3xl font-semibold tracking-tight text-[var(--text-1)]">
-                {billingHasAccess ? `$${inventoryValue.toLocaleString("en-US")}` : "Bloqueado"}
+                {billingHasAccess ? `$${inventoryValue.toLocaleString("es-AR")}` : "Bloqueado"}
               </p>
               <p className="mt-2 text-sm text-[var(--text-2)]">
                 Estimado segun precio actual de publicacion x unidades disponibles.
@@ -1469,7 +1499,7 @@ export default function DashboardWorkspace({
                 Unidades en stock
               </p>
               <p className="mt-3 text-3xl font-semibold tracking-tight text-[var(--text-1)]">
-                {billingHasAccess ? totalUnitsOnHand.toLocaleString("en-US") : "Bloqueado"}
+                {billingHasAccess ? totalUnitsOnHand.toLocaleString("es-AR") : "Bloqueado"}
               </p>
               <p className="mt-2 text-sm text-[var(--text-2)]">
                 Cantidad disponible total en las publicaciones cargadas.
@@ -1480,7 +1510,7 @@ export default function DashboardWorkspace({
                 Unidades vendidas total
               </p>
               <p className="mt-3 text-3xl font-semibold tracking-tight text-[var(--text-1)]">
-                {billingHasAccess ? totalUnitsSold.toLocaleString("en-US") : "Bloqueado"}
+                {billingHasAccess ? totalUnitsSold.toLocaleString("es-AR") : "Bloqueado"}
               </p>
               <p className="mt-2 text-sm text-[var(--text-2)]">
                 Unidades vendidas historicas en el catalogo cargado.
@@ -1544,14 +1574,14 @@ export default function DashboardWorkspace({
                           <div className="flex items-center justify-between">
                             <span>Unidades vendidas</span>
                             <span className="font-semibold text-[var(--text-1)]">
-                              {(item.sold_quantity ?? 0).toLocaleString("en-US")}
+                              {(item.sold_quantity ?? 0).toLocaleString("es-AR")}
                             </span>
                           </div>
                           <div className="flex items-center justify-between">
                             <span>Unidades en stock</span>
                             <span className="font-semibold text-[var(--text-1)]">
                               {typeof item.available_quantity === "number"
-                                ? item.available_quantity.toLocaleString("en-US")
+                                ? item.available_quantity.toLocaleString("es-AR")
                                 : "Desconocido"}
                             </span>
                           </div>
@@ -1560,7 +1590,7 @@ export default function DashboardWorkspace({
                             <span className="font-semibold text-[var(--text-1)]">
                               $
                               {typeof item.price === "number"
-                                ? item.price.toLocaleString("en-US")
+                                ? item.price.toLocaleString("es-AR")
                                 : "Desconocido"}
                             </span>
                           </div>
@@ -1638,7 +1668,7 @@ export default function DashboardWorkspace({
                 <div className="flex items-center justify-between border border-[var(--border-1)] bg-[var(--bg-0)] px-3 py-3">
                   <span className="text-sm text-[var(--text-2)]">Promedio de unidades / publicacion</span>
                   <span className="text-sm font-semibold text-[var(--text-1)]">
-                    {billingHasAccess ? averageUnitsPerListing.toLocaleString("en-US") : "Bloqueado"}
+                    {billingHasAccess ? averageUnitsPerListing.toLocaleString("es-AR") : "Bloqueado"}
                   </span>
                 </div>
               </div>
@@ -1680,11 +1710,11 @@ export default function DashboardWorkspace({
                             {item.title ?? item.id}
                           </p>
                           <div className="mt-2 flex items-center justify-between gap-3 text-xs text-[var(--text-3)]">
-                            <span>Vendidas: {(item.sold_quantity ?? 0).toLocaleString("en-US")}</span>
+                            <span>Vendidas: {(item.sold_quantity ?? 0).toLocaleString("es-AR")}</span>
                             <span>
                               Stock:{" "}
                               {typeof item.available_quantity === "number"
-                                ? item.available_quantity.toLocaleString("en-US")
+                                ? item.available_quantity.toLocaleString("es-AR")
                                 : "Desconocido"}
                             </span>
                           </div>
@@ -1745,11 +1775,11 @@ export default function DashboardWorkspace({
                             {item.title ?? item.id}
                           </p>
                           <div className="mt-2 flex items-center justify-between gap-3 text-xs text-[var(--text-3)]">
-                            <span>Vendidas: {(item.sold_quantity ?? 0).toLocaleString("en-US")}</span>
+                            <span>Vendidas: {(item.sold_quantity ?? 0).toLocaleString("es-AR")}</span>
                             <span>
                               Stock:{" "}
                               {typeof item.available_quantity === "number"
-                                ? item.available_quantity.toLocaleString("en-US")
+                                ? item.available_quantity.toLocaleString("es-AR")
                                 : "Desconocido"}
                             </span>
                           </div>
@@ -1811,7 +1841,7 @@ export default function DashboardWorkspace({
                           </p>
                           <div className="mt-2 flex items-center justify-between gap-3 text-xs text-[var(--text-3)]">
                             <span>Rotacion: {Math.round(item.sellThroughRate * 100)}%</span>
-                            <span>Vendidas: {(item.sold_quantity ?? 0).toLocaleString("en-US")}</span>
+                            <span>Vendidas: {(item.sold_quantity ?? 0).toLocaleString("es-AR")}</span>
                           </div>
                           <div className="mt-3 h-2 overflow-hidden bg-[var(--surface-2)]">
                             <div
@@ -1942,7 +1972,7 @@ export default function DashboardWorkspace({
                   Umbral:{" "}
                   {billingHasAccess
                     ? notificationSettings
-                      ? `${notificationSettings.lowStockThreshold.toLocaleString("en-US")} unidades`
+                      ? `${notificationSettings.lowStockThreshold.toLocaleString("es-AR")} unidades`
                       : "Verificando"
                     : "Bloqueado"}
                 </p>

@@ -11,7 +11,7 @@ function formatDate(value: Date | null) {
     return "No aplica";
   }
 
-  return new Intl.DateTimeFormat("en-US", {
+  return new Intl.DateTimeFormat("es-AR", {
     month: "short",
     day: "numeric",
     year: "numeric",

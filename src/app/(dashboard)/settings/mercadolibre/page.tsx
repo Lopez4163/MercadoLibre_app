@@ -5,7 +5,7 @@ import { getSessionUserIdFromCookieStore } from "../../../../../lib/auth/session
 import MercadoLibreSettingsCard from "../../../../../components/dashboard/MercadoLibreSettingsCard";
 
 function formatDate(value: Date) {
-  return new Intl.DateTimeFormat("en-US", {
+  return new Intl.DateTimeFormat("es-AR", {
     month: "short",
     day: "numeric",
     year: "numeric",

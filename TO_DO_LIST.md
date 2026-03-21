@@ -32,6 +32,7 @@ Date reorganized by priority: 2026-03-20 11:25:00 PM EDT
 10. Keep the product Spanish-first for the initial LATAM launch instead of implementing multilingual support now.
 11. Review and normalize launch-facing copy across the core product surfaces so the initial LATAM release reads consistently in Spanish.
 12. Confirm and standardize `NotiVenta` as the app name across product copy, notifications, and billing surfaces.
+13. Force Stripe hosted billing surfaces to Spanish (`locale: "es-419"` for Checkout, and matching locale behavior for Customer Portal sessions) instead of relying on browser auto-detection.
 
 ## Level 3 (Operational Maturity / Growth)
 1. Set a production Telegram bot profile image in BotFather so notifications show a branded avatar instead of the default letter icon.
