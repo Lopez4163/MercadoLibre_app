@@ -1,7 +1,11 @@
 import { prisma } from "../db/prisma";
 import type { MlOrderSaleType, MlShipmentLabelDocument } from "../ml/api";
 import type { TelegramInlineButton } from "../telegram/bot";
-import { sendTelegramDocument, sendTelegramMessage } from "../telegram/bot";
+import {
+  isPermanentTelegramDeliveryError,
+  sendTelegramDocument,
+  sendTelegramMessage,
+} from "../telegram/bot";
 import {
   buildLowStockMessage,
   buildOrderLabelReadyMessage,
@@ -39,6 +43,43 @@ async function getNotificationSettings(userId: string) {
   });
 }
 
+async function handleTelegramDeliveryFailure(input: {
+  userId: string;
+  chatId: string;
+  reason: "telegram_send_failed" | "telegram_delivery_permanent_failure";
+  error: unknown;
+  context: Record<string, unknown>;
+}) {
+  console.error("telegram delivery failed", {
+    userId: input.userId,
+    chatId: input.chatId,
+    reason: input.reason,
+    ...input.context,
+    error: input.error,
+  });
+
+  if (input.reason === "telegram_delivery_permanent_failure") {
+    await prisma.telegramAccount
+      .deleteMany({
+        where: {
+          userId: input.userId,
+          chatId: input.chatId,
+        },
+      })
+      .catch(() => null);
+  }
+
+  return { sent: false as const, reason: input.reason };
+}
+
+function mapTelegramDeliveryFailureReason(error: unknown) {
+  if (isPermanentTelegramDeliveryError(error)) {
+    return "telegram_delivery_permanent_failure" as const;
+  }
+
+  return "telegram_send_failed" as const;
+}
+
 export async function sendOrderSoldNotification(input: OrderSoldNotificationInput) {
   const settings = await getNotificationSettings(input.userId);
   if (!settings.notifyEverySale) {
@@ -74,6 +115,20 @@ export async function sendOrderSoldNotification(input: OrderSoldNotificationInpu
       );
       return { sent: true as const };
     } catch (error) {
+      const reason = mapTelegramDeliveryFailureReason(error);
+      if (reason === "telegram_delivery_permanent_failure") {
+        return handleTelegramDeliveryFailure({
+          userId: input.userId,
+          chatId: account.chatId,
+          reason,
+          error,
+          context: {
+            source: "order_sold_document",
+            orderId: input.orderId,
+          },
+        });
+      }
+
       console.error("telegram label document send failed for order notification", {
         userId: input.userId,
         orderId: input.orderId,
@@ -82,10 +137,23 @@ export async function sendOrderSoldNotification(input: OrderSoldNotificationInpu
     }
   }
 
-  await sendTelegramMessage(account.chatId, message, {
-    inlineButtons: input.inlineButtons,
-  });
-  return { sent: true as const };
+  try {
+    await sendTelegramMessage(account.chatId, message, {
+      inlineButtons: input.inlineButtons,
+    });
+    return { sent: true as const };
+  } catch (error) {
+    return handleTelegramDeliveryFailure({
+      userId: input.userId,
+      chatId: account.chatId,
+      reason: mapTelegramDeliveryFailureReason(error),
+      error,
+      context: {
+        source: "order_sold_message",
+        orderId: input.orderId,
+      },
+    });
+  }
 }
 
 type OutOfStockNotificationInput = {
@@ -134,8 +202,21 @@ export async function sendOutOfStockNotification(input: OutOfStockNotificationIn
     source: input.source,
   });
 
-  await sendTelegramMessage(account.chatId, message);
-  return { sent: true as const };
+  try {
+    await sendTelegramMessage(account.chatId, message);
+    return { sent: true as const };
+  } catch (error) {
+    return handleTelegramDeliveryFailure({
+      userId: input.userId,
+      chatId: account.chatId,
+      reason: mapTelegramDeliveryFailureReason(error),
+      error,
+      context: {
+        source: "out_of_stock",
+        itemId: input.itemId,
+      },
+    });
+  }
 }
 
 export async function sendOrderLabelReadyNotification(input: OrderLabelReadyNotificationInput) {
@@ -174,6 +255,21 @@ export async function sendOrderLabelReadyNotification(input: OrderLabelReadyNoti
       );
       return { sent: true as const };
     } catch (error) {
+      const reason = mapTelegramDeliveryFailureReason(error);
+      if (reason === "telegram_delivery_permanent_failure") {
+        return handleTelegramDeliveryFailure({
+          userId: input.userId,
+          chatId: account.chatId,
+          reason,
+          error,
+          context: {
+            source: "label_ready_document",
+            orderId: input.orderId,
+            shipmentId: input.shipmentId,
+          },
+        });
+      }
+
       console.error("telegram label document send failed for label-ready notification", {
         userId: input.userId,
         orderId: input.orderId,
@@ -183,10 +279,24 @@ export async function sendOrderLabelReadyNotification(input: OrderLabelReadyNoti
     }
   }
 
-  await sendTelegramMessage(account.chatId, message, {
-    inlineButtons: input.inlineButtons,
-  });
-  return { sent: true as const };
+  try {
+    await sendTelegramMessage(account.chatId, message, {
+      inlineButtons: input.inlineButtons,
+    });
+    return { sent: true as const };
+  } catch (error) {
+    return handleTelegramDeliveryFailure({
+      userId: input.userId,
+      chatId: account.chatId,
+      reason: mapTelegramDeliveryFailureReason(error),
+      error,
+      context: {
+        source: "label_ready_message",
+        orderId: input.orderId,
+        shipmentId: input.shipmentId,
+      },
+    });
+  }
 }
 
 type LowStockNotificationInput = {
@@ -223,6 +333,19 @@ export async function sendLowStockNotification(input: LowStockNotificationInput)
     source: input.source,
   });
 
-  await sendTelegramMessage(account.chatId, message);
-  return { sent: true as const };
+  try {
+    await sendTelegramMessage(account.chatId, message);
+    return { sent: true as const };
+  } catch (error) {
+    return handleTelegramDeliveryFailure({
+      userId: input.userId,
+      chatId: account.chatId,
+      reason: mapTelegramDeliveryFailureReason(error),
+      error,
+      context: {
+        source: "low_stock",
+        itemId: input.itemId,
+      },
+    });
+  }
 }
