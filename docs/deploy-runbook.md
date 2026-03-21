@@ -15,6 +15,14 @@ Last updated: March 15, 2026
 3. Verification command:
    - `RECONCILE_BASE_URL=https://<domain> RECONCILE_CRON_SECRET=<secret> npm run reconcile:check`
 
+## Telegram Webhook Registration (Operator-Safe)
+1. Check current Telegram webhook target before changing anything:
+   - `npm run telegram:webhook:check -- --env-file=.env.local`
+2. Apply/refresh webhook URL + secret token intentionally after deploy or secret rotation:
+   - `npm run telegram:webhook:register -- --env-file=.env.local`
+3. Optional forced re-registration even if URL already matches:
+   - `npm run telegram:webhook:register -- --env-file=.env.local --force`
+
 ## Environment Stages
 1. Keep separate `local`, `staging`, and `production` environments.
 2. Use separate DBs for staging vs production.

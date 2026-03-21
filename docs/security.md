@@ -53,3 +53,6 @@ Required:
 
 Operational rule:
 - If `TELEGRAM_WEBHOOK_SECRET` changes, re-run Telegram `setWebhook` immediately with the same secret.
+- Use controlled ops commands instead of ad-hoc manual changes:
+  - check: `npm run telegram:webhook:check -- --env-file=.env.local`
+  - register/update: `npm run telegram:webhook:register -- --env-file=.env.local`
