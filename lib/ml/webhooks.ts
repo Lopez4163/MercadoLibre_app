@@ -1,7 +1,7 @@
 import { getAppBaseUrl } from "../app/base-url";
 import { createHash } from "crypto";
 import { Prisma } from "@prisma/client";
-import { createOrderLabelToken } from "../labels/token";
+import { createOrderLabelTokenWithMetadata } from "../labels/token";
 import { prisma } from "../db/prisma";
 import { isBillingStatusActive } from "../billing/status";
 import {
@@ -109,21 +109,36 @@ function isShipmentEvent(topic: string, resource: string, action: string) {
   return combined.includes("shipment") || combined.includes("/shipments/");
 }
 
-function buildOrderLabelButtonUrl(input: {
+async function buildOrderLabelButtonUrl(input: {
   userId: string;
   orderId: string;
   shipmentId: string;
 }) {
   const baseUrl = getAppBaseUrl();
   const labelUrl = new URL(`/api/orders/${input.orderId}/label`, baseUrl);
+  const token = createOrderLabelTokenWithMetadata({
+    userId: input.userId,
+    orderId: input.orderId,
+    shipmentId: input.shipmentId,
+  });
   labelUrl.searchParams.set(
     "token",
-    createOrderLabelToken({
-      userId: input.userId,
-      orderId: input.orderId,
-      shipmentId: input.shipmentId,
-    }),
+    token.token,
   );
+
+  await prisma.mlWebhookEvent
+    .create({
+      data: {
+        eventKey: `order_label_link_generated:${token.tokenId}`,
+        userId: input.userId,
+        topic: "order_label_link",
+        action: "generated",
+        resource: `/orders/${input.orderId}`,
+      },
+      select: { id: true },
+    })
+    .catch(() => null);
+
   return labelUrl.toString();
 }
 
@@ -316,7 +331,7 @@ async function handleOrderEvent(options: {
     if (!shipmentId) {
       labelButtonSkippedReason = "no_shipment";
     } else {
-      labelButtonUrl = buildOrderLabelButtonUrl({
+      labelButtonUrl = await buildOrderLabelButtonUrl({
         userId,
         orderId: order.id,
         shipmentId,
@@ -603,7 +618,7 @@ async function handleShipmentEvent(options: {
       return { processed: false as const, reason: "shipment_label_duplicate" as const };
     }
 
-    const labelButtonUrl = buildOrderLabelButtonUrl({
+    const labelButtonUrl = await buildOrderLabelButtonUrl({
       userId,
       orderId,
       shipmentId,

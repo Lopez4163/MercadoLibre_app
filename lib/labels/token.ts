@@ -1,4 +1,4 @@
-import { createHmac, timingSafeEqual } from "node:crypto";
+import { createHmac, randomUUID, timingSafeEqual } from "node:crypto";
 
 const ORDER_LABEL_TOKEN_VERSION = 1;
 const ORDER_LABEL_TOKEN_TTL_SECONDS = 60 * 60 * 24;
@@ -7,6 +7,7 @@ type OrderLabelTokenPayload = {
   uid: string;
   oid: string;
   sid?: string;
+  tid: string;
   iat: number;
   exp: number;
   v: number;
@@ -73,7 +74,11 @@ function decodeOrderLabelTokenPayload(encodedPayload: string) {
     return null;
   }
 
-  if (typeof payload.uid !== "string" || typeof payload.oid !== "string") {
+  if (
+    typeof payload.uid !== "string" ||
+    typeof payload.oid !== "string" ||
+    typeof payload.tid !== "string"
+  ) {
     return null;
   }
 
@@ -85,13 +90,24 @@ function decodeOrderLabelTokenPayload(encodedPayload: string) {
 }
 
 export function createOrderLabelToken(input: OrderLabelTokenInput, options?: OrderLabelTokenOptions) {
+  return createOrderLabelTokenWithMetadata(input, options).token;
+}
+
+export function createOrderLabelTokenWithMetadata(
+  input: OrderLabelTokenInput,
+  options?: OrderLabelTokenOptions,
+) {
   const nowMs = (options?.now ?? new Date()).getTime();
   const issuedAtSeconds = Math.floor(nowMs / 1000);
-  const ttlSeconds = options?.ttlSeconds ?? ORDER_LABEL_TOKEN_TTL_SECONDS;
+  const ttlSeconds = Math.min(
+    options?.ttlSeconds ?? ORDER_LABEL_TOKEN_TTL_SECONDS,
+    ORDER_LABEL_TOKEN_TTL_SECONDS,
+  );
   const payload: OrderLabelTokenPayload = {
     uid: input.userId,
     oid: input.orderId,
     ...(input.shipmentId ? { sid: input.shipmentId } : {}),
+    tid: randomUUID(),
     iat: issuedAtSeconds,
     exp: issuedAtSeconds + ttlSeconds,
     v: ORDER_LABEL_TOKEN_VERSION,
@@ -99,7 +115,13 @@ export function createOrderLabelToken(input: OrderLabelTokenInput, options?: Ord
 
   const encodedPayload = encodeBase64Url(JSON.stringify(payload));
   const signature = signPayload(encodedPayload, getOrderLabelTokenSecret(options?.secret));
-  return `${encodedPayload}.${signature}`;
+  const token = `${encodedPayload}.${signature}`;
+  return {
+    token,
+    tokenId: payload.tid,
+    issuedAt: payload.iat,
+    expiresAt: payload.exp,
+  };
 }
 
 export function getOrderLabelTokenPayload(token: string | undefined, options?: OrderLabelTokenOptions) {
@@ -127,7 +149,12 @@ export function getOrderLabelTokenPayload(token: string | undefined, options?: O
     return null;
   }
 
+  if (payload.exp - payload.iat > ORDER_LABEL_TOKEN_TTL_SECONDS) {
+    return null;
+  }
+
   return {
+    tokenId: payload.tid,
     userId: payload.uid,
     orderId: payload.oid,
     shipmentId: payload.sid ?? null,

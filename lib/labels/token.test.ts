@@ -23,6 +23,7 @@ describe("order label token", () => {
     });
 
     expect(payload).toEqual({
+      tokenId: expect.any(String),
       userId: "user-123",
       orderId: "order-456",
       shipmentId: "shipment-789",
@@ -120,5 +121,32 @@ describe("order label token", () => {
         now: new Date("2026-03-12T12:02:00.000Z"),
       }),
     ).toBe(false);
+  });
+
+  it("caps TTL at 24 hours even when a longer ttlSeconds is requested", () => {
+    const now = new Date("2026-03-12T12:00:00.000Z");
+    const token = createOrderLabelToken(
+      {
+        userId: "user-123",
+        orderId: "order-456",
+      },
+      {
+        secret: "test-secret",
+        now,
+        ttlSeconds: 60 * 60 * 48,
+      },
+    );
+
+    const payload = getOrderLabelTokenPayload(token, {
+      secret: "test-secret",
+      now: new Date("2026-03-13T11:59:00.000Z"),
+    });
+    expect(payload).not.toBeNull();
+
+    const expiredPayload = getOrderLabelTokenPayload(token, {
+      secret: "test-secret",
+      now: new Date("2026-03-13T12:01:00.000Z"),
+    });
+    expect(expiredPayload).toBeNull();
   });
 });
