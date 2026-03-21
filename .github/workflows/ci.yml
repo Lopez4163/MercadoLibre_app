@@ -1,0 +1,62 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Lint, Test, Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      CI: "true"
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/mercadolibs?sslmode=disable
+      APP_BASE_URL: https://example.com
+      NEXTAUTH_URL: https://example.com
+      SESSION_SECRET: ci_session_secret_min_24_chars_123456
+      NEXTAUTH_SECRET: ci_nextauth_secret_min_24_chars_123456
+      OAUTH_STATE_SECRET: ci_oauth_state_secret_min_24_chars_123456
+      ML_CLIENT_ID: ci_ml_client_id
+      ML_CLIENT_SECRET: ci_ml_client_secret
+      ML_REDIRECT_URI: https://example.com/api/ml/callback
+      ML_WEBHOOK_SECRET: ci_ml_webhook_secret
+      TELEGRAM_BOT_TOKEN: 123456:ci_fake_token_value
+      TELEGRAM_BOT_USERNAME: ci_test_bot
+      TELEGRAM_WEBHOOK_SECRET: ci_telegram_webhook_secret
+      STRIPE_SECRET_KEY: sk_test_ci_secret_key
+      STRIPE_PRICE_ID: price_ci_price_id
+      STRIPE_WEBHOOK_SECRET: whsec_ci_webhook_secret
+      UPSTASH_REDIS_REST_URL: https://example.upstash.io
+      UPSTASH_REDIS_REST_TOKEN: ci_upstash_token
+      RECONCILE_CRON_SECRET: ci_reconcile_secret
+      ORDERS_CLEANUP_CRON_SECRET: ci_orders_cleanup_secret
+      ORDER_LABEL_TOKEN_SECRET: ci_order_label_token_secret
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Test
+        run: npm test
+
+      - name: Build
+        run: npm run build
