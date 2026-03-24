@@ -18,11 +18,11 @@ export default async function SettingsTelegramPage() {
     <div className="space-y-4">
       <TelegramSettingsCard initialHasBillingAccess={entitlement.hasAccess} />
       <section className="border border-[var(--border-1)] bg-[var(--surface-1)] p-5">
-        <h3 className="text-lg font-semibold tracking-tight text-[var(--text-1)]">Telegram delivery notes</h3>
+        <h3 className="text-lg font-semibold tracking-tight text-[var(--text-1)]">Notas de entrega por Telegram</h3>
         <ul className="mt-4 space-y-3 text-sm text-[var(--text-2)]">
-          <li>Use the connect action to bind your seller account to a Telegram chat.</li>
-          <li>Send a test ping after setup to verify the bot can deliver messages into the correct chat.</li>
-          <li>Disconnecting Telegram stops future delivery until the chat is connected again.</li>
+          <li>Usa la accion de conectar para vincular tu cuenta vendedora con un chat de Telegram.</li>
+          <li>Envia una prueba despues de configurar para verificar que el bot entrega en el chat correcto.</li>
+          <li>Desconectar Telegram detiene entregas futuras hasta volver a conectar el chat.</li>
         </ul>
       </section>
     </div>

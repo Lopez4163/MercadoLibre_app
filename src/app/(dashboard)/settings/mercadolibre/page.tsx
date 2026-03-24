@@ -5,7 +5,7 @@ import { getSessionUserIdFromCookieStore } from "../../../../../lib/auth/session
 import MercadoLibreSettingsCard from "../../../../../components/dashboard/MercadoLibreSettingsCard";
 
 function formatDate(value: Date) {
-  return new Intl.DateTimeFormat("en-US", {
+  return new Intl.DateTimeFormat("es-AR", {
     month: "short",
     day: "numeric",
     year: "numeric",
@@ -14,7 +14,7 @@ function formatDate(value: Date) {
 
 function formatOptionalDate(value: Date | null | undefined) {
   if (!value) {
-    return "N/A";
+    return "No aplica";
   }
 
   return formatDate(value);
@@ -48,35 +48,35 @@ export default async function SettingsMercadoLibrePage() {
   return (
     <div className="space-y-4">
       <section className="border border-[var(--border-1)] bg-[var(--surface-1)] p-5">
-        <h3 className="text-lg font-semibold tracking-tight text-[var(--text-1)]">Connection status</h3>
+        <h3 className="text-lg font-semibold tracking-tight text-[var(--text-1)]">Estado de conexion</h3>
         <dl className="mt-4 grid gap-3 text-sm text-[var(--text-2)] md:grid-cols-2">
           <div>
-            <dt className="text-[var(--text-3)]">Status</dt>
-            <dd className="mt-1 font-medium text-[var(--text-1)]">{mlConnected ? "Connected" : "Disconnected"}</dd>
+            <dt className="text-[var(--text-3)]">Estado</dt>
+            <dd className="mt-1 font-medium text-[var(--text-1)]">{mlConnected ? "Conectado" : "Desconectado"}</dd>
           </div>
           <div>
-            <dt className="text-[var(--text-3)]">ML User ID</dt>
+            <dt className="text-[var(--text-3)]">ID de usuario ML</dt>
             <dd className="mt-1 font-medium text-[var(--text-1)]">{user.mlUserId}</dd>
           </div>
           <div>
-            <dt className="text-[var(--text-3)]">Store nickname</dt>
-            <dd className="mt-1 font-medium text-[var(--text-1)]">{user.mlNickname ?? "N/A"}</dd>
+            <dt className="text-[var(--text-3)]">Nombre de tienda</dt>
+            <dd className="mt-1 font-medium text-[var(--text-1)]">{user.mlNickname ?? "No aplica"}</dd>
           </div>
           <div>
-            <dt className="text-[var(--text-3)]">Connected since</dt>
+            <dt className="text-[var(--text-3)]">Conectado desde</dt>
             <dd className="mt-1 font-medium text-[var(--text-1)]">
-              {mlConnected ? formatOptionalDate(user.createdAt) : "N/A"}
+              {mlConnected ? formatOptionalDate(user.createdAt) : "No aplica"}
             </dd>
           </div>
         </dl>
       </section>
       <MercadoLibreSettingsCard />
       <section className="border border-[var(--border-1)] bg-[var(--surface-1)] p-5">
-        <h3 className="text-lg font-semibold tracking-tight text-[var(--text-1)]">Connection notes</h3>
+        <h3 className="text-lg font-semibold tracking-tight text-[var(--text-1)]">Notas de conexion</h3>
         <ul className="mt-4 space-y-3 text-sm text-[var(--text-2)]">
-          <li>Disconnect only when you intentionally want to stop Mercado Libre syncing for this account.</li>
-          <li>Disconnect clears your app session and requires a fresh OAuth connect to continue.</li>
-          <li>Telegram can remain connected, but alerts require an active Mercado Libre account connection.</li>
+          <li>Desconecta solo cuando quieras detener la sincronizacion de Mercado Libre para esta cuenta.</li>
+          <li>Desconectar limpia la sesion de la app y requiere un nuevo OAuth para continuar.</li>
+          <li>Telegram puede quedar conectado, pero las alertas requieren una conexion activa de Mercado Libre.</li>
         </ul>
       </section>
     </div>

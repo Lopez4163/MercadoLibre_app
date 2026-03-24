@@ -4,7 +4,7 @@ import { prisma } from "../../../../../lib/db/prisma";
 import { getSessionUserIdFromCookieStore } from "../../../../../lib/auth/session";
 
 function formatDate(value: Date) {
-  return new Intl.DateTimeFormat("en-US", {
+  return new Intl.DateTimeFormat("es-AR", {
     month: "short",
     day: "numeric",
     year: "numeric",
@@ -13,7 +13,7 @@ function formatDate(value: Date) {
 
 function formatOptionalDate(value: Date | null | undefined) {
   if (!value) {
-    return "N/A";
+    return "No aplica";
   }
 
   return formatDate(value);
@@ -21,7 +21,7 @@ function formatOptionalDate(value: Date | null | undefined) {
 
 function maskChatId(chatId: string | null | undefined) {
   if (!chatId) {
-    return "N/A";
+    return "No aplica";
   }
 
   if (chatId.length <= 4) {
@@ -35,6 +35,25 @@ function storeInitial(user: { mlNickname: string | null; email: string }) {
   const source = user.mlNickname?.trim() || user.email.trim();
   const first = source[0];
   return first ? first.toUpperCase() : "?";
+}
+
+function billingStatusLabel(status: string | null | undefined) {
+  if (status === "active") {
+    return "activa";
+  }
+  if (status === "trialing") {
+    return "en prueba";
+  }
+  if (status === "past_due") {
+    return "pago pendiente";
+  }
+  if (status === "unpaid") {
+    return "impaga";
+  }
+  if (status === "canceled") {
+    return "cancelada";
+  }
+  return "sin estado";
 }
 
 export default async function SettingsProfilePage() {
@@ -82,13 +101,13 @@ export default async function SettingsProfilePage() {
     <div className="space-y-4">
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <article className="border border-[var(--border-1)] bg-[var(--surface-1)] p-4">
-          <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-3)]">Store image</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-3)]">Imagen de tienda</p>
           <div className="mt-3 h-20 w-20 border border-[var(--border-1)] bg-[var(--surface-2)] p-1">
             {user.mlAvatarUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={user.mlAvatarUrl}
-                alt="Store profile"
+                alt="Perfil de tienda"
                 className="h-full w-full object-contain"
                 loading="lazy"
                 referrerPolicy="no-referrer"
@@ -103,30 +122,30 @@ export default async function SettingsProfilePage() {
         <article className="border border-[var(--border-1)] bg-[var(--surface-1)] p-4">
           <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-3)]">Mercado Libre</p>
           <p className="mt-3 text-base font-semibold text-[var(--text-1)]">
-            {mlConnected ? "Connected" : "Disconnected"}
+            {mlConnected ? "Conectado" : "Desconectado"}
           </p>
         </article>
         <article className="border border-[var(--border-1)] bg-[var(--surface-1)] p-4">
           <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-3)]">Telegram</p>
           <p className="mt-3 text-base font-semibold text-[var(--text-1)]">
-            {telegramConnected ? "Connected" : "Not connected"}
+            {telegramConnected ? "Conectado" : "No conectado"}
           </p>
         </article>
         <article className="border border-[var(--border-1)] bg-[var(--surface-1)] p-4">
-          <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-3)]">Billing</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-3)]">Facturacion</p>
           <p className="mt-3 text-base font-semibold capitalize text-[var(--text-1)]">
-            {user.billingSubscription?.status ?? "none"}
+            {billingStatusLabel(user.billingSubscription?.status)}
           </p>
         </article>
       </section>
 
       <section className="border border-[var(--border-1)] bg-[var(--surface-1)] p-5">
-        <h3 className="text-lg font-semibold tracking-tight text-[var(--text-1)]">Store identity</h3>
+        <h3 className="text-lg font-semibold tracking-tight text-[var(--text-1)]">Identidad de tienda</h3>
         <dl className="mt-4 space-y-4 text-sm text-[var(--text-2)]">
           <div className="border border-[var(--border-1)] bg-[var(--bg-0)] px-3 py-3">
-            <dt className="text-[var(--text-3)]">Store name</dt>
+            <dt className="text-[var(--text-3)]">Nombre de tienda</dt>
             <dd className="mt-1 overflow-x-auto whitespace-nowrap font-medium text-[var(--text-1)]">
-              {user.mlNickname ?? "N/A"}
+              {user.mlNickname ?? "No aplica"}
             </dd>
           </div>
           <div className="border border-[var(--border-1)] bg-[var(--bg-0)] px-3 py-3">
@@ -136,7 +155,7 @@ export default async function SettingsProfilePage() {
             </dd>
           </div>
           <div className="border border-[var(--border-1)] bg-[var(--bg-0)] px-3 py-3">
-            <dt className="text-[var(--text-3)]">ML User ID</dt>
+            <dt className="text-[var(--text-3)]">ID de usuario ML</dt>
             <dd className="mt-1 overflow-x-auto whitespace-nowrap font-medium text-[var(--text-1)]">
               {user.mlUserId}
             </dd>
@@ -145,58 +164,58 @@ export default async function SettingsProfilePage() {
       </section>
 
       <section className="border border-[var(--border-1)] bg-[var(--surface-1)] p-5">
-        <h3 className="text-lg font-semibold tracking-tight text-[var(--text-1)]">Connections</h3>
+        <h3 className="text-lg font-semibold tracking-tight text-[var(--text-1)]">Conexiones</h3>
         <dl className="mt-4 grid gap-3 text-sm text-[var(--text-2)] md:grid-cols-2">
           <div>
             <dt className="text-[var(--text-3)]">Mercado Libre</dt>
             <dd className="mt-1 font-medium text-[var(--text-1)]">
-              {mlConnected ? "Connected" : "Disconnected"}
+              {mlConnected ? "Conectado" : "Desconectado"}
             </dd>
           </div>
           <div>
             <dt className="text-[var(--text-3)]">Telegram</dt>
             <dd className="mt-1 font-medium text-[var(--text-1)]">
-              {telegramConnected ? "Connected" : "Not connected"}
+              {telegramConnected ? "Conectado" : "No conectado"}
             </dd>
           </div>
           <div>
-            <dt className="text-[var(--text-3)]">Telegram chat ID</dt>
+            <dt className="text-[var(--text-3)]">ID de chat Telegram</dt>
             <dd className="mt-1 font-medium text-[var(--text-1)]">{maskChatId(user.telegramAccount?.chatId)}</dd>
           </div>
         </dl>
       </section>
 
       <section className="border border-[var(--border-1)] bg-[var(--surface-1)] p-5">
-        <h3 className="text-lg font-semibold tracking-tight text-[var(--text-1)]">Account details</h3>
+        <h3 className="text-lg font-semibold tracking-tight text-[var(--text-1)]">Detalles de cuenta</h3>
         <dl className="mt-4 grid gap-3 text-sm text-[var(--text-2)] md:grid-cols-2">
           <div>
-            <dt className="text-[var(--text-3)]">Joined</dt>
+            <dt className="text-[var(--text-3)]">Registro</dt>
             <dd className="mt-1 font-medium text-[var(--text-1)]">{formatDate(user.createdAt)}</dd>
           </div>
         </dl>
       </section>
 
       <section className="border border-[var(--border-1)] bg-[var(--surface-1)] p-5">
-        <h3 className="text-lg font-semibold tracking-tight text-[var(--text-1)]">Billing snapshot</h3>
+        <h3 className="text-lg font-semibold tracking-tight text-[var(--text-1)]">Resumen de facturacion</h3>
         <dl className="mt-4 grid gap-3 text-sm text-[var(--text-2)] md:grid-cols-2">
           <div>
-            <dt className="text-[var(--text-3)]">Subscription status</dt>
+            <dt className="text-[var(--text-3)]">Estado de suscripcion</dt>
             <dd className="mt-1 font-medium capitalize text-[var(--text-1)]">
-              {user.billingSubscription?.status ?? "none"}
+              {billingStatusLabel(user.billingSubscription?.status)}
             </dd>
           </div>
           <div>
-            <dt className="text-[var(--text-3)]">Plan (Price ID)</dt>
-            <dd className="mt-1 font-medium text-[var(--text-1)]">{user.billingSubscription?.priceId ?? "N/A"}</dd>
+            <dt className="text-[var(--text-3)]">Plan (ID de precio)</dt>
+            <dd className="mt-1 font-medium text-[var(--text-1)]">{user.billingSubscription?.priceId ?? "No aplica"}</dd>
           </div>
           <div>
-            <dt className="text-[var(--text-3)]">Trial end</dt>
+            <dt className="text-[var(--text-3)]">Fin de prueba</dt>
             <dd className="mt-1 font-medium text-[var(--text-1)]">
               {formatOptionalDate(user.billingSubscription?.trialEnd)}
             </dd>
           </div>
           <div>
-            <dt className="text-[var(--text-3)]">Next renewal</dt>
+            <dt className="text-[var(--text-3)]">Proxima renovacion</dt>
             <dd className="mt-1 font-medium text-[var(--text-1)]">
               {formatOptionalDate(user.billingSubscription?.currentPeriodEnd)}
             </dd>
@@ -206,7 +225,7 @@ export default async function SettingsProfilePage() {
           href="/billing"
           className="mt-4 inline-flex h-10 items-center border border-[var(--border-1)] bg-[var(--surface-2)] px-4 text-sm font-semibold text-[var(--text-1)] hover:bg-[var(--surface-1)]"
         >
-          Manage billing
+          Administrar facturacion
         </a>
       </section>
     </div>

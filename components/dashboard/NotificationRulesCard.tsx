@@ -12,16 +12,32 @@ type NotificationSettingsPayload = {
 
 type NotificationTestType = "sale" | "low_stock" | "sold_out" | "shipping_label" | "channel_health";
 const notificationTestOptions: Array<{ value: NotificationTestType; label: string }> = [
-  { value: "sale", label: "Sale Alert Sample" },
-  { value: "low_stock", label: "Low Stock Sample" },
-  { value: "sold_out", label: "Sold Out Sample" },
-  { value: "shipping_label", label: "Shipping Label Sample" },
-  { value: "channel_health", label: "Channel Health Check" },
+  { value: "sale", label: "Ejemplo de alerta de venta" },
+  { value: "low_stock", label: "Ejemplo de bajo stock" },
+  { value: "sold_out", label: "Ejemplo de agotado" },
+  { value: "shipping_label", label: "Ejemplo de etiqueta de envio" },
+  { value: "channel_health", label: "Prueba de salud del canal" },
 ];
 
 type NotificationRulesCardProps = {
   initialHasBillingAccess?: boolean | null;
 };
+
+function notificationErrorLabel(value: string) {
+  if (value === "subscription_required") {
+    return "Se requiere una suscripcion activa.";
+  }
+  if (value === "failed_to_load_settings") {
+    return "No se pudo cargar la configuracion de notificaciones.";
+  }
+  if (value === "failed_to_save_settings") {
+    return "No se pudo guardar la configuracion.";
+  }
+  if (value === "failed_to_send_test") {
+    return "No se pudo enviar la prueba.";
+  }
+  return value;
+}
 
 export default function NotificationRulesCard({ initialHasBillingAccess = null }: NotificationRulesCardProps) {
   const [notifyEverySale, setNotifyEverySale] = useState(false);
@@ -102,7 +118,8 @@ export default function NotificationRulesCard({ initialHasBillingAccess = null }
       setHasBillingAccess(true);
     } catch (error) {
       setHasBillingAccess(false);
-      setSettingsError(error instanceof Error ? error.message : "failed_to_load_settings");
+      const rawMessage = error instanceof Error ? error.message : "failed_to_load_settings";
+      setSettingsError(notificationErrorLabel(rawMessage));
     } finally {
       setSettingsLoading(false);
     }
@@ -155,9 +172,10 @@ export default function NotificationRulesCard({ initialHasBillingAccess = null }
       setNotifyLowStock(nextSettings.notifyLowStock);
       setLowStockThreshold(nextSettings.lowStockThreshold);
       setSavedSettings(nextSettings);
-      setSettingsSuccess("Notification settings saved.");
+      setSettingsSuccess("Configuracion de notificaciones guardada.");
     } catch (error) {
-      setSettingsError(error instanceof Error ? error.message : "failed_to_save_settings");
+      const rawMessage = error instanceof Error ? error.message : "failed_to_save_settings";
+      setSettingsError(notificationErrorLabel(rawMessage));
     } finally {
       setSettingsSaving(false);
     }
@@ -183,9 +201,10 @@ export default function NotificationRulesCard({ initialHasBillingAccess = null }
       }
 
       const selectedOption = notificationTestOptions.find((option) => option.value === type);
-      setTestSuccess(`${selectedOption?.label ?? "Test"} sent.`);
+      setTestSuccess(`${selectedOption?.label ?? "Prueba"} enviada.`);
     } catch (error) {
-      setTestError(error instanceof Error ? error.message : "failed_to_send_test");
+      const rawMessage = error instanceof Error ? error.message : "failed_to_send_test";
+      setTestError(notificationErrorLabel(rawMessage));
     } finally {
       setTestRunningType(null);
     }
@@ -201,10 +220,10 @@ export default function NotificationRulesCard({ initialHasBillingAccess = null }
 
   return (
     <section className="border border-[var(--border-1)] bg-[var(--surface-1)] p-5">
-      <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--text-3)]">Alert Rules</p>
-      <h3 className="mt-2 text-lg font-semibold tracking-tight text-[var(--text-1)]">Notification settings</h3>
+      <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--text-3)]">Reglas de alerta</p>
+      <h3 className="mt-2 text-lg font-semibold tracking-tight text-[var(--text-1)]">Configuracion de notificaciones</h3>
       <p className="mt-2 text-sm text-[var(--text-2)]">
-        Configure which sale and inventory transitions should create Telegram alerts.
+        Configura que transiciones de venta e inventario deben crear alertas por Telegram.
       </p>
 
       <div className="relative mt-5">
@@ -214,7 +233,7 @@ export default function NotificationRulesCard({ initialHasBillingAccess = null }
         >
           <div className="divide-y divide-[var(--border-1)] border border-[var(--border-1)] bg-[var(--bg-0)]">
             <div className="flex items-center justify-between px-3 py-3 text-sm">
-              <span className="text-[var(--text-1)]">Notify on every item sold</span>
+              <span className="text-[var(--text-1)]">Notificar cada articulo vendido</span>
               <button
                 type="button"
                 role="switch"
@@ -234,7 +253,7 @@ export default function NotificationRulesCard({ initialHasBillingAccess = null }
             </div>
 
             <div className="flex items-center justify-between px-3 py-3 text-sm">
-              <span className="text-[var(--text-1)]">Notify on sold out (stock = 0)</span>
+              <span className="text-[var(--text-1)]">Notificar agotado (stock = 0)</span>
               <button
                 type="button"
                 role="switch"
@@ -254,7 +273,7 @@ export default function NotificationRulesCard({ initialHasBillingAccess = null }
             </div>
 
             <div className="flex items-center justify-between px-3 py-3 text-sm">
-              <span className="text-[var(--text-1)]">Notify on low stock</span>
+              <span className="text-[var(--text-1)]">Notificar bajo stock</span>
               <button
                 type="button"
                 role="switch"
@@ -274,7 +293,7 @@ export default function NotificationRulesCard({ initialHasBillingAccess = null }
             </div>
 
             <div className="flex items-center justify-between px-3 py-3 text-sm">
-              <span className="text-[var(--text-1)]">Low stock threshold</span>
+              <span className="text-[var(--text-1)]">Umbral de bajo stock</span>
               <input
                 type="number"
                 min={0}
@@ -292,15 +311,15 @@ export default function NotificationRulesCard({ initialHasBillingAccess = null }
             disabled={controlsDisabled || !hasUnsavedChanges}
             className="mt-4 inline-flex h-10 w-full cursor-pointer items-center justify-center border border-[var(--accent)] bg-[var(--accent)] px-3 text-sm font-semibold text-[var(--accent-contrast)] hover:bg-[var(--bg-0)] hover:text-[var(--text-1)] disabled:cursor-not-allowed disabled:border-[var(--border-1)] disabled:bg-[var(--surface-2)] disabled:text-[var(--text-3)] disabled:hover:bg-[var(--surface-2)] disabled:hover:text-[var(--text-3)]"
           >
-            {settingsSaving ? "Saving..." : "Save Settings"}
+            {settingsSaving ? "Guardando..." : "Guardar configuracion"}
           </button>
 
           <div className="mt-5 border border-[var(--border-1)] bg-[var(--bg-0)] p-3">
             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--text-3)]">
-              Test Notifications
+              Probar notificaciones
             </p>
             <p className="mt-2 text-sm text-[var(--text-2)]">
-              Validate alert format, rule behavior, and delivery without waiting for real events.
+              Valida formato, reglas y entrega sin esperar eventos reales.
             </p>
 
             <div className="mt-3 grid gap-2 md:grid-cols-[minmax(0,1fr)_180px]">
@@ -322,50 +341,50 @@ export default function NotificationRulesCard({ initialHasBillingAccess = null }
                 onClick={() => runNotificationTest(selectedTestType)}
                 className="inline-flex h-10 cursor-pointer items-center justify-center border border-[var(--border-1)] bg-[var(--surface-2)] px-3 text-[11px] font-semibold uppercase tracking-wide text-[var(--text-1)] hover:bg-[var(--surface-1)] disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {testRunningType ? "Sending..." : "Run Test"}
+                {testRunningType ? "Enviando..." : "Ejecutar prueba"}
               </button>
             </div>
 
             <div className="mt-3 border border-[var(--border-1)] bg-[var(--surface-2)] px-3 py-2 text-xs text-[var(--text-2)]">
-              <p className="font-semibold uppercase tracking-wide text-[var(--text-3)]">Rule Preview</p>
+              <p className="font-semibold uppercase tracking-wide text-[var(--text-3)]">Vista previa de reglas</p>
               <ul className="mt-2 space-y-1">
                 <li>
-                  Every sale:{" "}
+                  Cada venta:{" "}
                   <span className={notifyEverySale ? "text-emerald-300" : "text-rose-300"}>
-                    {notifyEverySale ? "On" : "Off"}
+                    {notifyEverySale ? "Activo" : "Inactivo"}
                   </span>{" "}
-                  - {notifyEverySale ? "matching sale events will send alerts." : "sale events are skipped."}
+                  - {notifyEverySale ? "los eventos de venta que apliquen enviaran alertas." : "se omiten eventos de venta."}
                 </li>
                 <li>
-                  Sold out:{" "}
+                  Agotado:{" "}
                   <span className={notifySoldOut ? "text-emerald-300" : "text-rose-300"}>
-                    {notifySoldOut ? "On" : "Off"}
+                    {notifySoldOut ? "Activo" : "Inactivo"}
                   </span>{" "}
-                  - {notifySoldOut ? "stock transitions to zero will alert." : "sold out events are skipped."}
+                  - {notifySoldOut ? "se alerta cuando el stock llega a cero." : "se omiten eventos de agotado."}
                 </li>
                 <li>
-                  Low stock:{" "}
+                  Bajo stock:{" "}
                   <span className={notifyLowStock ? "text-emerald-300" : "text-rose-300"}>
-                    {notifyLowStock ? "On" : "Off"}
+                    {notifyLowStock ? "Activo" : "Inactivo"}
                   </span>{" "}
                   -{" "}
                   {notifyLowStock
-                    ? `alerts trigger when stock drops below ${Math.max(0, Math.floor(lowStockThreshold))}.`
-                    : "low stock events are skipped."}
+                    ? `las alertas se disparan cuando el stock baja de ${Math.max(0, Math.floor(lowStockThreshold))}.`
+                    : "se omiten eventos de bajo stock."}
                 </li>
                 <li>
-                  Channel:{" "}
+                  Canal:{" "}
                   <span className={telegramConnected ? "text-emerald-300" : "text-rose-300"}>
-                    {telegramConnected ? "Connected" : "Not connected"}
+                    {telegramConnected ? "Conectado" : "No conectado"}
                   </span>
                   {" - "}
-                  {telegramConnected ? "Telegram delivery is available." : "tests will fail."}
+                  {telegramConnected ? "La entrega por Telegram esta disponible." : "las pruebas fallaran."}
                 </li>
-                <li>Label alerts: Sent with a sample download label button to validate URL button rendering.</li>
+                <li>Alertas de etiqueta: se envian con un boton de descarga de ejemplo para validar el render del boton URL.</li>
               </ul>
             </div>
 
-            {testError ? <p className="mt-3 text-xs text-rose-300">Test error: {testError}</p> : null}
+            {testError ? <p className="mt-3 text-xs text-rose-300">Error de prueba: {testError}</p> : null}
             {testSuccess ? <p className="mt-3 text-xs text-emerald-300">{testSuccess}</p> : null}
           </div>
         </div>
@@ -374,20 +393,20 @@ export default function NotificationRulesCard({ initialHasBillingAccess = null }
           <div className="absolute inset-0 flex items-center justify-center bg-slate-950/45 p-4">
             <div className="max-w-md border border-yellow-300/80 bg-yellow-300/20 p-4 text-center shadow-lg">
               <p className="text-sm font-semibold text-[var(--text-1)]">
-                Start your free trial to view and configure notification settings.
+                Inicia tu prueba gratis para ver y configurar notificaciones.
               </p>
               <Link
                 href="/billing?intent=trial"
                 className="mt-3 inline-flex h-10 items-center justify-center border border-[var(--accent)] bg-[var(--accent)] px-4 text-sm font-semibold text-[var(--accent-contrast)] hover:bg-[var(--bg-0)] hover:text-[var(--text-1)]"
               >
-                Start Free Trial
+                Iniciar prueba gratis
               </Link>
             </div>
           </div>
         ) : null}
       </div>
 
-      {settingsError ? <p className="mt-2 text-xs text-rose-300">Settings error: {settingsError}</p> : null}
+      {settingsError ? <p className="mt-2 text-xs text-rose-300">Error de configuracion: {settingsError}</p> : null}
       {settingsSuccess ? <p className="mt-2 text-xs text-emerald-300">{settingsSuccess}</p> : null}
     </section>
   );

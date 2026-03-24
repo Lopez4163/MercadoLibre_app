@@ -2,6 +2,13 @@
 
 import { useState } from "react";
 
+function mlDisconnectErrorLabel(value: string) {
+  if (value === "failed_to_disconnect") {
+    return "No se pudo desconectar Mercado Libre.";
+  }
+  return value;
+}
+
 export default function MercadoLibreSettingsCard() {
   const [disconnecting, setDisconnecting] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -23,7 +30,8 @@ export default function MercadoLibreSettingsCard() {
 
       window.location.assign("/login?disconnected=mercadolibre");
     } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : "failed_to_disconnect");
+      const rawMessage = nextError instanceof Error ? nextError.message : "failed_to_disconnect";
+      setError(mlDisconnectErrorLabel(rawMessage));
       setDisconnecting(false);
     }
   }
@@ -31,15 +39,15 @@ export default function MercadoLibreSettingsCard() {
   return (
     <section className="border border-[var(--border-1)] bg-[var(--surface-1)] p-5">
       <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--text-3)]">Mercado Libre</p>
-      <h3 className="mt-2 text-lg font-semibold tracking-tight text-[var(--text-1)]">Account connection</h3>
+      <h3 className="mt-2 text-lg font-semibold tracking-tight text-[var(--text-1)]">Conexion de cuenta</h3>
       <p className="mt-2 text-sm text-[var(--text-2)]">
-        Disconnecting revokes this app&apos;s active Mercado Libre session for your user and signs you out.
+        Desconectar revoca la sesion activa de Mercado Libre para tu usuario y cierra sesion.
       </p>
 
       <div className="mt-5 border border-[var(--border-1)] bg-[var(--bg-0)] px-3 py-3 text-sm">
-        <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-3)]">Disconnect access</p>
+        <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-3)]">Desconectar acceso</p>
         <p className="mt-2 text-xs text-[var(--text-2)]">
-          Use this if you want to stop syncing this account or switch to a different Mercado Libre seller.
+          Usa esto si quieres detener la sincronizacion de esta cuenta o cambiar a otro vendedor de Mercado Libre.
         </p>
         <button
           type="button"
@@ -47,19 +55,19 @@ export default function MercadoLibreSettingsCard() {
           onClick={() => setConfirmOpen(true)}
           className="mt-3 inline-flex h-10 cursor-pointer items-center justify-center border border-[var(--border-1)] bg-rose-500/10 px-4 text-[11px] font-semibold uppercase tracking-wide text-rose-200 hover:bg-rose-500/20 disabled:cursor-not-allowed disabled:text-[var(--text-3)] disabled:hover:bg-rose-500/10"
         >
-          {disconnecting ? "Disconnecting..." : "Disconnect Mercado Libre"}
+          {disconnecting ? "Desconectando..." : "Desconectar Mercado Libre"}
         </button>
-        {error ? <p className="mt-3 text-xs text-rose-300">Disconnect error: {error}</p> : null}
+        {error ? <p className="mt-3 text-xs text-rose-300">Error al desconectar: {error}</p> : null}
       </div>
 
       {confirmOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4">
           <div className="w-full max-w-md border border-[var(--border-1)] bg-[var(--surface-1)] p-5">
             <h4 className="text-lg font-semibold tracking-tight text-[var(--text-1)]">
-              Disconnect Mercado Libre?
+              Desconectar Mercado Libre?
             </h4>
             <p className="mt-2 text-sm text-[var(--text-2)]">
-              This will remove your active Mercado Libre connection and you will be logged out immediately.
+              Esto eliminara tu conexion activa de Mercado Libre y cerrara sesion de inmediato.
             </p>
             <div className="mt-5 flex items-center justify-end gap-2">
               <button
@@ -68,7 +76,7 @@ export default function MercadoLibreSettingsCard() {
                 disabled={disconnecting}
                 className="inline-flex h-10 items-center border border-[var(--border-1)] bg-transparent px-4 text-sm font-semibold text-[var(--text-1)] hover:border-[var(--text-2)] disabled:cursor-not-allowed disabled:opacity-60"
               >
-                Keep connected
+                Mantener conectado
               </button>
               <button
                 type="button"
@@ -79,7 +87,7 @@ export default function MercadoLibreSettingsCard() {
                 disabled={disconnecting}
                 className="inline-flex h-10 items-center border border-red-500/50 bg-red-600/20 px-4 text-sm font-semibold text-red-200 hover:border-red-400 hover:bg-red-600/30 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                Yes, disconnect
+                Si, desconectar
               </button>
             </div>
           </div>

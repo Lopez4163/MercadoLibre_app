@@ -35,7 +35,7 @@ export default async function DashboardLayout({
             <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-[var(--text-3)]">
               MercadoLibs
             </p>
-            <h1 className="text-lg font-semibold tracking-tight text-[var(--text-1)]">Seller Operations</h1>
+            <h1 className="text-lg font-semibold tracking-tight text-[var(--text-1)]">Operaciones del vendedor</h1>
           </div>
           <DashboardHeaderNav />
         </div>

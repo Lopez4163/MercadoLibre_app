@@ -7,6 +7,34 @@ type TelegramSettingsCardProps = {
   initialHasBillingAccess?: boolean | null;
 };
 
+function telegramErrorLabel(value: string) {
+  if (value === "subscription_required") {
+    return "Se requiere una suscripcion activa.";
+  }
+  if (value === "failed_to_load_status") {
+    return "No se pudo cargar el estado de Telegram.";
+  }
+  if (value === "failed_to_create_connect_link") {
+    return "No se pudo crear el enlace de conexion.";
+  }
+  if (value === "missing TELEGRAM_BOT_USERNAME") {
+    return "Falta configurar TELEGRAM_BOT_USERNAME.";
+  }
+  if (value === "missing_connect_url") {
+    return "No se recibio la URL de conexion.";
+  }
+  if (value === "failed_to_connect") {
+    return "No se pudo completar la conexion con Telegram.";
+  }
+  if (value === "failed_to_disconnect") {
+    return "No se pudo desconectar Telegram.";
+  }
+  if (value === "failed_to_send_test_ping") {
+    return "No se pudo enviar la prueba de Telegram.";
+  }
+  return value;
+}
+
 export default function TelegramSettingsCard({ initialHasBillingAccess = null }: TelegramSettingsCardProps) {
   const [telegramConnected, setTelegramConnected] = useState(false);
   const [telegramLoading, setTelegramLoading] = useState(true);
@@ -49,7 +77,8 @@ export default function TelegramSettingsCard({ initialHasBillingAccess = null }:
     } catch (error) {
       setHasBillingAccess(false);
       if (!quiet) {
-        setTelegramError(error instanceof Error ? error.message : "failed_to_load_status");
+        const rawMessage = error instanceof Error ? error.message : "failed_to_load_status";
+        setTelegramError(telegramErrorLabel(rawMessage));
       }
     } finally {
       if (!quiet) {
@@ -125,7 +154,7 @@ export default function TelegramSettingsCard({ initialHasBillingAccess = null }:
 
       setConnectStartToken(data.startToken ?? null);
       window.open(data.connectUrl, "_blank", "noopener,noreferrer");
-      setTelegramSuccess("Waiting for Telegram confirmation...");
+      setTelegramSuccess("Esperando confirmacion de Telegram...");
 
       for (let attempt = 0; attempt < 20; attempt += 1) {
         await new Promise((resolve) => {
@@ -145,15 +174,16 @@ export default function TelegramSettingsCard({ initialHasBillingAccess = null }:
 
         if (statusData.connected) {
           setTelegramConnected(true);
-          setTelegramSuccess("Telegram connected.");
+          setTelegramSuccess("Telegram conectado.");
           setConnectStartToken(null);
           return;
         }
       }
 
-      setTelegramSuccess("Still waiting for Telegram. Click Refresh after pressing Start in the bot chat.");
+      setTelegramSuccess("Aun esperando Telegram. Pulsa Actualizar despues de enviar /start en el chat del bot.");
     } catch (error) {
-      setTelegramError(error instanceof Error ? error.message : "failed_to_connect");
+      const rawMessage = error instanceof Error ? error.message : "failed_to_connect";
+      setTelegramError(telegramErrorLabel(rawMessage));
     } finally {
       setTelegramActionLoading(false);
     }
@@ -175,9 +205,10 @@ export default function TelegramSettingsCard({ initialHasBillingAccess = null }:
       }
 
       await loadTelegramStatus();
-      setTelegramSuccess("Telegram disconnected.");
+      setTelegramSuccess("Telegram desconectado.");
     } catch (error) {
-      setTelegramError(error instanceof Error ? error.message : "failed_to_disconnect");
+      const rawMessage = error instanceof Error ? error.message : "failed_to_disconnect";
+      setTelegramError(telegramErrorLabel(rawMessage));
     } finally {
       setTelegramActionLoading(false);
     }
@@ -201,9 +232,10 @@ export default function TelegramSettingsCard({ initialHasBillingAccess = null }:
         throw new Error(data.message ?? data.error ?? "failed_to_send_test_ping");
       }
 
-      setTelegramSuccess("Test ping sent.");
+      setTelegramSuccess("Prueba enviada.");
     } catch (error) {
-      setTelegramError(error instanceof Error ? error.message : "failed_to_send_test_ping");
+      const rawMessage = error instanceof Error ? error.message : "failed_to_send_test_ping";
+      setTelegramError(telegramErrorLabel(rawMessage));
     } finally {
       setTelegramActionLoading(false);
     }
@@ -213,9 +245,9 @@ export default function TelegramSettingsCard({ initialHasBillingAccess = null }:
   return (
     <section className="border border-[var(--border-1)] bg-[var(--surface-1)] p-5">
       <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--text-3)]">Telegram</p>
-      <h3 className="mt-2 text-lg font-semibold tracking-tight text-[var(--text-1)]">Delivery channel</h3>
+      <h3 className="mt-2 text-lg font-semibold tracking-tight text-[var(--text-1)]">Canal de entrega</h3>
       <p className="mt-2 text-sm text-[var(--text-2)]">
-        Connect your Telegram chat, verify delivery, and control test notifications.
+        Conecta tu chat de Telegram, verifica la entrega y controla notificaciones de prueba.
       </p>
 
       <div className="relative mt-5">
@@ -224,11 +256,11 @@ export default function TelegramSettingsCard({ initialHasBillingAccess = null }:
           aria-hidden={hasBillingAccess !== true}
         >
           <div className="border border-[var(--border-1)] bg-[var(--bg-0)] px-3 py-3 text-sm">
-            <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-3)]">Connection status</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-3)]">Estado de conexion</p>
             <div className="mt-2 flex items-center gap-2">
               <span className={`h-2 w-2 ${telegramConnected ? "bg-emerald-400" : "bg-amber-400"}`} />
               <p className={`font-semibold ${telegramConnected ? "text-emerald-300" : "text-amber-300"}`}>
-                {telegramLoading ? "Checking..." : telegramConnected ? "Connected" : "Not connected"}
+                {telegramLoading ? "Verificando..." : telegramConnected ? "Conectado" : "No conectado"}
               </p>
             </div>
 
@@ -239,7 +271,7 @@ export default function TelegramSettingsCard({ initialHasBillingAccess = null }:
                 onClick={handleTelegramConnect}
                 className="inline-flex h-10 cursor-pointer items-center justify-center border-r border-[var(--border-1)] bg-[var(--surface-2)] px-3 text-[11px] font-semibold uppercase tracking-wide text-[var(--text-1)] hover:bg-[var(--surface-1)] disabled:cursor-not-allowed disabled:text-[var(--text-3)] disabled:hover:bg-[var(--surface-2)]"
               >
-                Connect
+                Conectar
               </button>
               <button
                 type="button"
@@ -247,7 +279,7 @@ export default function TelegramSettingsCard({ initialHasBillingAccess = null }:
                 onClick={handleSendTestPing}
                 className="inline-flex h-10 cursor-pointer items-center justify-center border-r border-[var(--border-1)] bg-[var(--surface-2)] px-3 text-[11px] font-semibold uppercase tracking-wide text-[var(--text-2)] hover:bg-[var(--surface-1)] disabled:cursor-not-allowed disabled:text-[var(--text-3)] disabled:hover:bg-[var(--surface-2)]"
               >
-                Test
+                Probar
               </button>
               <button
                 type="button"
@@ -255,7 +287,7 @@ export default function TelegramSettingsCard({ initialHasBillingAccess = null }:
                 onClick={handleTelegramDisconnect}
                 className="inline-flex h-10 cursor-pointer items-center justify-center border-r border-[var(--border-1)] bg-[var(--surface-2)] px-3 text-[11px] font-semibold uppercase tracking-wide text-[var(--text-2)] hover:bg-[var(--surface-1)] disabled:cursor-not-allowed disabled:text-[var(--text-3)] disabled:hover:bg-[var(--surface-2)]"
               >
-                Disconnect
+                Desconectar
               </button>
               <button
                 type="button"
@@ -263,15 +295,15 @@ export default function TelegramSettingsCard({ initialHasBillingAccess = null }:
                 onClick={() => void loadTelegramStatus()}
                 className="inline-flex h-10 cursor-pointer items-center justify-center bg-[var(--surface-2)] px-3 text-[11px] font-semibold uppercase tracking-wide text-[var(--text-2)] hover:bg-[var(--surface-1)] disabled:cursor-not-allowed disabled:text-[var(--text-3)] disabled:hover:bg-[var(--surface-2)]"
               >
-                Refresh
+                Actualizar
               </button>
             </div>
 
-            {telegramError ? <p className="mt-3 text-xs text-rose-300">Telegram error: {telegramError}</p> : null}
+            {telegramError ? <p className="mt-3 text-xs text-rose-300">Error de Telegram: {telegramError}</p> : null}
             {telegramSuccess ? <p className="mt-3 text-xs text-emerald-300">{telegramSuccess}</p> : null}
             {!telegramConnected && connectStartToken ? (
               <p className="mt-2 text-xs text-[var(--text-3)]">
-                If needed, send this in Telegram: <span className="font-mono text-[var(--text-2)]">/start {connectStartToken}</span>
+                Si hace falta, envia esto en Telegram: <span className="font-mono text-[var(--text-2)]">/start {connectStartToken}</span>
               </p>
             ) : null}
           </div>
@@ -281,13 +313,13 @@ export default function TelegramSettingsCard({ initialHasBillingAccess = null }:
           <div className="absolute inset-0 flex items-center justify-center bg-slate-950/45 p-4">
             <div className="max-w-md border border-yellow-300/80 bg-yellow-300/20 p-4 text-center shadow-lg">
               <p className="text-sm font-semibold text-[var(--text-1)]">
-                Start your free trial to view and manage Telegram delivery settings.
+                Inicia tu prueba gratis para ver y gestionar ajustes de entrega de Telegram.
               </p>
               <Link
                 href="/billing?intent=trial"
                 className="mt-3 inline-flex h-10 items-center justify-center border border-[var(--accent)] bg-[var(--accent)] px-4 text-sm font-semibold text-[var(--accent-contrast)] hover:bg-[var(--bg-0)] hover:text-[var(--text-1)]"
               >
-                Start Free Trial
+                Iniciar prueba gratis
               </Link>
             </div>
           </div>

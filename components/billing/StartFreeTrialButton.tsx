@@ -15,6 +15,38 @@ type StartFreeTrialButtonProps = {
   autoStart?: boolean;
 };
 
+function billingStatusLabel(status: string | null | undefined) {
+  if (status === "active") {
+    return "activa";
+  }
+  if (status === "trialing") {
+    return "en prueba";
+  }
+  if (status === "past_due") {
+    return "con pago pendiente";
+  }
+  if (status === "unpaid") {
+    return "impaga";
+  }
+  if (status === "canceled") {
+    return "cancelada";
+  }
+  return "activa";
+}
+
+function checkoutErrorLabel(value: string) {
+  if (value === "checkout_failed") {
+    return "No se pudo iniciar el checkout.";
+  }
+  if (value === "missing_checkout_url") {
+    return "No se recibio la URL de checkout.";
+  }
+  if (value === "unknown_error") {
+    return "Ocurrio un error inesperado.";
+  }
+  return value;
+}
+
 export default function StartFreeTrialButton(props: StartFreeTrialButtonProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -38,7 +70,7 @@ export default function StartFreeTrialButton(props: StartFreeTrialButtonProps) {
       }
 
       if (data.alreadyEntitled) {
-        setMessage(`Your subscription is already ${data.status ?? "active"}.`);
+        setMessage(`Tu suscripcion ya esta ${billingStatusLabel(data.status)}.`);
         return;
       }
 
@@ -49,7 +81,7 @@ export default function StartFreeTrialButton(props: StartFreeTrialButtonProps) {
       window.location.assign(data.url);
     } catch (err) {
       const messageText = err instanceof Error ? err.message : "unknown_error";
-      setError(messageText);
+      setError(checkoutErrorLabel(messageText));
     } finally {
       setLoading(false);
     }
@@ -79,10 +111,10 @@ export default function StartFreeTrialButton(props: StartFreeTrialButtonProps) {
         disabled={loading || props.initiallyEntitled}
         className="inline-flex h-11 items-center border border-[var(--accent)] bg-[var(--accent)] px-5 text-sm font-semibold text-[var(--accent-contrast)] hover:bg-transparent hover:text-[var(--text-1)] disabled:cursor-not-allowed disabled:opacity-60"
       >
-        {loading ? "Redirecting..." : props.initiallyEntitled ? "Trial Active" : "Start Free Trial"}
+        {loading ? "Redirigiendo..." : props.initiallyEntitled ? "Prueba activa" : "Iniciar prueba gratis"}
       </button>
       {message && <p className="text-sm text-emerald-300">{message}</p>}
-      {error && <p className="text-sm text-red-300">Checkout error: {error}</p>}
+      {error && <p className="text-sm text-red-300">Error de checkout: {error}</p>}
     </div>
   );
 }

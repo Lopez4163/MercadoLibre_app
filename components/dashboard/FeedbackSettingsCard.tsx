@@ -6,14 +6,21 @@ import { useSearchParams } from "next/navigation";
 type FeedbackCategory = "bug" | "feature_request" | "confusing_ux" | "billing_issue" | "general";
 
 const feedbackCategoryOptions: Array<{ value: FeedbackCategory; label: string }> = [
-  { value: "bug", label: "Bug" },
-  { value: "feature_request", label: "Feature request" },
-  { value: "confusing_ux", label: "Confusing UX" },
-  { value: "billing_issue", label: "Billing issue" },
+  { value: "bug", label: "Error" },
+  { value: "feature_request", label: "Solicitud de funcion" },
+  { value: "confusing_ux", label: "UX confusa" },
+  { value: "billing_issue", label: "Problema de facturacion" },
   { value: "general", label: "General" },
 ];
 
 const FEEDBACK_SUCCESS_COOLDOWN_MS = 15_000;
+
+function feedbackErrorLabel(value: string) {
+  if (value === "failed_to_submit_feedback") {
+    return "No se pudo enviar el comentario.";
+  }
+  return value;
+}
 
 export default function FeedbackSettingsCard() {
   const searchParams = useSearchParams();
@@ -98,10 +105,11 @@ export default function FeedbackSettingsCard() {
       }
 
       setMessage("");
-      setSuccess("Feedback submitted.");
+      setSuccess("Comentario enviado.");
       setCooldownUntil(Date.now() + FEEDBACK_SUCCESS_COOLDOWN_MS);
     } catch (submitError) {
-      setError(submitError instanceof Error ? submitError.message : "failed_to_submit_feedback");
+      const rawMessage = submitError instanceof Error ? submitError.message : "failed_to_submit_feedback";
+      setError(feedbackErrorLabel(rawMessage));
     } finally {
       setSubmitting(false);
     }
@@ -113,17 +121,17 @@ export default function FeedbackSettingsCard() {
   return (
     <div className="space-y-4">
       <section className="border border-[var(--border-1)] bg-[var(--surface-1)] p-5">
-        <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--text-3)]">Feedback</p>
-        <h3 className="mt-2 text-lg font-semibold tracking-tight text-[var(--text-1)]">Tell us what happened</h3>
+      <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--text-3)]">Comentarios</p>
+      <h3 className="mt-2 text-lg font-semibold tracking-tight text-[var(--text-1)]">Cuentanos que paso</h3>
         <p className="mt-2 text-sm text-[var(--text-2)]">
-          Tell us if something is wrong or if there is a feature you would like to see added. We use feedback to
-          identify pain points we can fix.
+          Cuentanos si algo falla o si hay una funcion que te gustaria agregar. Usamos comentarios para identificar
+          puntos de dolor que podemos corregir.
         </p>
 
         <form className="mt-5 space-y-4" onSubmit={handleSubmit}>
           <div className="grid gap-4 md:grid-cols-2">
             <label className="space-y-2 text-sm">
-              <span className="text-[var(--text-2)]">Category</span>
+              <span className="text-[var(--text-2)]">Categoria</span>
               <select
                 value={category}
                 onChange={(event) => setCategory(event.target.value as FeedbackCategory)}
@@ -139,20 +147,20 @@ export default function FeedbackSettingsCard() {
             </label>
 
             <label className="space-y-2 text-sm">
-              <span className="text-[var(--text-2)]">Related page</span>
+              <span className="text-[var(--text-2)]">Pagina relacionada</span>
               <input
                 value={pagePath}
                 onChange={(event) => setPagePath(event.target.value)}
                 disabled={submitting}
                 maxLength={240}
-                placeholder="/dashboard or /settings/telegram"
+                placeholder="/dashboard o /settings/telegram"
                 className="h-11 w-full border border-[var(--border-1)] bg-[var(--bg-0)] px-3 text-[var(--text-1)] outline-none placeholder:text-[var(--text-3)] focus:border-[var(--text-2)]"
               />
             </label>
           </div>
 
           <label className="block space-y-2 text-sm">
-            <span className="text-[var(--text-2)]">What happened?</span>
+            <span className="text-[var(--text-2)]">Que paso?</span>
             <textarea
               value={message}
               onChange={(event) => setMessage(event.target.value)}
@@ -160,13 +168,13 @@ export default function FeedbackSettingsCard() {
               minLength={10}
               maxLength={4000}
               rows={6}
-              placeholder="Describe what you tried, what you expected, and what the app did instead."
+              placeholder="Describe que intentaste, que esperabas y que hizo la app."
               className="w-full border border-[var(--border-1)] bg-[var(--bg-0)] px-3 py-3 text-[var(--text-1)] outline-none placeholder:text-[var(--text-3)] focus:border-[var(--text-2)]"
             />
           </label>
 
           <label className="hidden" aria-hidden="true">
-            <span>Website</span>
+            <span>Sitio web</span>
             <input
               tabIndex={-1}
               autoComplete="off"
@@ -178,17 +186,17 @@ export default function FeedbackSettingsCard() {
           </label>
 
           <div className="flex items-center justify-between gap-3">
-            <p className="text-xs text-[var(--text-3)]">Minimum 10 characters.</p>
+            <p className="text-xs text-[var(--text-3)]">Minimo 10 caracteres.</p>
             <button
               type="submit"
               disabled={isSubmitDisabled}
               className="inline-flex h-11 items-center border border-[var(--border-1)] bg-[var(--surface-2)] px-4 text-sm font-semibold text-[var(--text-1)] transition-all duration-150 hover:bg-[var(--surface-1)] disabled:cursor-not-allowed disabled:text-[var(--text-3)]"
             >
               {submitting
-                ? "Submitting..."
+                ? "Enviando..."
                 : isCooldownActive
-                  ? `Wait ${cooldownRemainingSeconds}s`
-                  : "Submit feedback"}
+                  ? `Espera ${cooldownRemainingSeconds}s`
+                  : "Enviar comentario"}
             </button>
           </div>
 
