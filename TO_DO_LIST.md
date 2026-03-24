@@ -35,7 +35,7 @@ Date reorganized by priority: 2026-03-20 11:25:00 PM EDT
 13. Force Stripe hosted billing surfaces to Spanish (`locale: "es-419"` for Checkout, and matching locale behavior for Customer Portal sessions) instead of relying on browser auto-detection.
 
 ## Level 3 (Operational Maturity / Growth)
-1. Set a production Telegram bot profile image in BotFather so notifications show a branded avatar instead of the default letter icon.
+1. [x] Set a production Telegram bot profile image in BotFather so notifications show a branded avatar instead of the default letter icon. (Completed 2026-03-24; asset prepared at `public/images/telegram/telegramLogo-botfather-512.png` and runbook steps documented.)
 2. Look into adding the current stock level for an item sold in the `order_sold` Telegram message.
 3. Add a weekly summary email with useful account activity, order, and alert metrics for engaged users.
 4. Evaluate Resend as the first transactional provider; current pricing makes it viable to stay on the free tier until roughly a few hundred active users.
