@@ -19,28 +19,29 @@
     "security:smoke-staging": "node scripts/security-smoke-staging.mjs",
     "telegram:webhook:check": "node scripts/telegram-webhook-sync.mjs",
     "telegram:webhook:register": "node scripts/telegram-webhook-sync.mjs --apply",
+    "postinstall": "prisma generate",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio"
   },
   "dependencies": {
     "@tailwindcss/postcss": "^4",
-    "@prisma/client": "^6.4.1",
-    "framer-motion": "^12.34.3",
-    "next": "16.1.6",
-    "react": "19.2.3",
-    "react-dom": "19.2.3",
-    "stripe": "^20.4.1",
-    "tailwindcss": "^4"
-  },
-  "devDependencies": {
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@prisma/client": "^6.4.1",
+    "framer-motion": "^12.34.3",
+    "next": "16.1.6",
+    "prisma": "^6.4.1",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "stripe": "^20.4.1",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  },
+  "devDependencies": {
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
-    "prisma": "^6.4.1",
-    "typescript": "^5",
     "vitest": "^4.0.18"
   }
 }
