@@ -25,13 +25,14 @@
     "prisma:studio": "prisma studio"
   },
   "dependencies": {
+    "@prisma/client": "^6.4.1",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "@prisma/client": "^6.4.1",
     "framer-motion": "^12.34.3",
     "next": "16.1.6",
+    "nodemailer": "^8.0.7",
     "prisma": "^6.4.1",
     "react": "19.2.3",
     "react-dom": "19.2.3",
@@ -40,6 +41,7 @@
     "typescript": "^5"
   },
   "devDependencies": {
+    "@types/nodemailer": "^8.0.0",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
     "vitest": "^4.0.18"
