@@ -126,6 +126,7 @@ describe("POST /api/billing/checkout", () => {
     expect(mocks.stripe.checkout.sessions.create).toHaveBeenCalledWith(
       expect.objectContaining({
         mode: "subscription",
+        locale: "es-419",
         customer: "cus_new",
         line_items: [{ price: "price_basic", quantity: 1 }],
         subscription_data: {

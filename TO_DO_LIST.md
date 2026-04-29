@@ -29,9 +29,7 @@ Date reorganized for launch: 2026-04-29
    - Current app surfaces use `MercadoLibs`; prior todo referenced `NotiVenta`.
 9. [ ] Review and normalize launch-facing copy across core product surfaces so the initial LATAM release reads consistently in Spanish.
 10. [ ] Keep the product Spanish-first for the initial LATAM launch instead of implementing multilingual support now.
-11. [ ] Fix stale Telegram bot image documentation/path before launch runbook use.
-   - Current todo/runbook references `public/images/telegram/telegramLogo-botfather-512.png`; local changes indicate a rename to `public/images/telegram/telegram_logo.png`.
-12. [ ] Update the README so it describes the real app, setup, env vars, migrations, and deploy workflow instead of the default Next.js starter text.
+11. [ ] Update the README so it describes the real app, setup, env vars, migrations, and deploy workflow instead of the default Next.js starter text.
 
 ## Done For Launch Baseline
 1. [x] Fix test suite reliability so `npm test` passes in CI/local without requiring an implicit runtime DB URL for pure unit suites.
@@ -57,6 +55,8 @@ Date reorganized for launch: 2026-04-29
    - Completed 2026-04-29; `EmailDelivery` table dedupes lifecycle sends.
 11. [x] Set a production Telegram bot profile image in BotFather so notifications show a branded avatar instead of the default letter icon.
    - Completed 2026-03-24; asset was prepared at `public/images/telegram/telegramLogo-botfather-512.png` and runbook steps documented.
+12. [x] Fix stale Telegram bot image documentation/path before launch runbook use.
+   - Completed 2026-04-29; runbook now references `public/images/telegram/telegram_logo.png`.
 
 ## Soon After Launch
 1. [ ] Extend `/api/orders/[orderId]/retry-telegram` to support retrying `label_ready` failures.
@@ -74,7 +74,7 @@ Date reorganized for launch: 2026-04-29
    - Scheduler failures.
    - Delivery failure spikes.
 6. [ ] Force Stripe hosted billing surfaces to Spanish instead of relying on browser auto-detection.
-   - Checkout should use `locale: "es-419"`.
+   - Checkout locale completed 2026-04-29 with `locale: "es-419"`.
    - Customer Portal should match when a portal session flow is added.
 7. [ ] Look into adding the current stock level for an item sold in the `order_sold` Telegram message.
 
