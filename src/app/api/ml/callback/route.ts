@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "../../../../../lib/db/prisma";
 import { exchangeAuthorizationCode, getMlUserProfile } from "../../../../../lib/ml/auth";
 import { setSessionCookie } from "../../../../../lib/auth/session";
+import { sendWelcomeSignupEmail } from "../../../../../lib/email/lifecycle";
 import {
   clearOAuthStateCookie,
   getOAuthStateReturnTo,
@@ -82,6 +83,10 @@ export async function GET(request: NextRequest) {
     const mlNickname = profile.nickname ?? null;
     const mlAvatarUrl = getMlAvatarUrl(profile);
     const tokenExpiresAt = new Date(Date.now() + tokenData.expires_in * 1000);
+    const existingUser = await prisma.user.findUnique({
+      where: { mlUserId: String(profile.id) },
+      select: { id: true },
+    });
 
     const user = await prisma.user.upsert({
       where: { mlUserId: String(profile.id) },
@@ -103,6 +108,12 @@ export async function GET(request: NextRequest) {
         tokenExpiresAt,
       },
     });
+
+    if (!existingUser) {
+      await sendWelcomeSignupEmail(user.id).catch((emailError) => {
+        console.error("welcome signup email failed:", emailError);
+      });
+    }
 
     const requestedPath = normalizeNextPath(getOAuthStateReturnTo(stateFromCookie));
     const destinationPath = requestedPath ?? "/dashboard";
