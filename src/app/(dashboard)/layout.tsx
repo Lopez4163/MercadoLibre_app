@@ -36,9 +36,16 @@ export default async function DashboardLayout({
       <header className="border-b border-[var(--border-1)] bg-[var(--surface-1)]">
         <div className="mx-auto flex w-full max-w-7xl items-center justify-between px-6 py-4">
           <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-[var(--text-3)]">
-              MercadoLibs
-            </p>
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-[var(--text-3)]">
+                MercadoLibs
+              </p>
+              {demoMode ? (
+                <span className="border border-[var(--border-1)] bg-[var(--surface-2)] px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--text-2)]">
+                  Demo mode
+                </span>
+              ) : null}
+            </div>
             <h1 className="text-lg font-semibold tracking-tight text-[var(--text-1)]">Operaciones del vendedor</h1>
           </div>
           <DashboardHeaderNav />

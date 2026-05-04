@@ -14,6 +14,22 @@ export default function HomePage() {
   return (
     <main className="min-h-screen">
       <Navbar />
+      {demoMode ? (
+        <section className="border-b border-[var(--border-1)] bg-[var(--surface-2)]">
+          <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-6 py-3">
+            <p className="text-sm text-[var(--text-2)]">
+              <span className="font-semibold text-[var(--text-1)]">Portfolio demo:</span> explore the product with
+              sample data. Live integrations are disabled for public viewing.
+            </p>
+            <Link
+              href="/dashboard"
+              className="inline-flex h-8 items-center border border-[var(--border-1)] bg-[var(--surface-1)] px-3 text-xs font-semibold uppercase tracking-wide text-[var(--text-1)] hover:bg-[var(--bg-0)]"
+            >
+              Open demo
+            </Link>
+          </div>
+        </section>
+      ) : null}
       <section className="relative overflow-hidden border-b border-[var(--border-1)]">
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_16%_12%,rgba(255,209,0,0.16),transparent_28%),radial-gradient(circle_at_82%_22%,rgba(42,171,238,0.18),transparent_30%)]" />
         <div className="relative mx-auto grid max-w-6xl gap-8 px-6 py-12 md:grid-cols-2 md:items-center md:py-20">
