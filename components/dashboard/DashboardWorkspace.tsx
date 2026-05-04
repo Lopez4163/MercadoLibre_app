@@ -102,6 +102,7 @@ type DashboardWorkspaceProps = {
   mlName: string;
   billingHasAccess: boolean;
   billingStatus: string;
+  demoMode?: boolean;
 };
 
 type DashboardTab = "overview" | "inventory" | "orders" | "notifications" | "stats";
@@ -282,6 +283,147 @@ const tabTransition = {
   ease: motionEase,
 } as const;
 
+const demoInventoryItems: InventoryItem[] = [
+  {
+    id: "MLA-DEMO-1001",
+    title: "Kit mate premium con bombilla acero",
+    available_quantity: 2,
+    sold_quantity: 96,
+    price: 22990,
+    status: "active",
+  },
+  {
+    id: "MLA-DEMO-1002",
+    title: "Organizador de cocina apilable",
+    available_quantity: 0,
+    sold_quantity: 74,
+    price: 18450,
+    status: "paused",
+  },
+  {
+    id: "MLA-DEMO-1003",
+    title: "Funda antigolpes para celular",
+    available_quantity: 7,
+    sold_quantity: 133,
+    price: 8990,
+    status: "active",
+  },
+  {
+    id: "MLA-DEMO-1004",
+    title: "Auriculares bluetooth compactos",
+    available_quantity: 28,
+    sold_quantity: 210,
+    price: 34990,
+    status: "active",
+  },
+  {
+    id: "MLA-DEMO-1005",
+    title: "Lampara LED escritorio regulable",
+    available_quantity: 14,
+    sold_quantity: 42,
+    price: 27900,
+    status: "active",
+  },
+  {
+    id: "MLA-DEMO-1006",
+    title: "Termo acero inoxidable 1L",
+    available_quantity: 4,
+    sold_quantity: 118,
+    price: 31500,
+    status: "active",
+  },
+  {
+    id: "MLA-DEMO-1007",
+    title: "Set de etiquetas autoadhesivas",
+    available_quantity: 63,
+    sold_quantity: 18,
+    price: 6290,
+    status: "active",
+  },
+  {
+    id: "MLA-DEMO-1008",
+    title: "Cable USB-C reforzado 2m",
+    available_quantity: 3,
+    sold_quantity: 155,
+    price: 7490,
+    status: "active",
+  },
+];
+
+const demoNotificationSettings: NotificationSettingsPayload = {
+  notifyEverySale: true,
+  notifySoldOut: true,
+  notifyLowStock: true,
+  lowStockThreshold: 5,
+};
+
+const demoOrders: DashboardOrder[] = [
+  {
+    id: "demo-order-1",
+    mlOrderId: "2000009345201452",
+    status: "paid",
+    saleType: "Catalogo",
+    totalAmount: 31500,
+    createdAt: new Date(Date.now() - 1000 * 60 * 24).toISOString(),
+    createdAtMl: new Date(Date.now() - 1000 * 60 * 24).toISOString(),
+    updatedAtMl: new Date(Date.now() - 1000 * 60 * 20).toISOString(),
+    lastSeenAt: new Date().toISOString(),
+    lines: [{ mlItemId: "MLA-DEMO-1006", title: "Termo acero inoxidable 1L", quantity: 1, unitPrice: 31500 }],
+    latestNotification: {
+      eventType: "order_sold",
+      status: "sent",
+      reason: null,
+      createdAt: new Date(Date.now() - 1000 * 60 * 23).toISOString(),
+    },
+    labelUrl: null,
+  },
+  {
+    id: "demo-order-2",
+    mlOrderId: "2000009345202110",
+    status: "confirmed",
+    saleType: "Full",
+    totalAmount: 17980,
+    createdAt: new Date(Date.now() - 1000 * 60 * 84).toISOString(),
+    createdAtMl: new Date(Date.now() - 1000 * 60 * 84).toISOString(),
+    updatedAtMl: new Date(Date.now() - 1000 * 60 * 80).toISOString(),
+    lastSeenAt: new Date().toISOString(),
+    lines: [{ mlItemId: "MLA-DEMO-1003", title: "Funda antigolpes para celular", quantity: 2, unitPrice: 8990 }],
+    latestNotification: {
+      eventType: "order_sold",
+      status: "sent",
+      reason: null,
+      createdAt: new Date(Date.now() - 1000 * 60 * 83).toISOString(),
+    },
+    labelUrl: "#",
+  },
+  {
+    id: "demo-order-3",
+    mlOrderId: "2000009345203098",
+    status: "paid",
+    saleType: "Clasica",
+    totalAmount: 22990,
+    createdAt: new Date(Date.now() - 1000 * 60 * 140).toISOString(),
+    createdAtMl: new Date(Date.now() - 1000 * 60 * 140).toISOString(),
+    updatedAtMl: new Date(Date.now() - 1000 * 60 * 130).toISOString(),
+    lastSeenAt: new Date().toISOString(),
+    lines: [{ mlItemId: "MLA-DEMO-1001", title: "Kit mate premium con bombilla acero", quantity: 1, unitPrice: 22990 }],
+    latestNotification: {
+      eventType: "order_sold",
+      status: "failed",
+      reason: "timeout_telegram",
+      createdAt: new Date(Date.now() - 1000 * 60 * 139).toISOString(),
+    },
+    labelUrl: null,
+  },
+];
+
+const demoTodayActivity: TodayActivity = {
+  orders: 18,
+  unitsSold: 26,
+  alertsSent: 21,
+  alertsFailed: 1,
+};
+
 function RefreshSpinner() {
   return (
     <motion.span
@@ -297,32 +439,39 @@ export default function DashboardWorkspace({
   mlName,
   billingHasAccess,
   billingStatus,
+  demoMode = false,
 }: DashboardWorkspaceProps) {
   const [activeTab, setActiveTab] = useState<DashboardTab>("overview");
-  const [items, setItems] = useState<InventoryItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [items, setItems] = useState<InventoryItem[]>(demoMode ? demoInventoryItems : []);
+  const [loading, setLoading] = useState(!demoMode);
   const [refreshing, setRefreshing] = useState(false);
   const [inventoryError, setInventoryError] = useState<string | null>(null);
-  const [lastUpdatedAt, setLastUpdatedAt] = useState<number | null>(null);
-  const [telegramConnected, setTelegramConnected] = useState<boolean | null>(null);
-  const [notificationSettings, setNotificationSettings] = useState<NotificationSettingsPayload | null>(null);
-  const [orders, setOrders] = useState<DashboardOrder[]>([]);
+  const [lastUpdatedAt, setLastUpdatedAt] = useState<number | null>(demoMode ? Date.now() : null);
+  const [telegramConnected, setTelegramConnected] = useState<boolean | null>(demoMode ? true : null);
+  const [notificationSettings, setNotificationSettings] = useState<NotificationSettingsPayload | null>(
+    demoMode ? demoNotificationSettings : null,
+  );
+  const [orders, setOrders] = useState<DashboardOrder[]>(demoMode ? demoOrders : []);
   const [ordersLoading, setOrdersLoading] = useState(false);
   const [ordersError, setOrdersError] = useState<string | null>(null);
   const [ordersPage, setOrdersPage] = useState(1);
   const [ordersTotalPages, setOrdersTotalPages] = useState(1);
-  const [ordersTotal, setOrdersTotal] = useState(0);
+  const [ordersTotal, setOrdersTotal] = useState(demoMode ? demoOrders.length : 0);
   const [retryingOrderId, setRetryingOrderId] = useState<string | null>(null);
   const [ordersRetryMessage, setOrdersRetryMessage] = useState<string | null>(null);
   const [orderStatusFilter, setOrderStatusFilter] = useState("all");
   const [ordersLoadedOnce, setOrdersLoadedOnce] = useState(false);
-  const [todayActivity, setTodayActivity] = useState<TodayActivity>({
-    orders: 0,
-    unitsSold: 0,
-    alertsSent: 0,
-    alertsFailed: 0,
-  });
-  const [todayActivityLoading, setTodayActivityLoading] = useState(true);
+  const [todayActivity, setTodayActivity] = useState<TodayActivity>(
+    demoMode
+      ? demoTodayActivity
+      : {
+          orders: 0,
+          unitsSold: 0,
+          alertsSent: 0,
+          alertsFailed: 0,
+        },
+  );
+  const [todayActivityLoading, setTodayActivityLoading] = useState(!demoMode);
   const [todayActivityError, setTodayActivityError] = useState<string | null>(null);
   const [telegramConnectBusy, setTelegramConnectBusy] = useState(false);
   const [telegramConnectPending, setTelegramConnectPending] = useState(false);
@@ -344,6 +493,12 @@ export default function DashboardWorkspace({
   }, [telegramConnectionRequired]);
 
   const handleQuickTelegramConnect = useCallback(async () => {
+    if (demoMode) {
+      setTelegramConnected(true);
+      setTelegramConnectedBanner("Telegram conectado en modo demo.");
+      return;
+    }
+
     if (telegramConnectBusy) {
       return;
     }
@@ -370,10 +525,19 @@ export default function DashboardWorkspace({
     } finally {
       setTelegramConnectBusy(false);
     }
-  }, [telegramConnectBusy]);
+  }, [demoMode, telegramConnectBusy]);
 
   async function loadInventory(options?: { initial?: boolean }) {
     const initial = options?.initial ?? false;
+
+    if (demoMode) {
+      setInventoryError(null);
+      setItems(demoInventoryItems);
+      setLastUpdatedAt(Date.now());
+      setLoading(false);
+      setRefreshing(false);
+      return;
+    }
 
     try {
       if (initial) {
@@ -405,6 +569,11 @@ export default function DashboardWorkspace({
   }
 
   const loadTelegramStatus = useCallback(async () => {
+    if (demoMode) {
+      setTelegramConnected(true);
+      return;
+    }
+
     try {
       const response = await fetch("/api/telegram/status", { cache: "no-store" });
       const data = (await response.json()) as { ok?: boolean; connected?: boolean };
@@ -424,7 +593,7 @@ export default function DashboardWorkspace({
     } catch {
       setTelegramConnected(false);
     }
-  }, [telegramConnectPending]);
+  }, [demoMode, telegramConnectPending]);
 
   useEffect(() => {
     if (!telegramConnectedBanner) {
@@ -439,6 +608,11 @@ export default function DashboardWorkspace({
   }, [telegramConnectedBanner]);
 
   async function loadNotificationSettings() {
+    if (demoMode) {
+      setNotificationSettings(demoNotificationSettings);
+      return;
+    }
+
     try {
       const response = await fetch("/api/notifications/settings", { cache: "no-store" });
       const data = (await response.json()) as {
@@ -464,6 +638,19 @@ export default function DashboardWorkspace({
   const loadOrders = useCallback(async (options?: { page?: number; status?: string }) => {
     const page = options?.page ?? ordersPage;
     const status = options?.status ?? orderStatusFilter;
+
+    if (demoMode) {
+      const filteredOrders =
+        status === "all" ? demoOrders : demoOrders.filter((order) => order.status === status);
+      setOrders(filteredOrders);
+      setOrdersPage(page);
+      setOrdersTotalPages(1);
+      setOrdersTotal(filteredOrders.length);
+      setOrdersLoadedOnce(true);
+      setOrdersError(null);
+      setOrdersLoading(false);
+      return;
+    }
 
     try {
       setOrdersLoading(true);
@@ -494,9 +681,16 @@ export default function DashboardWorkspace({
     } finally {
       setOrdersLoading(false);
     }
-  }, [orderStatusFilter, ordersPage]);
+  }, [demoMode, orderStatusFilter, ordersPage]);
 
   const loadTodayActivity = useCallback(async () => {
+    if (demoMode) {
+      setTodayActivity(demoTodayActivity);
+      setTodayActivityLoading(false);
+      setTodayActivityError(null);
+      return;
+    }
+
     try {
       setTodayActivityLoading(true);
       setTodayActivityError(null);
@@ -513,9 +707,21 @@ export default function DashboardWorkspace({
     } finally {
       setTodayActivityLoading(false);
     }
-  }, []);
+  }, [demoMode]);
 
   const retryOrderTelegramNotification = useCallback(async (orderId: string) => {
+    if (demoMode) {
+      setOrders((currentOrders) =>
+        currentOrders.map((order) =>
+          order.id === orderId && order.latestNotification
+            ? { ...order, latestNotification: { ...order.latestNotification, status: "sent", reason: null } }
+            : order,
+        ),
+      );
+      setOrdersRetryMessage("Alerta de Telegram reenviada en modo demo.");
+      return;
+    }
+
     if (retryingOrderId) {
       return;
     }
@@ -548,7 +754,7 @@ export default function DashboardWorkspace({
     } finally {
       setRetryingOrderId(null);
     }
-  }, [loadOrders, loadTodayActivity, orderStatusFilter, ordersPage, retryingOrderId]);
+  }, [demoMode, loadOrders, loadTodayActivity, orderStatusFilter, ordersPage, retryingOrderId]);
 
   useEffect(() => {
     void Promise.all([

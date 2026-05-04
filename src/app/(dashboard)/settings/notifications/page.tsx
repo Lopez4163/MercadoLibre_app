@@ -3,16 +3,18 @@ import { redirect } from "next/navigation";
 import NotificationRulesCard from "../../../../../components/dashboard/NotificationRulesCard";
 import { getSessionUserIdFromCookieStore } from "../../../../../lib/auth/session";
 import { getUserBillingEntitlement } from "../../../../../lib/billing/entitlements";
+import { isDemoMode } from "../../../../../lib/demo-mode";
 
 export default async function SettingsNotificationsPage() {
+  const demoMode = isDemoMode();
   const cookieStore = await cookies();
   const userId = getSessionUserIdFromCookieStore(cookieStore);
 
-  if (!userId) {
+  if (!demoMode && !userId) {
     redirect("/login");
   }
 
-  const entitlement = await getUserBillingEntitlement(userId);
+  const entitlement = demoMode ? { hasAccess: true } : await getUserBillingEntitlement(userId!);
 
   return (
     <div className="space-y-4">
