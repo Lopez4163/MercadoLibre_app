@@ -2,8 +2,15 @@ import Navbar from "../../components/layout/Navbar";
 import Link from "next/link";
 import Image from "next/image";
 import ProductShowcase from "../../components/marketing/ProductShowcase";
+import { isDemoMode } from "../../lib/demo-mode";
 
 export default function HomePage() {
+  const demoMode = isDemoMode();
+  const primaryHref = demoMode ? "/dashboard" : "/start-trial";
+  const primaryLabel = demoMode ? "Ver demo en vivo" : "Iniciar prueba gratis";
+  const secondaryHref = "/dashboard";
+  const secondaryLabel = demoMode ? "Explorar panel demo" : "Ver panel";
+
   return (
     <main className="min-h-screen">
       <Navbar />
@@ -20,16 +27,16 @@ export default function HomePage() {
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Link
-                href="/start-trial"
+                href={primaryHref}
                 className="inline-flex h-11 items-center border border-[var(--accent)] bg-[var(--accent)] px-5 text-sm font-semibold text-[var(--accent-contrast)] hover:bg-transparent hover:text-[var(--text-1)]"
               >
-                Iniciar prueba gratis
+                {primaryLabel}
               </Link>
               <Link
-                href="/dashboard"
+                href={secondaryHref}
                 className="inline-flex h-11 items-center border border-[var(--border-1)] bg-[var(--surface-2)] px-5 text-sm font-semibold text-[var(--text-1)] hover:bg-[var(--surface-1)]"
               >
-                Ver panel
+                {secondaryLabel}
               </Link>
             </div>
             <div className="mt-10 grid gap-3 sm:grid-cols-3">
@@ -72,6 +79,7 @@ export default function HomePage() {
           </h2>
           <p className="mt-3 text-[var(--text-2)]">
             Pantallas reales de la app, organizadas como trabaja tu equipo cada dia.
+            {demoMode ? " Esta version publica usa datos de muestra para mostrar el flujo sin conectar cuentas reales." : ""}
           </p>
         </div>
         <div className="mt-8">
@@ -117,16 +125,16 @@ export default function HomePage() {
 
             <div className="mt-6 flex flex-wrap gap-3">
               <Link
-                href="/start-trial"
+                href={primaryHref}
                 className="inline-flex h-11 items-center border border-[var(--accent)] bg-[var(--accent)] px-5 text-sm font-semibold text-[var(--accent-contrast)] hover:bg-transparent hover:text-[var(--text-1)]"
               >
-                Iniciar prueba gratis
+                {primaryLabel}
               </Link>
               <Link
-                href="/settings/billing"
+                href={demoMode ? "/dashboard" : "/settings/billing"}
                 className="inline-flex h-11 items-center border border-[var(--border-1)] bg-[var(--surface-2)] px-5 text-sm font-semibold text-[var(--text-1)] hover:bg-[var(--surface-1)]"
               >
-                Ver facturacion
+                {demoMode ? "Ver demo" : "Ver facturacion"}
               </Link>
             </div>
           </div>
@@ -143,16 +151,16 @@ export default function HomePage() {
           </div>
           <div className="flex flex-wrap gap-3">
             <Link
-              href="/start-trial"
+              href={primaryHref}
               className="inline-flex h-11 items-center border border-[var(--accent)] bg-[var(--accent)] px-5 text-sm font-semibold text-[var(--accent-contrast)] hover:bg-transparent hover:text-[var(--text-1)]"
             >
-              Iniciar prueba gratis
+              {primaryLabel}
             </Link>
             <Link
-              href="/login"
+              href={demoMode ? "/dashboard" : "/login"}
               className="inline-flex h-11 items-center border border-[var(--border-1)] bg-[var(--surface-2)] px-5 text-sm font-semibold text-[var(--text-1)] hover:bg-[var(--surface-1)]"
             >
-              Iniciar sesion
+              {demoMode ? "Abrir panel" : "Iniciar sesion"}
             </Link>
           </div>
         </div>

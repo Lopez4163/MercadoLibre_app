@@ -3,11 +3,13 @@ import { cookies } from "next/headers";
 import ThemeToggle from "../ui/ThemeToggle";
 import { prisma } from "../../lib/db/prisma";
 import { getSessionUserIdFromCookieStore } from "../../lib/auth/session";
+import { isDemoMode } from "../../lib/demo-mode";
 
 export default async function Navbar() {
+  const demoMode = isDemoMode();
   const cookieStore = await cookies();
   const sessionUserId = getSessionUserIdFromCookieStore(cookieStore);
-  const sessionUser = sessionUserId
+  const sessionUser = !demoMode && sessionUserId
     ? await prisma.user.findUnique({
         where: { id: sessionUserId },
         select: { id: true },
@@ -54,16 +56,16 @@ export default async function Navbar() {
           ) : (
             <>
               <Link
-                href="/login"
+                href={demoMode ? "/dashboard" : "/login"}
                 className="inline-flex h-9 items-center border border-[var(--border-1)] bg-[var(--surface-2)] px-4 text-sm font-semibold text-[var(--text-1)] hover:bg-[var(--surface-1)]"
               >
-                Iniciar sesion
+                {demoMode ? "Ver demo" : "Iniciar sesion"}
               </Link>
               <Link
-                href="/register"
+                href={demoMode ? "/dashboard" : "/register"}
                 className="inline-flex h-9 items-center border border-[var(--border-1)] bg-[var(--surface-2)] px-4 text-sm font-semibold text-[var(--text-1)] hover:bg-[var(--surface-1)]"
               >
-                Registrarse
+                {demoMode ? "Panel demo" : "Registrarse"}
               </Link>
             </>
           )}
