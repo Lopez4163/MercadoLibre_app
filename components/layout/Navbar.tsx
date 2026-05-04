@@ -61,12 +61,14 @@ export default async function Navbar() {
               >
                 {demoMode ? "Ver demo" : "Iniciar sesion"}
               </Link>
-              <Link
-                href={demoMode ? "/dashboard" : "/register"}
-                className="inline-flex h-9 items-center border border-[var(--border-1)] bg-[var(--surface-2)] px-4 text-sm font-semibold text-[var(--text-1)] hover:bg-[var(--surface-1)]"
-              >
-                {demoMode ? "Panel demo" : "Registrarse"}
-              </Link>
+              {!demoMode ? (
+                <Link
+                  href="/register"
+                  className="inline-flex h-9 items-center border border-[var(--border-1)] bg-[var(--surface-2)] px-4 text-sm font-semibold text-[var(--text-1)] hover:bg-[var(--surface-1)]"
+                >
+                  Registrarse
+                </Link>
+              ) : null}
             </>
           )}
         </div>

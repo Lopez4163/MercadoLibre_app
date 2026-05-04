@@ -8,8 +8,8 @@ export default function HomePage() {
   const demoMode = isDemoMode();
   const primaryHref = demoMode ? "/dashboard" : "/start-trial";
   const primaryLabel = demoMode ? "Ver demo en vivo" : "Iniciar prueba gratis";
-  const secondaryHref = "/dashboard";
-  const secondaryLabel = demoMode ? "Explorar panel demo" : "Ver panel";
+  const secondaryHref = demoMode ? "#inside-panel" : "/dashboard";
+  const secondaryLabel = demoMode ? "Ver pantallas" : "Ver panel";
 
   return (
     <main className="min-h-screen">
@@ -21,12 +21,6 @@ export default function HomePage() {
               <span className="font-semibold text-[var(--text-1)]">Portfolio demo:</span> explore the product with
               sample data. Live integrations are disabled for public viewing.
             </p>
-            <Link
-              href="/dashboard"
-              className="inline-flex h-8 items-center border border-[var(--border-1)] bg-[var(--surface-1)] px-3 text-xs font-semibold uppercase tracking-wide text-[var(--text-1)] hover:bg-[var(--bg-0)]"
-            >
-              Open demo
-            </Link>
           </div>
         </section>
       ) : null}
@@ -87,7 +81,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-6xl px-6 py-14">
+      <section id="inside-panel" className="mx-auto max-w-6xl px-6 py-14">
         <div className="mx-auto max-w-5xl text-center">
           <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--text-3)]">Dentro del panel</p>
           <h2 className="mt-3 text-3xl font-semibold tracking-tight text-[var(--text-1)] md:text-4xl">
