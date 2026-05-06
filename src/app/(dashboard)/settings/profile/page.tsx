@@ -2,7 +2,6 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { prisma } from "../../../../../lib/db/prisma";
 import { getSessionUserIdFromCookieStore } from "../../../../../lib/auth/session";
-import { isDemoMode } from "../../../../../lib/demo-mode";
 
 function formatDate(value: Date) {
   return new Intl.DateTimeFormat("es-AR", {
@@ -58,58 +57,38 @@ function billingStatusLabel(status: string | null | undefined) {
 }
 
 export default async function SettingsProfilePage() {
-  const demoMode = isDemoMode();
   const cookieStore = await cookies();
   const sessionUserId = getSessionUserIdFromCookieStore(cookieStore);
 
-  if (!demoMode && !sessionUserId) {
+  if (!sessionUserId) {
     redirect("/login");
   }
 
-  const user = demoMode
-    ? {
-        email: "demo@mercadolibs.app",
-        mlUserId: "DEMO_SELLER",
-        mlNickname: "Tienda Demo ML",
-        mlAvatarUrl: null,
-        accessToken: "demo",
-        refreshToken: "demo",
-        createdAt: new Date("2026-03-01T12:00:00.000Z"),
-        telegramAccount: {
-          chatId: "123456789",
-        },
-        billingSubscription: {
-          status: "trialing",
-          priceId: "demo_beta_monthly",
-          trialEnd: new Date("2026-06-01T12:00:00.000Z"),
-          currentPeriodEnd: new Date("2026-06-08T12:00:00.000Z"),
-        },
-      }
-    : await prisma.user.findUnique({
-        where: { id: sessionUserId! },
+  const user = await prisma.user.findUnique({
+    where: { id: sessionUserId },
+    select: {
+      email: true,
+      mlUserId: true,
+      mlNickname: true,
+      mlAvatarUrl: true,
+      accessToken: true,
+      refreshToken: true,
+      createdAt: true,
+      telegramAccount: {
         select: {
-          email: true,
-          mlUserId: true,
-          mlNickname: true,
-          mlAvatarUrl: true,
-          accessToken: true,
-          refreshToken: true,
-          createdAt: true,
-          telegramAccount: {
-            select: {
-              chatId: true,
-            },
-          },
-          billingSubscription: {
-            select: {
-              status: true,
-              priceId: true,
-              trialEnd: true,
-              currentPeriodEnd: true,
-            },
-          },
+          chatId: true,
         },
-      });
+      },
+      billingSubscription: {
+        select: {
+          status: true,
+          priceId: true,
+          trialEnd: true,
+          currentPeriodEnd: true,
+        },
+      },
+    },
+  });
 
   if (!user) {
     redirect("/login");

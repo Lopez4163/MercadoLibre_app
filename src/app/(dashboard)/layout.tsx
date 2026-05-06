@@ -3,25 +3,21 @@ import { redirect } from "next/navigation";
 import { prisma } from "../../../lib/db/prisma";
 import { getSessionUserIdFromCookieStore } from "../../../lib/auth/session";
 import DashboardHeaderNav from "../../../components/layout/DashboardHeaderNav";
-import { isDemoMode } from "../../../lib/demo-mode";
 
 export default async function DashboardLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
-  const demoMode = isDemoMode();
   const cookieStore = await cookies();
   const sessionUserId = getSessionUserIdFromCookieStore(cookieStore);
 
-  if (!demoMode && !sessionUserId) {
+  if (!sessionUserId) {
     redirect("/login");
   }
 
-  const user = demoMode
-    ? { id: "demo-user", mlUserId: "DEMO_SELLER", accessToken: "demo", refreshToken: "demo" }
-    : await prisma.user.findUnique({
-        where: { id: sessionUserId! },
-        select: { id: true, mlUserId: true, accessToken: true, refreshToken: true },
-      });
+  const user = await prisma.user.findUnique({
+    where: { id: sessionUserId },
+    select: { id: true, mlUserId: true, accessToken: true, refreshToken: true },
+  });
 
   if (!user) {
     redirect("/login");

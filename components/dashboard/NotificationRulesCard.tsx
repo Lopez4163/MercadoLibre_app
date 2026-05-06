@@ -23,8 +23,6 @@ type NotificationRulesCardProps = {
   initialHasBillingAccess?: boolean | null;
 };
 
-const isDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE === "true";
-
 function notificationErrorLabel(value: string) {
   if (value === "subscription_required") {
     return "Se requiere una suscripcion activa.";
@@ -71,32 +69,10 @@ export default function NotificationRulesCard({ initialHasBillingAccess = null }
   }, [settingsSuccess]);
 
   useEffect(() => {
-    if (isDemoMode) {
-      setNotifyEverySale(true);
-      setNotifySoldOut(true);
-      setNotifyLowStock(true);
-      setLowStockThreshold(5);
-      setTelegramConnected(true);
-      setSavedSettings({
-        notifyEverySale: true,
-        notifySoldOut: true,
-        notifyLowStock: true,
-        lowStockThreshold: 5,
-      });
-      setHasBillingAccess(true);
-      setSettingsLoading(false);
-      return;
-    }
-
     void loadNotificationSettings();
   }, []);
 
   async function loadNotificationSettings() {
-    if (isDemoMode) {
-      setSettingsLoading(false);
-      return;
-    }
-
     setSettingsLoading(true);
     setSettingsError(null);
     setSettingsSuccess(null);
@@ -155,18 +131,6 @@ export default function NotificationRulesCard({ initialHasBillingAccess = null }
     setSettingsSuccess(null);
 
     try {
-      if (isDemoMode) {
-        const nextSettings = {
-          notifyEverySale,
-          notifySoldOut,
-          notifyLowStock,
-          lowStockThreshold,
-        };
-        setSavedSettings(nextSettings);
-        setSettingsSuccess("Configuracion de demo actualizada.");
-        return;
-      }
-
       const response = await fetch("/api/notifications/settings", {
         method: "POST",
         headers: {
@@ -223,12 +187,6 @@ export default function NotificationRulesCard({ initialHasBillingAccess = null }
     setTestSuccess(null);
 
     try {
-      if (isDemoMode) {
-        const selectedOption = notificationTestOptions.find((option) => option.value === type);
-        setTestSuccess(`${selectedOption?.label ?? "Prueba"} simulada en modo demo.`);
-        return;
-      }
-
       const response = await fetch("/api/notifications/test", {
         method: "POST",
         headers: {
