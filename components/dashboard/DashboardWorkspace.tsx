@@ -942,14 +942,19 @@ export default function DashboardWorkspace({
   }, [items]);
 
   const tabClass = (tab: DashboardTab) =>
-    `inline-flex h-11 cursor-pointer items-center border px-4 text-sm font-semibold transition-all duration-150 active:translate-y-px active:scale-[0.99] ${
+    `inline-flex h-11 cursor-pointer items-center rounded border px-4 text-sm font-semibold transition-all duration-150 active:translate-y-px active:scale-[0.99] ${
       activeTab === tab
         ? "border-[var(--accent)] bg-[var(--accent)] text-[var(--accent-contrast)] hover:brightness-110 active:brightness-95"
-        : "border-[var(--border-1)] bg-[var(--surface-1)] text-[var(--text-1)] hover:border-[var(--text-2)] hover:bg-[var(--surface-2)] active:bg-[var(--bg-0)]"
+        : "border-[var(--border-1)] bg-[var(--surface-1)] text-[var(--text-1)] hover:border-[#85cfff] hover:bg-[var(--surface-2)] active:bg-[var(--bg-0)]"
     }`;
 
   return (
-    <motion.main className="space-y-6" variants={layoutStagger} initial="hidden" animate="visible">
+    <motion.main
+      className="space-y-6 [&_a]:rounded [&_article]:rounded-lg [&_button]:rounded [&_select]:rounded [&_table]:rounded"
+      variants={layoutStagger}
+      initial="hidden"
+      animate="visible"
+    >
       <motion.section className="space-y-3" variants={fadeInUp}>
         <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--text-3)]">
           Panel
