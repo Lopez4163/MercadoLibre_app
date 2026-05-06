@@ -7,10 +7,6 @@ const globalForPrisma = globalThis as unknown as {
 function buildPrismaDatabaseUrl() {
   const databaseUrl = process.env.DATABASE_URL;
   if (!databaseUrl) {
-    if (process.env.NEXT_PUBLIC_DEMO_MODE === "true") {
-      return "postgresql://demo:demo@localhost:5432/mercadolibs_demo";
-    }
-
     return undefined;
   }
 

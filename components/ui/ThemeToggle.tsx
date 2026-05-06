@@ -40,7 +40,7 @@ export default function ThemeToggle() {
     <button
       type="button"
       onClick={handleToggle}
-      className="inline-flex h-9 items-center justify-center rounded border border-[#4b4731] bg-[#1e1c10] px-3 text-xs font-semibold uppercase tracking-wide text-[#cdc7aa] hover:border-[#85cfff] hover:text-white"
+      className="inline-flex h-9 items-center justify-center border border-[var(--border-1)] bg-[var(--surface-2)] px-3 text-xs font-semibold uppercase tracking-wide text-[var(--text-1)] hover:bg-[var(--surface-1)]"
       aria-label="Cambiar tema de color"
       title={`Cambiar a modo ${theme === "dark" ? "claro" : "oscuro"}`}
     >
