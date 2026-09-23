@@ -308,6 +308,12 @@ export default function HomePage() {
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <Link
+              href="/v2/connect"
+              className="inline-flex h-12 items-center rounded bg-[#85cfff] px-6 text-sm font-bold text-[#082f43] hover:brightness-110"
+            >
+              Iniciar sesion V2
+            </Link>
+            <Link
               href={primaryHref}
               className="inline-flex h-12 items-center rounded bg-[#fde400] px-6 text-sm font-bold text-[#373100] hover:brightness-110"
             >

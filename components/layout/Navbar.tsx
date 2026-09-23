@@ -43,6 +43,12 @@ export default async function Navbar() {
         </div>
         <div className="flex items-center gap-2 sm:gap-3">
           <ThemeToggle />
+          <Link
+            href="/v2/connect"
+            className="inline-flex h-9 items-center rounded border border-[#85cfff] bg-[#082f43] px-3 text-sm font-bold text-[#85cfff] hover:bg-[#0d405a] sm:px-4"
+          >
+            Iniciar V2
+          </Link>
           {sessionUser ? (
             <>
               <Link
