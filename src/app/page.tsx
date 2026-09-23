@@ -19,6 +19,12 @@ export default function HomePage() {
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Link
+                href="/v2/connect"
+                className="inline-flex h-11 items-center border border-[#85cfff] bg-[#082f43] px-5 text-sm font-semibold text-[#85cfff] hover:bg-[#0d405a]"
+              >
+                Sign in to V2
+              </Link>
+              <Link
                 href="/connect/ml"
                 className="inline-flex h-11 items-center border border-[var(--accent)] bg-[var(--accent)] px-5 text-sm font-semibold text-[var(--accent-contrast)] hover:bg-transparent hover:text-[var(--text-1)]"
               >
