@@ -8,6 +8,18 @@ export type MercadoLibreAuthorization = {
   authorizationUrl: string;
 };
 
+export type MercadoLibreAccount =
+  | {
+      connected: false;
+      accountId: null;
+      externalSellerId: null;
+    }
+  | {
+      connected: true;
+      accountId: string;
+      externalSellerId: string;
+    };
+
 export class V2ApiError extends Error {
   constructor(
     message: string,
@@ -60,4 +72,8 @@ export function startMercadoLibreAuthorization(
     token,
     { method: "POST" },
   );
+}
+
+export function getMercadoLibreAccount(token: string): Promise<MercadoLibreAccount> {
+  return request<MercadoLibreAccount>("/api/v1/mercado-libre/account", token);
 }
