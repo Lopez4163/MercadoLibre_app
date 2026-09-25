@@ -11,6 +11,15 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "reconcile:check": "bash scripts/reconcile-check.sh",
+    "orders:cleanup": "node scripts/cleanup-expired-orders.mjs",
+    "orders:cleanup:check": "bash scripts/orders-cleanup-check.sh",
+    "telegram:connect-tokens:cleanup:check": "bash scripts/telegram-connect-tokens-cleanup-check.sh",
+    "security:check-env": "node scripts/security-env-check.mjs",
+    "security:check-webhooks": "node scripts/security-webhook-check.mjs",
+    "security:smoke-staging": "node scripts/security-smoke-staging.mjs",
+    "telegram:webhook:check": "node scripts/telegram-webhook-sync.mjs",
+    "telegram:webhook:register": "node scripts/telegram-webhook-sync.mjs --apply",
+    "postinstall": "prisma generate",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio"
@@ -18,20 +27,24 @@
   "dependencies": {
     "@clerk/nextjs": "^7.9.5",
     "@prisma/client": "^6.4.1",
-    "next": "16.1.6",
-    "react": "19.2.3",
-    "react-dom": "19.2.3"
-  },
-  "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "framer-motion": "^12.34.3",
+    "next": "16.1.6",
+    "nodemailer": "^8.0.7",
+    "prisma": "^6.4.1",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "stripe": "^20.4.1",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  },
+  "devDependencies": {
+    "@types/nodemailer": "^8.0.0",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
-    "prisma": "^6.4.1",
-    "tailwindcss": "^4",
-    "typescript": "^5",
     "vitest": "^4.0.18"
   }
 }

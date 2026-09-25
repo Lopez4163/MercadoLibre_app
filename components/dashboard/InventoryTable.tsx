@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { motion } from "framer-motion";
 import InventorySearchBar from "./InventorySearchBar";
 
 type InventoryItem = {
@@ -16,6 +17,7 @@ type InventoryTableProps = {
   refreshing: boolean;
   lastUpdatedAt: number | null;
   onRefresh: () => void;
+  refreshDisabled?: boolean;
 };
 
 type SortOption = "stock_asc" | "stock_desc" | "price_asc" | "price_desc";
@@ -46,7 +48,7 @@ function compareNullableNumbers(a?: number, b?: number, direction: "asc" | "desc
 function getStockLevel(stock?: number) {
   if (typeof stock !== "number") {
     return {
-      label: "Unknown",
+      label: "Desconocido",
       containerClass: "border-[var(--border-1)] bg-[var(--surface-2)] text-[var(--text-2)]",
       dotClass: "bg-[var(--text-3)]",
     };
@@ -54,7 +56,7 @@ function getStockLevel(stock?: number) {
 
   if (stock <= 3) {
     return {
-      label: "Critical",
+      label: "Critico",
       containerClass: "border-red-500/60 bg-red-500/10 text-red-300",
       dotClass: "bg-red-400",
     };
@@ -62,7 +64,7 @@ function getStockLevel(stock?: number) {
 
   if (stock <= 10) {
     return {
-      label: "Low",
+      label: "Bajo",
       containerClass: "border-orange-500/60 bg-orange-500/10 text-orange-300",
       dotClass: "bg-orange-400",
     };
@@ -70,24 +72,42 @@ function getStockLevel(stock?: number) {
 
   if (stock <= 20) {
     return {
-      label: "Watch",
+      label: "Atencion",
       containerClass: "border-amber-500/60 bg-amber-500/10 text-amber-300",
       dotClass: "bg-amber-400",
     };
   }
 
   return {
-    label: "Healthy",
+    label: "Saludable",
     containerClass: "border-emerald-500/60 bg-emerald-500/10 text-emerald-300",
     dotClass: "bg-emerald-400",
   };
 }
 
-export default function InventoryTable({ items, refreshing, lastUpdatedAt, onRefresh }: InventoryTableProps) {
+function RefreshSpinner() {
+  return (
+    <motion.span
+      aria-hidden="true"
+      className="inline-block h-3.5 w-3.5 rounded-full border-2 border-current border-r-transparent"
+      animate={{ rotate: 360 }}
+      transition={{ duration: 0.8, ease: "linear", repeat: Number.POSITIVE_INFINITY }}
+    />
+  );
+}
+
+export default function InventoryTable({
+  items,
+  refreshing,
+  lastUpdatedAt,
+  onRefresh,
+  refreshDisabled = false,
+}: InventoryTableProps) {
   const [pageSize, setPageSize] = useState<"10" | "20" | "all">("10");
   const [currentPage, setCurrentPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<SortOption>("stock_asc");
+  const controlsDisabled = refreshDisabled;
 
   const filteredItems = useMemo(() => {
     const normalizedQuery = searchQuery.trim().toLowerCase();
@@ -151,80 +171,93 @@ export default function InventoryTable({ items, refreshing, lastUpdatedAt, onRef
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--text-3)]">
-              Inventory Table
+              Tabla de inventario
             </p>
-            <h2 className="mt-1 text-xl font-semibold tracking-tight text-[var(--text-1)]">Items</h2>
+            <h2 className="mt-1 text-xl font-semibold tracking-tight text-[var(--text-1)]">Listado de stock</h2>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             {lastUpdatedAt ? (
               <p className="text-xs text-[var(--text-3)]">
-                Updated {new Date(lastUpdatedAt).toLocaleTimeString()}
+                Actualizado {new Date(lastUpdatedAt).toLocaleTimeString()}
               </p>
             ) : null}
             <button
               type="button"
               onClick={onRefresh}
-              disabled={refreshing}
+              disabled={refreshing || refreshDisabled}
               className="inline-flex h-8 cursor-pointer items-center border border-[var(--border-1)] bg-[var(--surface-2)] px-3 text-[11px] font-semibold uppercase tracking-wide text-[var(--text-1)] hover:bg-[var(--surface-1)] disabled:cursor-not-allowed disabled:text-[var(--text-3)] disabled:hover:bg-[var(--surface-2)]"
             >
-              {refreshing ? "Refreshing..." : "Refresh"}
+              {refreshing ? (
+                <span className="inline-flex items-center gap-2">
+                  <RefreshSpinner />
+                  Actualizando...
+                </span>
+              ) : (
+                "Actualizar"
+              )}
             </button>
           </div>
         </div>
         <div className="mt-4">
-          <InventorySearchBar query={searchQuery} onQueryChange={onSearchQueryChange} />
+          <InventorySearchBar
+            query={searchQuery}
+            onQueryChange={onSearchQueryChange}
+            disabled={controlsDisabled}
+          />
         </div>
         <div className="mt-4 flex flex-wrap items-center gap-3 border border-[var(--border-1)] bg-[var(--bg-0)] p-3 text-sm">
           <label htmlFor="sort-by" className="text-[var(--text-2)]">
-            Sort
+            Ordenar
           </label>
           <select
             id="sort-by"
             value={sortBy}
+            disabled={controlsDisabled}
             onChange={(event) => onSortByChange(event.target.value as SortOption)}
-            className="h-9 border border-[var(--border-1)] bg-[var(--surface-1)] px-3 text-[var(--text-1)]"
+            className="h-9 border border-[var(--border-1)] bg-[var(--surface-1)] px-3 text-[var(--text-1)] disabled:cursor-not-allowed disabled:opacity-60"
           >
-            <option value="stock_asc">Lowest stock - highest</option>
-            <option value="stock_desc">Highest stock - lowest</option>
-            <option value="price_asc">Cheapest - most expensive</option>
-            <option value="price_desc">Most expensive - cheapest</option>
+            <option value="stock_asc">Menor stock - mayor</option>
+            <option value="stock_desc">Mayor stock - menor</option>
+            <option value="price_asc">Mas barato - mas caro</option>
+            <option value="price_desc">Mas caro - mas barato</option>
           </select>
           <label htmlFor="page-size" className="text-[var(--text-2)]">
-            Show
+            Mostrar
           </label>
           <select
             id="page-size"
             value={pageSize}
+            disabled={controlsDisabled}
             onChange={(event) => onPageSizeChange(event.target.value as "10" | "20" | "all")}
-            className="h-9 border border-[var(--border-1)] bg-[var(--surface-1)] px-3 text-[var(--text-1)]"
+            className="h-9 border border-[var(--border-1)] bg-[var(--surface-1)] px-3 text-[var(--text-1)] disabled:cursor-not-allowed disabled:opacity-60"
           >
             <option value="10">10</option>
             <option value="20">20</option>
-            <option value="all">All</option>
+            <option value="all">Todos</option>
           </select>
           <span className="text-[var(--text-3)]">
-            {filteredItems.length} result{filteredItems.length === 1 ? "" : "s"}.
+            {filteredItems.length} resultado{filteredItems.length === 1 ? "" : "s"}.
           </span>
           <span className="text-[var(--text-3)]">
-            Page {safeCurrentPage} of {totalPages}
+            Pagina {safeCurrentPage} de {totalPages}
           </span>
           {pageSize !== "all" && (
             <div className="ml-auto flex items-center gap-2">
               <button
                 type="button"
                 onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
-                disabled={safeCurrentPage === 1}
+                disabled={controlsDisabled || safeCurrentPage === 1}
                 className="h-9 border border-[var(--border-1)] bg-[var(--bg-0)] px-3 text-xs font-semibold uppercase tracking-wide text-[var(--text-1)] disabled:cursor-not-allowed disabled:opacity-50"
               >
-                Prev
+                Anterior
               </button>
               <button
                 type="button"
                 onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
-                disabled={safeCurrentPage === totalPages}
+                disabled={controlsDisabled || safeCurrentPage === totalPages}
                 className="h-9 border border-[var(--border-1)] bg-[var(--bg-0)] px-3 text-xs font-semibold uppercase tracking-wide text-[var(--text-1)] disabled:cursor-not-allowed disabled:opacity-50"
               >
-                Next
+                Siguiente
               </button>
             </div>
           )}
@@ -236,17 +269,17 @@ export default function InventoryTable({ items, refreshing, lastUpdatedAt, onRef
           <thead className="bg-[var(--bg-0)] text-[var(--text-1)]">
             <tr>
               <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider">ID</th>
-              <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider">Title</th>
+              <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider">Titulo</th>
               <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider">Stock</th>
-              <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider">Price</th>
-              <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider">Status</th>
+              <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider">Precio</th>
+              <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider">Estado</th>
             </tr>
           </thead>
           <tbody>
             {visibleItems.length === 0 && (
               <tr>
                 <td className="px-4 py-6 text-[var(--text-3)]" colSpan={5}>
-                  No items found.
+                  No se encontraron articulos.
                 </td>
               </tr>
             )}

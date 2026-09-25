@@ -15,7 +15,7 @@ const jetBrainsMono = JetBrains_Mono({
 
 export const metadata: Metadata = {
   title: "MercadoLibs",
-  description: "Mercado Libre notifications dashboard",
+  description: "Panel de notificaciones para Mercado Libre",
 };
 
 const themeInitScript = `
@@ -35,7 +35,7 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="es" suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
       </head>

@@ -1,3 +1,3 @@
 export default function InventoryPage() {
-  return <main>Inventory page</main>;
+  return <main>Pagina de inventario</main>;
 }

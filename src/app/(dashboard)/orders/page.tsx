@@ -1,3 +1,3 @@
 export default function OrdersPage() {
-  return <main>Orders page</main>;
+  return <main>Pagina de pedidos</main>;
 }

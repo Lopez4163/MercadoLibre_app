@@ -4,6 +4,7 @@ import { consumeTelegramConnectCode } from "../../../../../lib/telegram/connect"
 import {
   buildTelegramConnectedMessage,
   buildTelegramConnectionExpiredMessage,
+  buildTelegramPrivateChatRequiredMessage,
 } from "../../../../../lib/telegram/messages";
 import { sendTelegramMessage } from "../../../../../lib/telegram/bot";
 
@@ -12,6 +13,7 @@ type TelegramWebhookUpdate = {
   message?: {
     chat?: {
       id?: number;
+      type?: string;
     };
     text?: string;
   };
@@ -34,8 +36,18 @@ function extractStartToken(text?: string) {
 async function processStartCommand(update: TelegramWebhookUpdate) {
   const token = extractStartToken(update.message?.text);
   const chatIdRaw = update.message?.chat?.id;
+  const chatType = update.message?.chat?.type?.trim().toLowerCase();
 
   if (!token || chatIdRaw === undefined || chatIdRaw === null) {
+    return;
+  }
+
+  if (chatType !== "private") {
+    try {
+      await sendTelegramMessage(String(chatIdRaw), buildTelegramPrivateChatRequiredMessage());
+    } catch (error) {
+      console.error("telegram webhook private-chat warning failed", error);
+    }
     return;
   }
 
@@ -79,9 +91,19 @@ async function processStartCommand(update: TelegramWebhookUpdate) {
 }
 
 export async function POST(request: NextRequest) {
-  const expectedSecret = process.env.TELEGRAM_WEBHOOK_SECRET;
+  const strictMode = process.env.NODE_ENV === "production";
+  const expectedSecret = process.env.TELEGRAM_WEBHOOK_SECRET?.trim() ?? "";
+
+  if (strictMode && !expectedSecret) {
+    console.error("telegram webhook secret missing in production");
+    return NextResponse.json(
+      { ok: false, error: "webhook_secret_unavailable" },
+      { status: 500 },
+    );
+  }
+
   if (expectedSecret) {
-    const headerSecret = request.headers.get("x-telegram-bot-api-secret-token");
+    const headerSecret = request.headers.get("x-telegram-bot-api-secret-token")?.trim();
     if (headerSecret !== expectedSecret) {
       return NextResponse.json({ ok: false, error: "forbidden" }, { status: 403 });
     }

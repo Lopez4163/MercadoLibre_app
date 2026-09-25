@@ -18,6 +18,14 @@ type MlUserResponse = {
   id: number;
   email?: string;
   nickname?: string;
+  thumbnail?:
+    | string
+    | {
+        picture_id?: string;
+        picture_url?: string;
+      };
+  picture?: string;
+  logo?: string;
 };
 
 function getMlConfig() {

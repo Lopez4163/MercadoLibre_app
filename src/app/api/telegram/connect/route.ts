@@ -4,9 +4,11 @@ import {
   createTelegramConnectCode,
   TELEGRAM_CONNECT_CODE_TTL_SECONDS,
 } from "../../../../../lib/telegram/connect";
+import { getSessionUserIdFromRequest } from "../../../../../lib/auth/session";
+import { getUserBillingEntitlement } from "../../../../../lib/billing/entitlements";
 
 export async function GET(request: NextRequest) {
-  const sessionUserId = request.cookies.get("ml_user_id")?.value;
+  const sessionUserId = getSessionUserIdFromRequest(request);
   if (!sessionUserId) {
     return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
   }
@@ -18,6 +20,19 @@ export async function GET(request: NextRequest) {
 
   if (!user) {
     return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
+  }
+
+  const entitlement = await getUserBillingEntitlement(user.id);
+  if (!entitlement.hasAccess) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: "subscription_required",
+        message: "Active subscription required. Start trial in Billing to connect Telegram.",
+        subscriptionStatus: entitlement.status,
+      },
+      { status: 402 },
+    );
   }
 
   const { code: startToken } = await createTelegramConnectCode(user.id);
