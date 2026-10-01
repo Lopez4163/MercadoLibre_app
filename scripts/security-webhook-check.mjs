@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import fs from "node:fs";
+import { createHmac } from "node:crypto";
 import path from "node:path";
 
 function normalize(value) {
@@ -106,18 +107,25 @@ function fail(message) {
   console.error(`FAIL: ${message}`);
 }
 
-async function probeEndpoint(name, url, init, expectedStatus) {
+async function probeEndpoint(name, url, init, expectedStatus, validatePayload) {
   try {
     const response = await fetch(url, init);
+    const payload = await readJson(response);
     if (response.status === expectedStatus) {
+      if (validatePayload && !validatePayload(payload)) {
+        fail(`${name} returned HTTP ${expectedStatus} with unexpected response: ${JSON.stringify(payload)}`);
+        return { ok: false, status: response.status, payload };
+      }
+
       pass(`${name} returned HTTP ${expectedStatus}`);
-      return;
+      return { ok: true, status: response.status, payload };
     }
 
-    const payload = await readJson(response);
     fail(`${name} returned HTTP ${response.status} (expected ${expectedStatus}). Response: ${JSON.stringify(payload)}`);
+    return { ok: false, status: response.status, payload };
   } catch (error) {
     fail(`${name} request failed: ${error instanceof Error ? error.message : String(error)}`);
+    return { ok: false, status: null, payload: null };
   }
 }
 
@@ -205,11 +213,79 @@ async function checkStripeProvider(expectedUrl, stripeSecretKey) {
   }
 }
 
+function buildStripeProbePayload(eventId) {
+  return JSON.stringify({
+    id: eventId,
+    object: "event",
+    api_version: "2025-10-29.clover",
+    created: Math.floor(Date.now() / 1000),
+    data: {
+      object: {
+        id: `cs_${eventId.replace(/[^a-zA-Z0-9_]/g, "_")}`,
+        object: "checkout.session",
+        client_reference_id: null,
+        customer: null,
+        metadata: {
+          probe: "security-webhook-check",
+        },
+        mode: "subscription",
+        subscription: null,
+      },
+    },
+    livemode: false,
+    pending_webhooks: 1,
+    request: {
+      id: null,
+      idempotency_key: null,
+    },
+    type: "checkout.session.completed",
+  });
+}
+
+function buildStripeSignatureHeader(payload, webhookSecret) {
+  const timestamp = Math.floor(Date.now() / 1000);
+  const signature = createHmac("sha256", webhookSecret)
+    .update(`${timestamp}.${payload}`)
+    .digest("hex");
+
+  return `t=${timestamp},v1=${signature}`;
+}
+
+async function probeStripeSignedFixture(stripeWebhookUrl, stripeWebhookSecret) {
+  const eventId = `evt_security_probe_${Date.now()}`;
+  const payload = buildStripeProbePayload(eventId);
+  const signature = buildStripeSignatureHeader(payload, stripeWebhookSecret);
+  const init = {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "stripe-signature": signature,
+    },
+    body: payload,
+  };
+
+  await probeEndpoint(
+    "Stripe webhook accepts valid signed probe event",
+    stripeWebhookUrl,
+    init,
+    200,
+    (payload) => payload && payload.ok === true && payload.duplicate !== true,
+  );
+  await probeEndpoint(
+    "Stripe webhook treats signed duplicate event as idempotent",
+    stripeWebhookUrl,
+    init,
+    200,
+    (payload) => payload && payload.ok === true && payload.duplicate === true,
+  );
+}
+
 async function main() {
   const baseUrl = ensureBaseUrl(required("APP_BASE_URL"));
   const telegramBotToken = required("TELEGRAM_BOT_TOKEN");
   const telegramSecret = required("TELEGRAM_WEBHOOK_SECRET");
   const stripeSecretKey = required("STRIPE_SECRET_KEY");
+  const stripeWebhookSecret = required("STRIPE_WEBHOOK_SECRET");
   const mlSecretRaw = required("ML_WEBHOOK_SECRET");
   const mlSecret = parseMlSecret(mlSecretRaw);
 
@@ -227,7 +303,7 @@ async function main() {
   await checkStripeProvider(stripeWebhookUrl, stripeSecretKey);
 
   await probeEndpoint(
-    "ML webhook accepts configured secret",
+    "ML webhook accepts configured secret for unsupported/minimal payload",
     mlWebhookUrl,
     {
       method: "POST",
@@ -238,6 +314,19 @@ async function main() {
       body: "{}",
     },
     200,
+  );
+
+  await probeEndpoint(
+    "ML webhook rejects missing secret",
+    mlWebhookUrl,
+    {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+      },
+      body: "{}",
+    },
+    403,
   );
 
   await probeEndpoint(
@@ -255,7 +344,7 @@ async function main() {
   );
 
   await probeEndpoint(
-    "Telegram webhook accepts configured secret",
+    "Telegram webhook accepts configured secret for minimal payload",
     telegramWebhookUrl,
     {
       method: "POST",
@@ -266,6 +355,33 @@ async function main() {
       body: "{}",
     },
     200,
+  );
+
+  await probeEndpoint(
+    "Telegram webhook accepts malformed JSON without crashing",
+    telegramWebhookUrl,
+    {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-telegram-bot-api-secret-token": telegramSecret,
+      },
+      body: "{",
+    },
+    200,
+  );
+
+  await probeEndpoint(
+    "Telegram webhook rejects missing secret",
+    telegramWebhookUrl,
+    {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+      },
+      body: "{}",
+    },
+    403,
   );
 
   await probeEndpoint(
@@ -294,6 +410,22 @@ async function main() {
     },
     400,
   );
+
+  await probeEndpoint(
+    "Stripe webhook rejects wrong signature",
+    stripeWebhookUrl,
+    {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "stripe-signature": `t=${Math.floor(Date.now() / 1000)},v1=invalid${Date.now()}`,
+      },
+      body: "{}",
+    },
+    400,
+  );
+
+  await probeStripeSignedFixture(stripeWebhookUrl, stripeWebhookSecret);
 
   if (hasFailure) {
     console.error("security:check-webhooks failed");

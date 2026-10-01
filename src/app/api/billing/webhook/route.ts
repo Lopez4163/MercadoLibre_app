@@ -5,6 +5,7 @@ import { prisma } from "../../../../../lib/db/prisma";
 import { getStripe, getStripeWebhookSecret } from "../../../../../lib/stripe/client";
 import { disconnectUserIntegrationsForBillingEnd } from "../../../../../lib/account/disconnect";
 import { resolveDegradedSince, shouldDisconnectForBillingStatus } from "../../../../../lib/billing/disconnect-policy";
+import { sendTrialStartedEmail } from "../../../../../lib/email/lifecycle";
 
 export const runtime = "nodejs";
 const DEFAULT_STRIPE_WEBHOOK_EVENT_RETENTION_DAYS = 30;
@@ -77,7 +78,7 @@ async function upsertSubscriptionState(subscription: Stripe.Subscription, fallba
       userId,
       stripeCustomerId,
     });
-    return;
+    return null;
   }
 
   await prisma.user.updateMany({
@@ -109,9 +110,10 @@ async function upsertSubscriptionState(subscription: Stripe.Subscription, fallba
             degradedSince: true,
           },
         });
+  const previousStatus = existingByUser?.status ?? existingBySubscription?.status ?? null;
   const degradedSince = resolveDegradedSince({
     status: subscription.status,
-    previousStatus: existingByUser?.status ?? existingBySubscription?.status ?? null,
+    previousStatus,
     previousDegradedSince: existingByUser?.degradedSince ?? existingBySubscription?.degradedSince ?? null,
     now,
   });
@@ -150,6 +152,14 @@ async function upsertSubscriptionState(subscription: Stripe.Subscription, fallba
   if (shouldDisconnectForBillingStatus(subscription.status, degradedSince, now)) {
     await disconnectUserIntegrationsForBillingEnd(userId);
   }
+
+  return {
+    userId,
+    status: subscription.status,
+    previousStatus,
+    trialEnd: payload.trialEnd,
+    currentPeriodEnd: payload.currentPeriodEnd,
+  };
 }
 
 async function syncBySubscriptionId(subscriptionId: string, fallbackUserId?: string | null) {
@@ -157,7 +167,24 @@ async function syncBySubscriptionId(subscriptionId: string, fallbackUserId?: str
   const subscription = await stripe.subscriptions.retrieve(subscriptionId, {
     expand: ["latest_invoice"],
   });
-  await upsertSubscriptionState(subscription, fallbackUserId);
+  return upsertSubscriptionState(subscription, fallbackUserId);
+}
+
+async function sendTrialStartedEmailIfNeeded(syncResult: Awaited<ReturnType<typeof upsertSubscriptionState>>) {
+  if (!syncResult || syncResult.status !== "trialing" || syncResult.previousStatus === "trialing") {
+    return;
+  }
+
+  await sendTrialStartedEmail({
+    userId: syncResult.userId,
+    trialEnd: syncResult.trialEnd,
+    currentPeriodEnd: syncResult.currentPeriodEnd,
+  }).catch((error) => {
+    console.error("[Stripe webhook] trial started email failed", {
+      userId: syncResult.userId,
+      error,
+    });
+  });
 }
 
 async function claimStripeEvent(event: Stripe.Event) {
@@ -235,14 +262,16 @@ export async function POST(request: NextRequest) {
             ? session.subscription
             : session.subscription?.id ?? null;
         if (subscriptionId) {
-          await syncBySubscriptionId(subscriptionId, userId);
+          const syncResult = await syncBySubscriptionId(subscriptionId, userId);
+          await sendTrialStartedEmailIfNeeded(syncResult);
         }
         break;
       }
       case "customer.subscription.updated":
       case "customer.subscription.deleted": {
         const subscription = event.data.object as Stripe.Subscription;
-        await upsertSubscriptionState(subscription);
+        const syncResult = await upsertSubscriptionState(subscription);
+        await sendTrialStartedEmailIfNeeded(syncResult);
         break;
       }
       case "invoice.paid":

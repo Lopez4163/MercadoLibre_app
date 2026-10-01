@@ -36,12 +36,12 @@ Last updated: March 15, 2026
    - `npm run telegram:webhook:register -- --env-file=.env.local --force`
 
 ## Telegram Bot Profile Image (BotFather)
-1. Use the prepared square asset:
-   - `public/images/telegram/telegramLogo-botfather-512.png` (512x512 PNG)
+1. Use the prepared bot image asset:
+   - `public/images/telegram/telegram_logo.png`
 2. In Telegram, open `@BotFather`.
 3. Run `/mybots` and select the production bot.
 4. Choose `Edit Bot` -> `Edit Botpic`.
-5. Upload `public/images/telegram/telegramLogo-botfather-512.png`.
+5. Upload `public/images/telegram/telegram_logo.png`.
 6. Send a test message from the bot and verify the avatar is visible in chat list + message header.
 
 ## Environment Stages

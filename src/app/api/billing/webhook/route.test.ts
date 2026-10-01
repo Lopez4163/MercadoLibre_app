@@ -18,6 +18,7 @@ const mocks = vi.hoisted(() => ({
     },
   },
   disconnectUserIntegrationsForBillingEnd: vi.fn(),
+  sendTrialStartedEmail: vi.fn(),
   getStripeWebhookSecret: vi.fn(() => "whsec_test"),
   stripe: {
     webhooks: {
@@ -32,6 +33,9 @@ const mocks = vi.hoisted(() => ({
 vi.mock("../../../../../lib/db/prisma", () => ({ prisma: mocks.prisma }));
 vi.mock("../../../../../lib/account/disconnect", () => ({
   disconnectUserIntegrationsForBillingEnd: mocks.disconnectUserIntegrationsForBillingEnd,
+}));
+vi.mock("../../../../../lib/email/lifecycle", () => ({
+  sendTrialStartedEmail: mocks.sendTrialStartedEmail,
 }));
 vi.mock("../../../../../lib/stripe/client", () => ({
   getStripe: vi.fn(() => mocks.stripe),
@@ -80,6 +84,7 @@ describe("POST /api/billing/webhook", () => {
     mocks.prisma.user.updateMany.mockResolvedValue({ count: 1 });
     mocks.prisma.billingSubscription.update.mockResolvedValue({ id: "billing_1" });
     mocks.prisma.billingSubscription.upsert.mockResolvedValue({ id: "billing_1" });
+    mocks.sendTrialStartedEmail.mockResolvedValue({ sent: true });
   });
 
   it("tracks degradedSince on past_due but does not disconnect before 24h", async () => {
@@ -162,5 +167,27 @@ describe("POST /api/billing/webhook", () => {
 
     expect(response.status).toBe(200);
     expect(mocks.disconnectUserIntegrationsForBillingEnd).toHaveBeenCalledWith("user_1");
+  });
+
+  it("sends trial started email once when subscription enters trialing", async () => {
+    mocks.stripe.webhooks.constructEvent.mockReturnValue(buildSubscriptionEvent("trialing"));
+    mocks.prisma.billingSubscription.findUnique.mockResolvedValue(null);
+
+    const request = new Request("http://localhost/api/billing/webhook", {
+      method: "POST",
+      headers: {
+        "stripe-signature": "t=123,v1=abc",
+      },
+      body: JSON.stringify({ any: "payload" }),
+    });
+
+    const response = await POST(request as unknown as NextRequest);
+
+    expect(response.status).toBe(200);
+    expect(mocks.sendTrialStartedEmail).toHaveBeenCalledWith({
+      userId: "user_1",
+      trialEnd: null,
+      currentPeriodEnd: new Date(1_700_086_400 * 1000),
+    });
   });
 });

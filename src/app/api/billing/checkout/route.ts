@@ -159,6 +159,7 @@ export async function POST(request: NextRequest) {
 
     const session = await stripe.checkout.sessions.create({
       mode: "subscription",
+      locale: "es-419",
       customer: stripeCustomerId,
       line_items: [{ price: getStripePriceId(), quantity: 1 }],
       success_url: successUrl,

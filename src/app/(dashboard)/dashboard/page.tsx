@@ -4,8 +4,13 @@ import DashboardWorkspace from "../../../../components/dashboard/DashboardWorksp
 import { getSessionUserIdFromCookieStore } from "../../../../lib/auth/session";
 import { getUserBillingEntitlement } from "../../../../lib/billing/entitlements";
 import { prisma } from "../../../../lib/db/prisma";
+import { isDemoMode } from "../../../../lib/demo-mode";
 
 export default async function DashboardPage() {
+  if (isDemoMode()) {
+    return <DashboardWorkspace mlName="Tienda Demo ML" billingHasAccess billingStatus="trialing" demoMode />;
+  }
+
   const cookieStore = await cookies();
   const userId = getSessionUserIdFromCookieStore(cookieStore);
 

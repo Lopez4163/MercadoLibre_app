@@ -27,6 +27,7 @@ model User {
   orders                Order[]
   feedbackEntries       Feedback[]
   billingSubscription   BillingSubscription?
+  emailDeliveries       EmailDelivery[]
 }
 
 model TelegramAccount {
@@ -214,4 +215,23 @@ model Feedback {
   @@index([userId, createdAt])
   @@index([category, createdAt])
   @@index([createdAt])
+}
+
+model EmailDelivery {
+  id                String    @id @default(cuid())
+  userId            String
+  type              String
+  dedupeKey         String
+  recipient         String
+  subject           String
+  status            String
+  providerMessageId String?
+  error             String?
+  createdAt         DateTime  @default(now())
+  sentAt            DateTime?
+  user              User      @relation(fields: [userId], references: [id])
+
+  @@unique([userId, type, dedupeKey])
+  @@index([status, createdAt])
+  @@index([type, createdAt])
 }
