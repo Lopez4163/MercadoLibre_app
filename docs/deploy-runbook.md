@@ -1,6 +1,62 @@
 # Deploy and Staging Runbook
 
-Last updated: March 15, 2026
+Last updated: October 7, 2026
+
+This runbook covers both the legacy MercadoLibs application and the
+transitional NotiVenta V2 `/v2/connect` surface. A validation step must name
+which generation it is testing; success in one does not prove the other.
+
+## NotiVenta V2 Staging
+
+Current endpoints:
+
+```text
+Frontend: https://mercadolibreapp-staging.up.railway.app
+Backend:  https://notiventabe-staging.up.railway.app
+V2 page:  https://mercadolibreapp-staging.up.railway.app/v2/connect
+```
+
+Required frontend configuration for the V2 surface:
+
+```text
+APP_BASE_URL=https://mercadolibreapp-staging.up.railway.app
+NEXTAUTH_URL=https://mercadolibreapp-staging.up.railway.app
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
+CLERK_SECRET_KEY
+NEXT_PUBLIC_NOTIVENTA_API_URL=https://notiventabe-staging.up.railway.app
+```
+
+`NEXT_PUBLIC_NOTIVENTA_ENABLE_TEST_TOOLS` is an optional temporary staging
+diagnostic that exposes a button for copying a short-lived Clerk bearer token.
+Keep it `false` unless a supervised diagnostic specifically requires it, and
+never enable it in production.
+
+The V2 backend must independently allow the exact frontend origin through both
+`CLERK_AUTHORIZED_PARTIES` and `CORS_ALLOWED_ORIGINS`, and must use the same
+frontend origin for `FRONTEND_BASE_URL`.
+
+Configure the Mercado Libre application with two distinct FastAPI routes:
+
+| Mercado Libre field | Staging URL |
+| --- | --- |
+| Redirect URI | `https://notiventabe-staging.up.railway.app/api/v1/mercado-libre/oauth/callback` |
+| Notifications Callback URL | `https://notiventabe-staging.up.railway.app/api/v1/mercado-libre/webhooks` |
+
+For Colombian authorization, the backend uses
+`https://auth.mercadolibre.com.co/authorization`. Do not put the OAuth callback
+in the notification field; notifications are `POST` requests while the OAuth
+callback accepts `GET`.
+
+V2 staging validation must prove separately:
+
+1. Clerk sign-in and protected FastAPI reads.
+2. OAuth return to `/v2/connect?mercadoLibre=connected`.
+3. Device pairing/status/removal as applicable.
+4. Real notification delivery to FastAPI.
+5. Worker processing and exactly-one eligible `PrintJob` behavior.
+
+The backend `/health` response proves only FastAPI process liveness. It does not
+prove database, Redis, Celery worker, or Mercado Libre health.
 
 ## Baseline Pre-Deploy Checks
 1. `npm run security:check-env`
@@ -51,7 +107,7 @@ Last updated: March 15, 2026
 4. Auto-deploy to staging from integration branch.
 5. Deploy production only from protected branch/tag.
 
-## Staging Validation (24h recommended)
+## Legacy Application Staging Validation (24h recommended)
 1. OAuth connect flow.
 2. Telegram connect/status/test/disconnect.
 3. Sale alert dispatch.
