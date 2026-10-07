@@ -1,8 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
+  createDevicePairingCode,
+  getDashboardDevice,
   getMercadoLibreAccount,
   getCurrentUser,
+  removeDashboardDevice,
   startMercadoLibreAuthorization,
   V2ApiError,
 } from "./api";
@@ -74,6 +77,63 @@ describe("V2 FastAPI client", () => {
     expect(fetchMock).toHaveBeenCalledWith(
       "https://api.example.test/api/v1/mercado-libre/account",
       expect.objectContaining({
+        headers: expect.objectContaining({ Authorization: "Bearer session-token" }),
+      }),
+    );
+  });
+
+  it("creates a Device pairing code with the Clerk bearer token", async () => {
+    const payload = { code: "482193", expiresAt: "2026-10-01T15:30:00Z" };
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify(payload), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+
+    await expect(createDevicePairingCode("session-token")).resolves.toEqual(payload);
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://api.example.test/api/v1/devices/pairing-codes",
+      expect.objectContaining({
+        method: "POST",
+        headers: expect.objectContaining({ Authorization: "Bearer session-token" }),
+      }),
+    );
+  });
+
+  it("loads the authenticated dashboard Device status", async () => {
+    const payload = { device: null };
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify(payload), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+
+    await expect(getDashboardDevice("session-token")).resolves.toEqual(payload);
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://api.example.test/api/v1/dashboard/device",
+      expect.objectContaining({
+        headers: expect.objectContaining({ Authorization: "Bearer session-token" }),
+      }),
+    );
+  });
+
+  it("removes the selected Device with the Clerk bearer token", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ removed: true }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+
+    await expect(
+      removeDashboardDevice("session-token", "device-id"),
+    ).resolves.toEqual({ removed: true });
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://api.example.test/api/v1/devices/device-id",
+      expect.objectContaining({
+        method: "DELETE",
         headers: expect.objectContaining({ Authorization: "Bearer session-token" }),
       }),
     );
