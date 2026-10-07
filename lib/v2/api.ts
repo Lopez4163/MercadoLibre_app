@@ -8,6 +8,27 @@ export type MercadoLibreAuthorization = {
   authorizationUrl: string;
 };
 
+export type DevicePairingCode = {
+  code: string;
+  expiresAt: string;
+};
+
+export type DashboardDevice = {
+  deviceId: string;
+  displayName: string;
+  systemName: string;
+  platform: string;
+  agentVersion: string;
+  isPaused: boolean;
+  online: boolean;
+  systemBlocked: boolean;
+  lastSeenAt: string;
+};
+
+export type DashboardDeviceStatus = {
+  device: DashboardDevice | null;
+};
+
 export type MercadoLibreAccount =
   | {
       connected: false;
@@ -76,4 +97,23 @@ export function startMercadoLibreAuthorization(
 
 export function getMercadoLibreAccount(token: string): Promise<MercadoLibreAccount> {
   return request<MercadoLibreAccount>("/api/v1/mercado-libre/account", token);
+}
+
+export function createDevicePairingCode(token: string): Promise<DevicePairingCode> {
+  return request<DevicePairingCode>("/api/v1/devices/pairing-codes", token, {
+    method: "POST",
+  });
+}
+
+export function getDashboardDevice(token: string): Promise<DashboardDeviceStatus> {
+  return request<DashboardDeviceStatus>("/api/v1/dashboard/device", token);
+}
+
+export function removeDashboardDevice(
+  token: string,
+  deviceId: string,
+): Promise<{ removed: boolean }> {
+  return request<{ removed: boolean }>(`/api/v1/devices/${deviceId}`, token, {
+    method: "DELETE",
+  });
 }
