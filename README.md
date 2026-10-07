@@ -1,4 +1,16 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# MercadoLibs / NotiVenta Web
+
+This Next.js repository currently contains two integration generations:
+
+- the legacy MercadoLibs dashboard, whose Node routes own inventory, Telegram,
+  billing, and the original Mercado Libre session; and
+- the transitional NotiVenta V2 surface at `/v2/connect`, which uses Clerk and
+  calls the separate FastAPI backend for Mercado Libre connection and Device
+  management.
+
+Do not treat the legacy and V2 Mercado Libre callbacks as interchangeable. The
+V2 staging configuration is documented in
+[`docs/deploy-runbook.md`](docs/deploy-runbook.md).
 
 ## Getting Started
 
@@ -14,7 +26,9 @@ pnpm dev
 bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the
+application. The transitional V2 connection page is at
+[http://localhost:3000/v2/connect](http://localhost:3000/v2/connect).
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
@@ -29,11 +43,7 @@ To learn more about Next.js, take a look at the following resources:
 
 You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
 
-## Deploy on Vercel
+## Deployment
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
-# MercadoLibre_app
-# MercadoLibre_app
-# MercadoLibre_app
+The current V2 staging frontend runs on Railway. Follow the checked-in staging
+runbook rather than the generic create-next-app deployment instructions.

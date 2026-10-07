@@ -1,6 +1,6 @@
 # Architecture and Feature Inventory
 
-Last updated: March 15, 2026
+Last updated: October 7, 2026
 
 ## Snapshot
 1. Dashboard reads inventory live from ML via `/api/ml/items`.
@@ -12,6 +12,37 @@ Last updated: March 15, 2026
    - `/dashboard` operations
    - `/settings/*` configuration
    - `/profile` account summary
+
+## NotiVenta V2 Transition
+
+This repository also hosts the transitional `/v2/connect` surface. It does not
+use the legacy `ml_session` boundary for its V2 operations. It obtains a Clerk
+session token in the browser and sends it to the separate FastAPI backend using
+`NEXT_PUBLIC_NOTIVENTA_API_URL`.
+
+The V2 backend owns:
+
+1. Clerk-to-internal-User mapping.
+2. V2 Mercado Libre OAuth credentials and account status.
+3. Device pairing, status, and removal.
+4. Mercado Libre shipment webhook processing and `PrintJob` creation.
+
+The legacy frontend routes remain present for the existing inventory,
+Telegram, billing, alerts, and reconcile behavior. Until migration is complete,
+deployment and troubleshooting documentation must identify whether a setting
+belongs to the legacy Node integration or the V2 FastAPI integration.
+
+The two Mercado Libre integrations use different callback routes:
+
+| Flow | OAuth callback | Notification callback |
+| --- | --- | --- |
+| Legacy Node application | `/api/ml/callback` | `/api/webhooks/mercadolibre` |
+| V2 FastAPI backend | `/api/v1/mercado-libre/oauth/callback` | `/api/v1/mercado-libre/webhooks` |
+
+The current V2 printing integration must use the FastAPI routes. Changing the
+Mercado Libre application fields can affect the legacy integration if both
+generations share one Mercado Libre application, so ownership must be checked
+before changing those fields.
 
 ## Implemented Core
 1. OAuth + signed session cookie (`ml_session`).
