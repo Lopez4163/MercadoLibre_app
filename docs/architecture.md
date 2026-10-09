@@ -1,6 +1,6 @@
 # Architecture and Feature Inventory
 
-Last updated: October 7, 2026
+Last updated: October 9, 2026
 
 ## Snapshot
 1. Dashboard reads inventory live from ML via `/api/ml/items`.
@@ -29,13 +29,16 @@ The V2 backend owns:
 5. The protected `/v2/workstation` fulfillment workstation. Q0 provides the
    structural home; Q1/Q2 provide persisted packing snapshots and enrichment;
    Q3 provides the authenticated read-only queue API; and Q4 displays its
-    active assignment, dispatch state, waiting queue, attention, and recent
-    completion data. The browser does not mutate queue or print lifecycle state.
-    The current workstation is one full-width operational surface: connection
-    and Device configuration precede a simple read-only fulfillment table.
-    Visible-page refresh keeps that table current without creating a second
-    queue-data source or lifecycle action. Q6 locally validates the complete
-    Dummy ML-to-workstation read path.
+   active assignment, dispatch state, waiting queue, attention, and recent
+   completion data. The browser does not mutate queue or print lifecycle state.
+   The current workstation is one full-width operational surface: connection
+   and Device configuration precede a simple read-only fulfillment table. It
+   fetches immediately, polls every 15 seconds only while visible, and refreshes
+   again on focus/visibility return without creating a second queue-data source
+   or lifecycle action. Q6 locally validates the complete Dummy
+   ML-to-workstation read path. The earlier compact-card, collapsed-rail, and
+   mobile-drawer presentation remains historical implementation evidence and
+   is not the current UI contract.
 
 The legacy frontend routes remain present for the existing inventory,
 Telegram, billing, alerts, and reconcile behavior. Until migration is complete,
