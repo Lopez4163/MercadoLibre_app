@@ -26,6 +26,16 @@ The V2 backend owns:
 2. V2 Mercado Libre OAuth credentials and account status.
 3. Device pairing, status, and removal.
 4. Mercado Libre shipment webhook processing and `PrintJob` creation.
+5. The protected `/v2/workstation` fulfillment workstation. Q0 provides the
+   structural home; Q1/Q2 provide persisted packing snapshots and enrichment;
+   Q3 provides the authenticated read-only queue API; and Q4 displays its
+   active assignment, dispatch state, waiting queue, attention, and recent
+   completion data. The browser does not mutate queue or print lifecycle state.
+   Q5 adds a local visual preference, desktop collapsed rail, and mobile queue
+   drawer without creating a second queue-data source or lifecycle action. Q6
+   locally validates the complete Dummy ML-to-workstation read path. Waiting
+   shipment cards stay compact until explicitly expanded for full packing
+   details; this is visual state only and does not change backend queue state.
 
 The legacy frontend routes remain present for the existing inventory,
 Telegram, billing, alerts, and reconcile behavior. Until migration is complete,

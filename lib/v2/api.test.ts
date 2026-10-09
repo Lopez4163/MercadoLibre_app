@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   createDevicePairingCode,
   getDashboardDevice,
+  getFulfillmentQueue,
   getMercadoLibreAccount,
   getCurrentUser,
   removeDashboardDevice,
@@ -117,6 +118,56 @@ describe("V2 FastAPI client", () => {
         headers: expect.objectContaining({ Authorization: "Bearer session-token" }),
       }),
     );
+  });
+
+  it("loads the read-only fulfillment queue with the Clerk bearer token", async () => {
+    const payload = {
+      dispatchState: "READY" as const,
+      activeAssignment: null,
+      queued: [],
+      needsAttention: [],
+      recentCompleted: [],
+    };
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify(payload), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+
+    await expect(getFulfillmentQueue("session-token")).resolves.toEqual(payload);
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://api.example.test/api/v1/dashboard/queue",
+      expect.objectContaining({
+        headers: expect.objectContaining({ Authorization: "Bearer session-token" }),
+      }),
+    );
+  });
+
+  it("keeps a failed queue refresh read-only when it is requested again", async () => {
+    const payload = {
+      dispatchState: "READY" as const,
+      activeAssignment: null,
+      queued: [],
+      needsAttention: [],
+      recentCompleted: [],
+    };
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(new Response(null, { status: 503 }))
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify(payload), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      );
+
+    await expect(getFulfillmentQueue("session-token")).rejects.toBeInstanceOf(V2ApiError);
+    await expect(getFulfillmentQueue("session-token")).resolves.toEqual(payload);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    for (const call of fetchMock.mock.calls) {
+      expect(call[1]).not.toMatchObject({ method: expect.any(String) });
+    }
   });
 
   it("removes the selected Device with the Clerk bearer token", async () => {

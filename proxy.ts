@@ -1,6 +1,9 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 
-const isProtectedV2Route = createRouteMatcher(["/v2/connect(.*)"]);
+const isProtectedV2Route = createRouteMatcher([
+  "/v2/connect(.*)",
+  "/v2/workstation(.*)",
+]);
 
 export default clerkMiddleware(async (auth, request) => {
   if (isProtectedV2Route(request)) {

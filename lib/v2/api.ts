@@ -29,6 +29,43 @@ export type DashboardDeviceStatus = {
   device: DashboardDevice | null;
 };
 
+export type FulfillmentSnapshotState = "PENDING" | "AVAILABLE" | "UNAVAILABLE";
+
+export type FulfillmentQueueItem = {
+  itemId: string;
+  title: string;
+  quantity: number;
+  sellerSku: string | null;
+  variationSummary: string | null;
+};
+
+export type FulfillmentQueueJob = {
+  jobId: string;
+  shipmentId: string;
+  orderId: string | null;
+  status: string;
+  shipmentStatus: string | null;
+  shipmentSubstatus: string | null;
+  createdAt: string;
+  fulfillmentSnapshotState: FulfillmentSnapshotState;
+  totalUnits: number;
+  items: FulfillmentQueueItem[];
+};
+
+export type FulfillmentActiveAssignment = {
+  attemptId: string;
+  attemptStatus: "AUTHORIZED" | "RECEIVED" | "PRINTING";
+  job: FulfillmentQueueJob;
+};
+
+export type FulfillmentQueue = {
+  dispatchState: "READY" | "PAUSED" | "BLOCKED" | "OCCUPIED" | "NO_ACTIVE_DEVICE";
+  activeAssignment: FulfillmentActiveAssignment | null;
+  queued: FulfillmentQueueJob[];
+  needsAttention: FulfillmentQueueJob[];
+  recentCompleted: FulfillmentQueueJob[];
+};
+
 export type MercadoLibreAccount =
   | {
       connected: false;
@@ -107,6 +144,10 @@ export function createDevicePairingCode(token: string): Promise<DevicePairingCod
 
 export function getDashboardDevice(token: string): Promise<DashboardDeviceStatus> {
   return request<DashboardDeviceStatus>("/api/v1/dashboard/device", token);
+}
+
+export function getFulfillmentQueue(token: string): Promise<FulfillmentQueue> {
+  return request<FulfillmentQueue>("/api/v1/dashboard/queue", token);
 }
 
 export function removeDashboardDevice(

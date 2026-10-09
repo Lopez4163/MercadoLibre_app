@@ -28,7 +28,20 @@ bun dev
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 application. The transitional V2 connection page is at
-[http://localhost:3000/v2/connect](http://localhost:3000/v2/connect).
+[http://localhost:3000/v2/connect](http://localhost:3000/v2/connect), and the
+protected V2 workstation shell is at
+[http://localhost:3000/v2/workstation](http://localhost:3000/v2/workstation).
+The workstation displays the authenticated user's read-only fulfillment queue,
+including persisted packing snapshots and backend-derived dispatch state. It
+does not expose printing or queue lifecycle actions. Q5 responsive/collapse
+behavior is implemented: the desktop panel can collapse into a rail and small
+screens use a queue drawer, with a local visual-preference only. Q6 local
+workstation acceptance is complete: the local Dummy Mercado Libre flow was
+observed through webhook ingestion, `PrintJob`, order enrichment, persisted
+packing snapshot, queue API, and workstation. Waiting shipments use compact,
+expandable cards; expanding one reveals its full read-only packing details.
+No print, lifecycle mutation, label download, or physical output is part of
+this workstation.
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
