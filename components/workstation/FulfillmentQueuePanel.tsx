@@ -1,7 +1,7 @@
 "use client";
 
 import { useAuth } from "@clerk/nextjs";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import {
   getFulfillmentQueue,
@@ -9,6 +9,10 @@ import {
   type FulfillmentQueue,
   type FulfillmentQueueJob,
 } from "../../lib/v2/api";
+import {
+  canRefreshFulfillmentQueue,
+  FULFILLMENT_QUEUE_REFRESH_INTERVAL_MS,
+} from "../../lib/v2/fulfillment-queue-refresh";
 
 const dispatchCopy = {
   READY: {
@@ -203,23 +207,53 @@ export function FulfillmentQueuePanel() {
   const [queue, setQueue] = useState<FulfillmentQueue | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const refreshInFlight = useRef(false);
+  const hasLoadedQueue = useRef(false);
 
-  const loadQueue = useCallback(async () => {
-    setLoading(true);
-    setError(false);
+  const loadQueue = useCallback(async (mode: "initial" | "background" = "initial") => {
+    if (refreshInFlight.current) return;
+    refreshInFlight.current = true;
+    if (mode === "initial") {
+      setLoading(true);
+      setError(false);
+    }
     try {
       const token = await getToken();
       if (!token) throw new Error("No active Clerk session is available");
       setQueue(await getFulfillmentQueue(token));
+      hasLoadedQueue.current = true;
+      setError(false);
     } catch {
-      setError(true);
+      if (!hasLoadedQueue.current) setError(true);
     } finally {
-      setLoading(false);
+      refreshInFlight.current = false;
+      if (mode === "initial") setLoading(false);
     }
   }, [getToken]);
 
   useEffect(() => {
     void loadQueue();
+  }, [loadQueue]);
+
+  useEffect(() => {
+    const refreshWhenVisible = () => {
+      if (canRefreshFulfillmentQueue(document.visibilityState)) {
+        void loadQueue("background");
+      }
+    };
+
+    window.addEventListener("focus", refreshWhenVisible);
+    document.addEventListener("visibilitychange", refreshWhenVisible);
+    const intervalId = window.setInterval(
+      refreshWhenVisible,
+      FULFILLMENT_QUEUE_REFRESH_INTERVAL_MS,
+    );
+
+    return () => {
+      window.removeEventListener("focus", refreshWhenVisible);
+      document.removeEventListener("visibilitychange", refreshWhenVisible);
+      window.clearInterval(intervalId);
+    };
   }, [loadQueue]);
 
   if (loading) return <p className="mt-5 text-sm text-zinc-600 dark:text-zinc-400">Loading fulfillment queue…</p>;
