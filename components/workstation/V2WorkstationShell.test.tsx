@@ -8,14 +8,17 @@ describe("V2 workstation shell", () => {
     const output = renderToStaticMarkup(
       <V2WorkstationShell
         operations={<p>Connection and device status live here.</p>}
-        fulfillment={<p>Packing details will appear here after queue API work.</p>}
+        fulfillment={<p>Packing details are read-only.</p>}
       />,
     );
 
     expect(output).toContain("Operations workstation");
     expect(output).toContain("Fulfillment Queue");
     expect(output).toContain("Connection and device status live here.");
-    expect(output).toContain("Packing details will appear here after queue API work.");
+    expect(output).toContain("Packing details are read-only.");
     expect(output).toContain("Read-only");
+    expect(output).toContain("Open queue");
+    expect(output).toContain('aria-label="Collapse fulfillment queue"');
+    expect(output).toContain("transition-[grid-template-columns]");
   });
 });

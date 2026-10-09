@@ -31,7 +31,9 @@ The V2 backend owns:
    Q3 provides the authenticated read-only queue API; and Q4 displays its
    active assignment, dispatch state, waiting queue, attention, and recent
    completion data. The browser does not mutate queue or print lifecycle state.
-   Q5 responsive/collapse behavior and Q6 local acceptance remain pending.
+   Q5 adds a local visual preference, desktop collapsed rail, and mobile queue
+   drawer without creating a second queue-data source or lifecycle action. Q6
+   local acceptance remains pending.
 
 The legacy frontend routes remain present for the existing inventory,
 Telegram, billing, alerts, and reconcile behavior. Until migration is complete,

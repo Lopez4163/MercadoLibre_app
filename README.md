@@ -34,7 +34,9 @@ protected V2 workstation shell is at
 The workstation displays the authenticated user's read-only fulfillment queue,
 including persisted packing snapshots and backend-derived dispatch state. It
 does not expose printing or queue lifecycle actions. Q5 responsive/collapse
-behavior and Q6 local workstation acceptance remain pending.
+behavior is implemented: the desktop panel can collapse into a rail and small
+screens use a queue drawer, with a local visual-preference only. Q6 local
+workstation acceptance remains pending.
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
