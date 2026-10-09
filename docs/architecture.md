@@ -33,7 +33,9 @@ The V2 backend owns:
    completion data. The browser does not mutate queue or print lifecycle state.
    Q5 adds a local visual preference, desktop collapsed rail, and mobile queue
    drawer without creating a second queue-data source or lifecycle action. Q6
-   local acceptance remains pending.
+   locally validates the complete Dummy ML-to-workstation read path. Waiting
+   shipment cards stay compact until explicitly expanded for full packing
+   details; this is visual state only and does not change backend queue state.
 
 The legacy frontend routes remain present for the existing inventory,
 Telegram, billing, alerts, and reconcile behavior. Until migration is complete,
