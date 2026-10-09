@@ -38,9 +38,11 @@ function shipmentLabel(job: FulfillmentQueueJob) {
 }
 
 function itemSummary(job: FulfillmentQueueJob) {
+  const message = snapshotMessage(job);
+  if (message) return message;
   return job.items.length
     ? job.items.map((item) => item.title).join(" + ")
-    : "Packing details unavailable";
+    : "No packing items";
 }
 
 function snapshotMessage(job: FulfillmentQueueJob) {
@@ -91,24 +93,64 @@ function ActiveAssignmentCard({ assignment }: { assignment: FulfillmentActiveAss
   );
 }
 
-function QueueRows({ jobs }: { jobs: FulfillmentQueueJob[] }) {
+function QueueRows({
+  jobs,
+  selectedJobId,
+  onSelectJob,
+}: {
+  jobs: FulfillmentQueueJob[];
+  selectedJobId: string | null;
+  onSelectJob: (jobId: string) => void;
+}) {
   return (
     <ul className="divide-y divide-zinc-200 rounded-lg border border-zinc-200 dark:divide-zinc-700 dark:border-zinc-700">
-      {jobs.map((job) => (
-        <li key={job.jobId} className="p-4">
-          <p className="font-medium">{shipmentLabel(job)}</p>
-          <p className="mt-1 text-sm">{job.totalUnits} total units · {itemSummary(job)}</p>
-          <p className="mt-1 text-xs font-medium uppercase tracking-wide text-zinc-600 dark:text-zinc-400">{job.status.replaceAll("_", " ")}</p>
-          <PackingDetails job={job} />
-        </li>
-      ))}
+      {jobs.map((job) => {
+        const isSelected = selectedJobId === job.jobId;
+        const detailsId = `packing-details-${job.jobId}`;
+
+        return (
+          <li key={job.jobId} className="p-1">
+            <button
+              aria-controls={detailsId}
+              aria-expanded={isSelected}
+              className="w-full rounded-md p-3 text-left transition-colors hover:bg-zinc-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-800 dark:hover:bg-zinc-800 dark:focus-visible:outline-zinc-100"
+              onClick={() => onSelectJob(job.jobId)}
+              type="button"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="font-medium">{shipmentLabel(job)}</p>
+                  <p className="mt-1 truncate text-sm text-zinc-700 dark:text-zinc-300">
+                    {job.totalUnits} total units · {itemSummary(job)}
+                  </p>
+                  <p className="mt-1 text-xs font-medium uppercase tracking-wide text-zinc-600 dark:text-zinc-400">
+                    {job.status.replaceAll("_", " ")}
+                  </p>
+                </div>
+                <span aria-hidden="true" className="pt-1 text-lg text-zinc-500">
+                  {isSelected ? "⌃" : "›"}
+                </span>
+              </div>
+            </button>
+            {isSelected && (
+              <div className="px-3 pb-3" id={detailsId}>
+                <PackingDetails job={job} />
+              </div>
+            )}
+          </li>
+        );
+      })}
     </ul>
   );
 }
 
 export function FulfillmentQueueContent({ queue }: { queue: FulfillmentQueue }) {
+  const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
   const state = dispatchCopy[queue.dispatchState];
   const noJobs = !queue.activeAssignment && !queue.queued.length && !queue.needsAttention.length && !queue.recentCompleted.length;
+  const selectJob = (jobId: string) => {
+    setSelectedJobId((current) => (current === jobId ? null : jobId));
+  };
 
   return (
     <div className="mt-5 space-y-6">
@@ -128,21 +170,21 @@ export function FulfillmentQueueContent({ queue }: { queue: FulfillmentQueue }) 
       {queue.queued.length > 0 && (
         <section>
           <h3 className="text-sm font-semibold uppercase tracking-widest text-zinc-500">Waiting queue · {queue.queued.length}</h3>
-          <div className="mt-3"><QueueRows jobs={queue.queued} /></div>
+          <div className="mt-3"><QueueRows jobs={queue.queued} selectedJobId={selectedJobId} onSelectJob={selectJob} /></div>
         </section>
       )}
 
       {queue.needsAttention.length > 0 && (
         <section>
           <h3 className="text-sm font-semibold uppercase tracking-widest text-amber-700 dark:text-amber-400">Needs attention · {queue.needsAttention.length}</h3>
-          <div className="mt-3"><QueueRows jobs={queue.needsAttention} /></div>
+          <div className="mt-3"><QueueRows jobs={queue.needsAttention} selectedJobId={selectedJobId} onSelectJob={selectJob} /></div>
         </section>
       )}
 
       {queue.recentCompleted.length > 0 && (
         <section>
           <h3 className="text-sm font-semibold uppercase tracking-widest text-zinc-500">Recently completed</h3>
-          <div className="mt-3"><QueueRows jobs={queue.recentCompleted} /></div>
+          <div className="mt-3"><QueueRows jobs={queue.recentCompleted} selectedJobId={selectedJobId} onSelectJob={selectJob} /></div>
         </section>
       )}
 
