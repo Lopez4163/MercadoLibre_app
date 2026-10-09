@@ -38,10 +38,15 @@ full-width operational surface: connection and Device configuration remain at
 the top, followed by a simple read-only queue table. Q6 local
 workstation acceptance is complete: the local Dummy Mercado Libre flow was
 observed through webhook ingestion, `PrintJob`, order enrichment, persisted
-packing snapshot, queue API, and workstation. The queue refreshes while the
-page is visible and presents available packing details directly in its rows.
-No print, lifecycle mutation, label download, or physical output is part of
-this workstation.
+packing snapshot, queue API, and workstation. The queue loads immediately,
+polls every 15 seconds while the page is visible, and refreshes again when the
+page regains focus or visibility. Background refresh preserves the last
+successful queue while the replacement request is in flight. The table
+presents available packing details directly in its rows. Historical jobs
+created before fulfillment enrichment may remain `PENDING` with zero units;
+the workstation labels those details as pending without treating that as a
+printing failure. No print, lifecycle mutation, label download, or physical
+output is part of this workstation.
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
