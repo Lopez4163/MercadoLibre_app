@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { V2WorkstationShell } from "./V2WorkstationShell";
 
 describe("V2 workstation shell", () => {
-  it("keeps operations and the future fulfillment region structurally separate", () => {
+  it("keeps operations and the fulfillment table on one simple page", () => {
     const output = renderToStaticMarkup(
       <V2WorkstationShell
         operations={<p>Connection and device status live here.</p>}
@@ -12,13 +12,13 @@ describe("V2 workstation shell", () => {
       />,
     );
 
-    expect(output).toContain("Operations workstation");
+    expect(output).toContain("Operations");
     expect(output).toContain("Fulfillment Queue");
     expect(output).toContain("Connection and device status live here.");
     expect(output).toContain("Packing details are read-only.");
     expect(output).toContain("Read-only");
-    expect(output).toContain("Open queue");
-    expect(output).toContain('aria-label="Collapse fulfillment queue"');
-    expect(output).toContain("transition-[grid-template-columns]");
+    expect(output).not.toContain("Open queue");
+    expect(output).not.toContain("Collapse fulfillment queue");
+    expect(output).not.toContain("transition-[grid-template-columns]");
   });
 });
