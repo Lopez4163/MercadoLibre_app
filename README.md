@@ -28,7 +28,10 @@ bun dev
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 application. The transitional V2 connection page is at
-[http://localhost:3000/v2/connect](http://localhost:3000/v2/connect).
+[http://localhost:3000/v2/connect](http://localhost:3000/v2/connect), and the
+protected V2 workstation shell is at
+[http://localhost:3000/v2/workstation](http://localhost:3000/v2/workstation).
+The workstation does not yet expose a fulfillment queue or any printing action.
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 

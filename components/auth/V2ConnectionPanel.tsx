@@ -1,6 +1,7 @@
 "use client";
 
 import { SignInButton, UserButton, useAuth } from "@clerk/nextjs";
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
 import {
@@ -262,11 +263,19 @@ function SignedInConnectionPanel() {
           </div>
 
           {device ? (
-            <DeviceStatusPanel
-              device={device}
-              removing={removingDevice}
-              onRemove={() => void disconnectDevice()}
-            />
+            <>
+              <DeviceStatusPanel
+                device={device}
+                removing={removingDevice}
+                onRemove={() => void disconnectDevice()}
+              />
+              <Link
+                className="inline-flex w-fit rounded-lg border border-zinc-500 px-4 py-2 font-semibold"
+                href="/v2/workstation"
+              >
+                Open operations workstation
+              </Link>
+            </>
           ) : (
             <div className="rounded-xl border border-zinc-300 p-5 dark:border-zinc-700">
               <h2 className="text-xl font-semibold">Connect computer</h2>
