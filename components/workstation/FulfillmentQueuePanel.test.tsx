@@ -62,7 +62,7 @@ describe("FulfillmentQueueContent", () => {
     expect(output).toContain(detail);
   });
 
-  it("preserves backend queue order in compact cards before a job is selected", () => {
+  it("preserves backend queue order in the read-only table", () => {
     const first = job("48206971947");
     const second = job("48206971948", { items: [], totalUnits: 0 });
     const output = renderToStaticMarkup(
@@ -72,10 +72,9 @@ describe("FulfillmentQueueContent", () => {
     expect(output.indexOf("Shipment #48206971947")).toBeLessThan(
       output.indexOf("Shipment #48206971948"),
     );
-    expect(output).toContain("3 total units · Black T-Shirt + Baseball Cap");
-    expect(output).toContain('aria-expanded="false"');
-    expect(output).not.toContain("2 × Black T-Shirt");
-    expect(output).not.toContain("SKU: SHIRT-BLK-M");
+    expect(output).toContain("Packing details");
+    expect(output).toContain("2 × Black T-Shirt · SKU: SHIRT-BLK-M · Black / M");
+    expect(output).not.toContain('aria-expanded="false"');
   });
 
   it("shows active, pending, unavailable, attention, and completed sections read-only", () => {
@@ -100,10 +99,8 @@ describe("FulfillmentQueueContent", () => {
     expect(output).toContain("Attempt RECEIVED");
     expect(output).toContain("2 × Black T-Shirt");
     expect(output).toContain("SKU: SHIRT-BLK-M");
-    expect(output).toContain("Packing details loading");
+    expect(output).toContain("Packing details pending");
     expect(output).toContain("Packing details unavailable");
-    expect(output).not.toContain('id="packing-details-pending"');
-    expect(output).not.toContain('id="packing-details-unavailable"');
     expect(output).toContain("Needs attention · 1");
     expect(output).toContain("Recently completed");
     expect(output).not.toMatch(/Print Now|Retry Print|Requeue|Cancel|Resolve UNKNOWN|Manual Print|Download Label|Test Print/);
