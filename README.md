@@ -31,7 +31,10 @@ application. The transitional V2 connection page is at
 [http://localhost:3000/v2/connect](http://localhost:3000/v2/connect), and the
 protected V2 workstation shell is at
 [http://localhost:3000/v2/workstation](http://localhost:3000/v2/workstation).
-The workstation does not yet expose a fulfillment queue or any printing action.
+The workstation displays the authenticated user's read-only fulfillment queue,
+including persisted packing snapshots and backend-derived dispatch state. It
+does not expose printing or queue lifecycle actions. Q5 responsive/collapse
+behavior and Q6 local workstation acceptance remain pending.
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 

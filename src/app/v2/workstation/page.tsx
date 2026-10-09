@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { FulfillmentQueuePanel } from "../../../../components/workstation/FulfillmentQueuePanel";
 import { V2WorkstationShell } from "../../../../components/workstation/V2WorkstationShell";
 
 export default function V2WorkstationPage() {
@@ -19,11 +20,7 @@ export default function V2WorkstationPage() {
           </Link>
         </section>
       }
-      fulfillment={
-        <p className="mt-3 text-sm text-zinc-600 dark:text-zinc-400">
-          Packing details will be added after the backend enrichment and read-only queue API phases.
-        </p>
-      }
+      fulfillment={<FulfillmentQueuePanel />}
     />
   );
 }

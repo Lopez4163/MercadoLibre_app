@@ -26,9 +26,12 @@ The V2 backend owns:
 2. V2 Mercado Libre OAuth credentials and account status.
 3. Device pairing, status, and removal.
 4. Mercado Libre shipment webhook processing and `PrintJob` creation.
-5. The protected `/v2/workstation` structural home for future read-only
-   fulfillment operations. Q0 provides layout only; it does not read or mutate
-   the print queue.
+5. The protected `/v2/workstation` fulfillment workstation. Q0 provides the
+   structural home; Q1/Q2 provide persisted packing snapshots and enrichment;
+   Q3 provides the authenticated read-only queue API; and Q4 displays its
+   active assignment, dispatch state, waiting queue, attention, and recent
+   completion data. The browser does not mutate queue or print lifecycle state.
+   Q5 responsive/collapse behavior and Q6 local acceptance remain pending.
 
 The legacy frontend routes remain present for the existing inventory,
 Telegram, billing, alerts, and reconcile behavior. Until migration is complete,
