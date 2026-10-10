@@ -26,6 +26,12 @@ function shipmentLabel(job: FulfillmentQueueJob) {
   return `Shipment #${job.shipmentId}`;
 }
 
+function operationalStatusLabel(job: FulfillmentQueueJob) {
+  if (job.status === "FAILED") return "Print failed";
+  if (job.status === "NEEDS_ATTENTION") return "Print outcome unknown";
+  return job.status.replaceAll("_", " ");
+}
+
 function snapshotMessage(job: FulfillmentQueueJob) {
   if (job.fulfillmentSnapshotState === "PENDING") return "Packing details pending";
   if (job.fulfillmentSnapshotState === "UNAVAILABLE") return "Packing details unavailable";
@@ -71,7 +77,7 @@ function QueueTable({
                   {job.orderId && <p className="mt-1 text-xs font-normal text-zinc-500">Order #{job.orderId}</p>}
                 </td>
                 <td className="whitespace-nowrap px-4 py-3">
-                  <p className="text-xs font-medium uppercase tracking-wide text-zinc-600 dark:text-zinc-400">{job.status.replaceAll("_", " ")}</p>
+                  <p className="text-xs font-medium uppercase tracking-wide text-zinc-600 dark:text-zinc-400">{operationalStatusLabel(job)}</p>
                   {attemptStatus && <p className="mt-1 text-xs text-zinc-500">Attempt {attemptStatus.replaceAll("_", " ")}</p>}
                 </td>
                 <td className="min-w-72 px-4 py-3 text-zinc-700 dark:text-zinc-300">{itemSummary(job)}</td>
@@ -120,7 +126,7 @@ export function FulfillmentQueueContent({ queue }: { queue: FulfillmentQueue }) 
 
       {queue.needsAttention.length > 0 && (
         <section>
-          <h3 className="text-sm font-semibold uppercase tracking-widest text-amber-700 dark:text-amber-400">Needs attention · {queue.needsAttention.length}</h3>
+          <h3 className="text-sm font-semibold uppercase tracking-widest text-amber-700 dark:text-amber-400">Printing attention · {queue.needsAttention.length}</h3>
           <QueueTable jobs={queue.needsAttention} />
         </section>
       )}

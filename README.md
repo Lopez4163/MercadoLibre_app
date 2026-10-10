@@ -48,6 +48,11 @@ the workstation labels those details as pending without treating that as a
 printing failure. No print, lifecycle mutation, label download, or physical
 output is part of this workstation.
 
+Local unreleased P1.5 work additionally makes `FAILED` and
+`NEEDS_ATTENTION` jobs visible in the same read-only operational attention
+section. It distinguishes known print failure from an uncertain outcome; it
+adds no retry, requeue, resolve, or print controls.
+
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.

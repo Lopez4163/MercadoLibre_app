@@ -55,6 +55,21 @@ V2 staging validation must prove separately:
 4. Real notification delivery to FastAPI.
 5. Worker processing and exactly-one eligible `PrintJob` behavior.
 
+### OAuth-start troubleshooting
+
+If **Connect Mercado Libre** returns to `/v2/connect?mercadoLibre=error` or
+never opens Mercado Libre, first inspect the browser Network entry for:
+
+```http
+POST /api/v1/mercado-libre/oauth/authorize
+```
+
+Record its status and safe response body. If it succeeds, inspect the returned
+`authorizationUrl` and verify its encoded `redirect_uri` is the exact registered
+staging callback. Do not assume a callback mismatch is the cause when the
+browser never reached Mercado Libre: authentication, CORS, or backend
+configuration can fail before browser navigation.
+
 The backend `/health` response proves only FastAPI process liveness. It does not
 prove database, Redis, Celery worker, or Mercado Libre health.
 
