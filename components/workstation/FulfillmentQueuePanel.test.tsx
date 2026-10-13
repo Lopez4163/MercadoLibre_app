@@ -77,11 +77,12 @@ describe("FulfillmentQueueContent", () => {
     expect(output).not.toContain('aria-expanded="false"');
   });
 
-  it("shows active, pending, unavailable, attention, and completed sections read-only", () => {
+  it("shows known print failures separately from uncertain outcomes in the read-only attention section", () => {
     const active = job("active", { status: "SENT_TO_AGENT" });
     const pending = job("pending", { fulfillmentSnapshotState: "PENDING", items: [] });
     const unavailable = job("unavailable", { fulfillmentSnapshotState: "UNAVAILABLE", items: [] });
     const attention = job("attention", { status: "NEEDS_ATTENTION" });
+    const failed = job("failed", { status: "FAILED" });
     const completed = job("completed", { status: "PRINTED_SUCCESSFULLY" });
     const output = renderToStaticMarkup(
       <FulfillmentQueueContent
@@ -89,7 +90,7 @@ describe("FulfillmentQueueContent", () => {
           dispatchState: "OCCUPIED",
           activeAssignment: { attemptId: "attempt-1", attemptStatus: "RECEIVED", job: active },
           queued: [pending, unavailable],
-          needsAttention: [attention],
+          needsAttention: [failed, attention],
           recentCompleted: [completed],
         })}
       />,
@@ -101,7 +102,9 @@ describe("FulfillmentQueueContent", () => {
     expect(output).toContain("SKU: SHIRT-BLK-M");
     expect(output).toContain("Packing details pending");
     expect(output).toContain("Packing details unavailable");
-    expect(output).toContain("Needs attention · 1");
+    expect(output).toContain("Printing attention · 2");
+    expect(output).toContain("Print failed");
+    expect(output).toContain("Print outcome unknown");
     expect(output).toContain("Recently completed");
     expect(output).not.toMatch(/Print Now|Retry Print|Requeue|Cancel|Resolve UNKNOWN|Manual Print|Download Label|Test Print/);
   });
