@@ -8,6 +8,13 @@ which generation it is testing; success in one does not prove the other.
 
 ## NotiVenta V2 Staging
 
+Staging is an explicit promotion environment, not the development environment.
+Complete the local full-phase acceptance session and reviewed GitHub `dev`
+integration before proposing a staging promotion. Staging validation supplements
+local acceptance; it does not replace required Windows x64, WHTP203e,
+installer, calibration, or physical fault-testing evidence. The shared testing
+cadence is defined in the [Backend testing policy](https://github.com/Lopez4163/notiventa_be/blob/dev/TESTING.md).
+
 Current endpoints:
 
 ```text
@@ -119,7 +126,9 @@ prove database, Redis, Celery worker, or Mercado Libre health.
 1. Keep separate `local`, `staging`, and `production` environments.
 2. Use separate DBs for staging vs production.
 3. Keep secrets different across staging/prod (especially webhook + cron secrets).
-4. Auto-deploy to staging from integration branch.
+4. Promote the reviewed `dev` integration branch explicitly to the separate
+   `staging` branch/environment; do not treat GitHub `dev` as a Railway
+   development deployment.
 5. Deploy production only from protected branch/tag.
 
 ## Legacy Application Staging Validation (24h recommended)

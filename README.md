@@ -52,6 +52,22 @@ Local unreleased P1.5 work additionally makes `FAILED` and
 section. It distinguishes known print failure from an uncertain outcome; it
 adds no retry, requeue, resolve, or print controls.
 
+## Testing and acceptance cadence
+
+Follow the shared [NotiVenta testing and acceptance policy](https://github.com/Lopez4163/notiventa_be/blob/dev/TESTING.md).
+During a Frontend subphase, run focused tests and the applicable automated
+checks: `npm run lint`, `npm test`, and `npm run build`. This repository has no
+separate typecheck script; its production build performs the established
+Next.js type validation. Commit and push the feature-branch checkpoint after
+relevant checks pass.
+
+Comprehensive manual UI acceptance is a coordinated full-phase activity unless
+an individual subphase explicitly requires it. The full-phase session covers
+the complete local user journey with Dummy Mercado Libre, Backend, Frontend,
+Agent, and isolated dependencies before reviewed promotion into GitHub `dev`.
+GitHub `dev` is the integration branch, not a Railway development environment;
+staging promotion and hardware acceptance remain explicit separate gates.
+
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
