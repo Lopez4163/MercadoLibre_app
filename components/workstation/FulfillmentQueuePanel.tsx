@@ -5,6 +5,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import {
   getFulfillmentQueue,
+  reportPrintJobIssue,
+  resolveUnknownPrintJob,
+  type PrintJobResolutionDecision,
   type FulfillmentActiveAssignment,
   type FulfillmentQueue,
   type FulfillmentQueueJob,
@@ -148,11 +151,51 @@ export function FulfillmentQueueContent({ queue }: { queue: FulfillmentQueue }) 
   );
 }
 
+type PendingAction =
+  | { kind: "PRINTED" | "RETRY"; job: FulfillmentQueueJob }
+  | { kind: "ISSUE"; job: FulfillmentQueueJob };
+
+function attentionCopy(job: FulfillmentQueueJob) {
+  if (job.attention?.outcome === "PRINT_FAILED") {
+    return "This print failed. Do not retry it here; report the issue for support follow-up.";
+  }
+  return "Inspect the printer and label before choosing what happened. This screen never prints directly.";
+}
+
+export function PrintingAttentionActions({
+  job,
+  onAction,
+}: {
+  job: FulfillmentQueueJob;
+  onAction: (action: PendingAction) => void;
+}) {
+  const attention = job.attention;
+  if (!attention) return null;
+  const unknown = attention.outcome === "UNKNOWN";
+  return (
+    <article className="rounded-lg border border-amber-300 bg-amber-50 p-4 dark:border-amber-700 dark:bg-amber-950/30" aria-label={`Printing issue for ${shipmentLabel(job)}`}>
+      <h4 className="font-semibold">Printing issue · {shipmentLabel(job)}</h4>
+      <p className="mt-1 text-sm text-zinc-700 dark:text-zinc-300">{attentionCopy(job)}</p>
+      {unknown && !attention.retryAllowed && <p className="mt-2 text-sm font-medium">The permitted retry has already been used. You can still confirm that this label printed.</p>}
+      <div className="mt-3 flex flex-wrap gap-2">
+        {unknown && <button className="rounded-lg border border-zinc-500 px-3 py-2 text-sm font-semibold" type="button" onClick={() => onAction({ kind: "PRINTED", job })}>Yes, it printed</button>}
+        {unknown && attention.retryAllowed && <button className="rounded-lg bg-amber-700 px-3 py-2 text-sm font-semibold text-white" type="button" onClick={() => onAction({ kind: "RETRY", job })}>No, it didn&apos;t print</button>}
+        {attention.issueReportingAllowed && <button className="rounded-lg border border-zinc-500 px-3 py-2 text-sm font-semibold" type="button" onClick={() => onAction({ kind: "ISSUE", job })}>Report an issue</button>}
+      </div>
+    </article>
+  );
+}
+
 export function FulfillmentQueuePanel() {
   const { getToken } = useAuth();
   const [queue, setQueue] = useState<FulfillmentQueue | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
+  const [issueDescription, setIssueDescription] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const idempotencyKeys = useRef(new Map<string, string>());
   const refreshInFlight = useRef(false);
   const hasLoadedQueue = useRef(false);
 
@@ -206,5 +249,47 @@ export function FulfillmentQueuePanel() {
       </div>
     );
   }
-  return <FulfillmentQueueContent queue={queue} />;
+  const attentionJobs = queue.needsAttention.filter((job) => job.attention);
+  const actionKey = pendingAction ? `${pendingAction.kind}:${pendingAction.job.jobId}:${pendingAction.job.attention?.attemptId}` : "";
+  const submitAction = async () => {
+    if (!pendingAction?.job.attention || submitting) return;
+    const description = issueDescription.trim();
+    if (pendingAction.kind === "ISSUE" && (description.length < 10 || description.length > 2000)) {
+      setActionError("Describe the issue using 10–2,000 characters.");
+      return;
+    }
+    setSubmitting(true);
+    setActionError(null);
+    const key = idempotencyKeys.current.get(actionKey) ?? crypto.randomUUID();
+    idempotencyKeys.current.set(actionKey, key);
+    try {
+      const token = await getToken();
+      if (!token) throw new Error("No active Clerk session is available");
+      if (pendingAction.kind === "ISSUE") {
+        await reportPrintJobIssue(token, pendingAction.job.jobId, pendingAction.job.attention.attemptId, description, key);
+      } else {
+        await resolveUnknownPrintJob(token, pendingAction.job.jobId, pendingAction.job.attention.attemptId, pendingAction.kind as PrintJobResolutionDecision, key);
+      }
+      setPendingAction(null);
+      setIssueDescription("");
+    } catch {
+      setActionError("The request could not be completed. The queue will refresh before you try again.");
+    } finally {
+      setSubmitting(false);
+      await loadQueue("background");
+    }
+  };
+  return <>
+    <FulfillmentQueueContent queue={queue} />
+    {attentionJobs.length > 0 && <section className="mt-6 space-y-3" aria-label="Printing issue actions">{attentionJobs.map((job) => <PrintingAttentionActions key={job.jobId} job={job} onAction={(action) => { setActionError(null); setIssueDescription(""); setPendingAction(action); }} />)}</section>}
+    {pendingAction && <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4" role="dialog" aria-modal="true" aria-labelledby="print-action-title">
+      <div className="w-full max-w-md rounded-xl bg-white p-5 shadow-xl dark:bg-zinc-900">
+        <h3 id="print-action-title" className="text-lg font-semibold">{pendingAction.kind === "PRINTED" ? "Confirm printed label" : pendingAction.kind === "RETRY" ? "Authorize one guarded retry" : "Report printing issue"}</h3>
+        <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-300">Shipment #{pendingAction.job.shipmentId}. {pendingAction.kind === "PRINTED" ? "Confirm only if you physically verified the correct label printed. This will not print again." : pendingAction.kind === "RETRY" ? "Confirm only if no label printed. The Backend will apply normal safety checks before any future dispatch." : "This report does not resolve the job, unblock printing, or authorize a retry."}</p>
+        {pendingAction.kind === "ISSUE" && <textarea className="mt-4 w-full rounded-lg border border-zinc-400 p-3 text-sm" value={issueDescription} onChange={(event) => setIssueDescription(event.target.value)} minLength={10} maxLength={2000} placeholder="Describe what you observed (10–2,000 characters)" />}
+        {actionError && <p className="mt-3 text-sm text-red-700" role="alert">{actionError}</p>}
+        <div className="mt-5 flex justify-end gap-2"><button className="rounded-lg border border-zinc-500 px-3 py-2 text-sm font-semibold" type="button" disabled={submitting} onClick={() => setPendingAction(null)}>Cancel</button><button className="rounded-lg bg-black px-3 py-2 text-sm font-semibold text-white disabled:opacity-50 dark:bg-white dark:text-black" type="button" disabled={submitting} onClick={() => void submitAction()}>{submitting ? "Submitting…" : "Confirm"}</button></div>
+      </div>
+    </div>}
+  </>;
 }

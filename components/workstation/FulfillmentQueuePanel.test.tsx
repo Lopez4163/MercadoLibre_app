@@ -2,7 +2,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
 import type { FulfillmentQueue } from "../../lib/v2/api";
-import { FulfillmentQueueContent } from "./FulfillmentQueuePanel";
+import { FulfillmentQueueContent, PrintingAttentionActions } from "./FulfillmentQueuePanel";
 
 function queue(overrides: Partial<FulfillmentQueue> = {}): FulfillmentQueue {
   return {
@@ -26,6 +26,7 @@ function job(id: string, overrides: Partial<FulfillmentQueue["queued"][number]> 
     createdAt: "2026-10-09T12:00:00Z",
     fulfillmentSnapshotState: "AVAILABLE" as const,
     totalUnits: 3,
+    attention: null,
     items: [
       {
         itemId: `item-${id}-shirt`,
@@ -114,5 +115,28 @@ describe("FulfillmentQueueContent", () => {
 
     expect(output).toContain("Queue is clear");
     expect(output).toContain("New eligible Mercado Libre shipments will appear here.");
+  });
+
+  it("offers only backend-authorized recovery actions", () => {
+    const unknown = job("unknown", {
+      status: "NEEDS_ATTENTION",
+      attention: { attemptId: "attempt-1", outcome: "UNKNOWN", retryAllowed: true, retryAuthorizationsUsed: 0, issueReportingAllowed: true },
+    });
+    const exhausted = job("exhausted", {
+      status: "NEEDS_ATTENTION",
+      attention: { attemptId: "attempt-2", outcome: "UNKNOWN", retryAllowed: false, retryAuthorizationsUsed: 1, issueReportingAllowed: true },
+    });
+    const failed = job("failed", {
+      status: "FAILED",
+      attention: { attemptId: "attempt-3", outcome: "PRINT_FAILED", retryAllowed: false, retryAuthorizationsUsed: 0, issueReportingAllowed: true },
+    });
+    const render = (value: typeof unknown) => renderToStaticMarkup(<PrintingAttentionActions job={value} onAction={() => undefined} />);
+    expect(render(unknown)).toContain("Yes, it printed");
+    expect(render(unknown)).toContain("No, it didn&#x27;t print");
+    expect(render(exhausted)).not.toContain("No, it didn&#x27;t print");
+    expect(render(exhausted)).toContain("permitted retry has already been used");
+    expect(render(failed)).not.toContain("Yes, it printed");
+    expect(render(failed)).toContain("Report an issue");
+    expect(render(failed)).not.toMatch(/Print Now|Requeue|Manual Print/);
   });
 });

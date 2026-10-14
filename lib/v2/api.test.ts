@@ -7,6 +7,8 @@ import {
   getMercadoLibreAccount,
   getCurrentUser,
   removeDashboardDevice,
+  reportPrintJobIssue,
+  resolveUnknownPrintJob,
   startMercadoLibreAuthorization,
   V2ApiError,
 } from "./api";
@@ -168,6 +170,36 @@ describe("V2 FastAPI client", () => {
     for (const call of fetchMock.mock.calls) {
       expect(call[1]).not.toMatchObject({ method: expect.any(String) });
     }
+  });
+
+  it("uses Clerk auth and an idempotency key for operator resolutions", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ decision: "RETRY" }), { status: 200 }),
+    );
+    await resolveUnknownPrintJob("session-token", "job-id", "attempt-id", "RETRY", "key-1");
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://api.example.test/api/v1/print-jobs/job-id/unknown-resolution",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({ attemptId: "attempt-id", decision: "RETRY" }),
+        headers: expect.objectContaining({ Authorization: "Bearer session-token", "Idempotency-Key": "key-1" }),
+      }),
+    );
+  });
+
+  it("reports an issue separately from resolution with its idempotency key", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ status: "OPEN" }), { status: 200 }),
+    );
+    await reportPrintJobIssue("session-token", "job-id", "attempt-id", "Printer did not feed a label.", "issue-key");
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://api.example.test/api/v1/print-jobs/job-id/issues",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({ attemptId: "attempt-id", description: "Printer did not feed a label." }),
+        headers: expect.objectContaining({ "Idempotency-Key": "issue-key" }),
+      }),
+    );
   });
 
   it("removes the selected Device with the Clerk bearer token", async () => {

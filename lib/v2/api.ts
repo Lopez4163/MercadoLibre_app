@@ -50,6 +50,15 @@ export type FulfillmentQueueJob = {
   fulfillmentSnapshotState: FulfillmentSnapshotState;
   totalUnits: number;
   items: FulfillmentQueueItem[];
+  attention: FulfillmentAttention | null;
+};
+
+export type FulfillmentAttention = {
+  attemptId: string;
+  outcome: "UNKNOWN" | "PRINT_FAILED";
+  retryAllowed: boolean;
+  retryAuthorizationsUsed: number;
+  issueReportingAllowed: boolean;
 };
 
 export type FulfillmentActiveAssignment = {
@@ -148,6 +157,53 @@ export function getDashboardDevice(token: string): Promise<DashboardDeviceStatus
 
 export function getFulfillmentQueue(token: string): Promise<FulfillmentQueue> {
   return request<FulfillmentQueue>("/api/v1/dashboard/queue", token);
+}
+
+export type PrintJobResolutionDecision = "PRINTED" | "RETRY";
+
+export type PrintJobResolution = {
+  resolutionId: string;
+  jobId: string;
+  attemptId: string;
+  decision: PrintJobResolutionDecision;
+  jobStatus: string;
+  resolvedAt: string;
+};
+
+export type PrintJobIssue = {
+  issueId: string;
+  jobId: string;
+  attemptId: string;
+  status: "OPEN";
+  createdAt: string;
+};
+
+export function resolveUnknownPrintJob(
+  token: string,
+  jobId: string,
+  attemptId: string,
+  decision: PrintJobResolutionDecision,
+  idempotencyKey: string,
+): Promise<PrintJobResolution> {
+  return request<PrintJobResolution>(`/api/v1/print-jobs/${jobId}/unknown-resolution`, token, {
+    method: "POST",
+    headers: { "Idempotency-Key": idempotencyKey },
+    body: JSON.stringify({ attemptId, decision }),
+  });
+}
+
+export function reportPrintJobIssue(
+  token: string,
+  jobId: string,
+  attemptId: string,
+  description: string,
+  idempotencyKey: string,
+): Promise<PrintJobIssue> {
+  return request<PrintJobIssue>(`/api/v1/print-jobs/${jobId}/issues`, token, {
+    method: "POST",
+    headers: { "Idempotency-Key": idempotencyKey },
+    body: JSON.stringify({ attemptId, description }),
+  });
 }
 
 export function removeDashboardDevice(
