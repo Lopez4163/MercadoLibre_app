@@ -40,6 +40,11 @@ The V2 backend owns:
    mobile-drawer presentation remains historical implementation evidence and
    is not the current UI contract.
 
+   Phase 8 has approved a future, deliberately narrow exception: after Backend
+   P8.3 enforcement exists, P8.2 may add confirmed UNKNOWN resolution and issue
+   reporting. Until that work is accepted, this page remains read-only and must
+   not infer retry authority or issue print actions.
+
 The legacy frontend routes remain present for the existing inventory,
 Telegram, billing, alerts, and reconcile behavior. Until migration is complete,
 deployment and troubleshooting documentation must identify whether a setting

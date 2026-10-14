@@ -31,7 +31,7 @@ application. The transitional V2 connection page is at
 [http://localhost:3000/v2/connect](http://localhost:3000/v2/connect), and the
 protected V2 workstation shell is at
 [http://localhost:3000/v2/workstation](http://localhost:3000/v2/workstation).
-The workstation displays the authenticated user's read-only fulfillment queue,
+The workstation currently displays the authenticated user's read-only fulfillment queue,
 including persisted packing snapshots and backend-derived dispatch state. It
 does not expose printing or queue lifecycle actions. The workstation uses one
 full-width operational surface: connection and Device configuration remain at
@@ -50,7 +50,9 @@ output is part of this workstation.
 Local unreleased P1.5 work additionally makes `FAILED` and
 `NEEDS_ATTENTION` jobs visible in the same read-only operational attention
 section. It distinguishes known print failure from an uncertain outcome; it
-adds no retry, requeue, resolve, or print controls.
+adds no retry, requeue, resolve, or print controls. Approved Phase 8 work will
+add narrowly confirmed UNKNOWN resolution and issue reporting only after the
+Backend enforces the one-retry safety policy; this is not implemented here yet.
 
 ## Testing and acceptance cadence
 
